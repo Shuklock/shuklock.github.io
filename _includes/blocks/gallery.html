@@ -1,0 +1,13 @@
+<section class="block block--gallery">
+  {% if include.block.heading %}<h2>{{ include.block.heading }}</h2>{% endif %}
+  <div class="gallery">
+    {% for item in include.block.items %}
+      {% if item.file %}
+      <figure>
+        {% include media-item.html src=item.file alt=item.caption %}
+        {% if item.caption %}<figcaption>{{ item.caption }}</figcaption>{% endif %}
+      </figure>
+      {% endif %}
+    {% endfor %}
+  </div>
+</section>

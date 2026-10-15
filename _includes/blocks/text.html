@@ -1,0 +1,4 @@
+<section class="block block--text">
+  {% if include.block.heading %}<h2>{{ include.block.heading }}</h2>{% endif %}
+  {{ include.block.body | markdownify }}
+</section>

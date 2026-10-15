@@ -1,0 +1,14 @@
+<section class="block block--features">
+  {% if include.block.heading %}<h2>{{ include.block.heading }}</h2>{% endif %}
+  <ul class="features">
+    {% for item in include.block.items %}
+      <li>
+        {% if item.icon %}<img class="feature-icon" src="{{ item.icon | relative_url }}" alt="">{% endif %}
+        <div>
+          <h3>{{ item.title }}</h3>
+          {{ item.text | markdownify }}
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+</section>

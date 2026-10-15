@@ -1,0 +1,35 @@
+---
+layout: default
+---
+<article class="kit">
+  <section class="kit-hero">
+    <div class="wrap kit-hero__inner">
+      {% include kit-icon.html kit=page size="large" %}
+      <div class="kit-hero__text">
+        <p class="kit-status kit-status--{{ page.status | slugify }}">
+          {{ page.status }}{% if page.version and page.version != "" %} · v{{ page.version }}{% endif %}
+        </p>
+        <h1>{{ page.title }}</h1>
+        {% if page.tagline %}<p class="kit-tagline">{{ page.tagline }}</p>{% endif %}
+        <div class="kit-links">
+          {% if page.curseforge and page.curseforge != "" %}
+            <a class="button button--primary" href="{{ page.curseforge }}">Download on CurseForge</a>
+          {% endif %}
+          {% if page.command and page.command != "" %}
+            <span class="kit-command">Settings: <code>{{ page.command }}</code></span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap kit-body">
+    {% if content != "" %}
+      <section class="block block--text intro">{{ content }}</section>
+    {% endif %}
+
+    {% for block in page.blocks %}
+      {% include blocks/{{ block.type }}.html block=block %}
+    {% endfor %}
+  </div>
+</article>

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if page.title and page.url != "/" %}{{ page.title }} · {% endif %}{{ site.title }}</title>
+  <meta name="description" content="{{ page.tagline | default: site.description | strip_html | escape }}">
+  <meta property="og:title" content="{{ page.title | default: site.title | escape }}">
+  <meta property="og:description" content="{{ page.tagline | default: site.description | strip_html | escape }}">
+  {% if page.icon %}<meta property="og:image" content="{{ page.icon | absolute_url }}">{% endif %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ '/assets/css/site.css' | relative_url }}">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="{{ '/' | relative_url }}">{{ site.title }}</a>
+      <nav class="site-nav" aria-label="Kits">
+        {% assign nav_kits = site.kits | sort: "order" %}
+        {% for kit in nav_kits %}
+          <a href="{{ kit.url | relative_url }}"{% if kit.url == page.url %} aria-current="page"{% endif %}>{{ kit.title | remove: " Kit" }}</a>
+        {% endfor %}
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    {{ content }}
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>Made by Shuklock for WoW Forever. Not affiliated with Blizzard Entertainment.</p>
+    </div>
+  </footer>
+</body>
+</html>

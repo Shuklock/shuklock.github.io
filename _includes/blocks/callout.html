@@ -1,0 +1,4 @@
+<aside class="block block--callout callout--{{ include.block.style | default: 'note' | downcase }}">
+  {% if include.block.heading %}<h2>{{ include.block.heading }}</h2>{% endif %}
+  {{ include.block.body | markdownify }}
+</aside>
