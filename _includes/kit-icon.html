@@ -1,0 +1,8 @@
+{% comment %}Kit icon: uses the uploaded icon, or a lettered ring when there isn't one yet.{% endcomment %}
+<span class="kit-icon{% if include.size %} kit-icon--{{ include.size }}{% endif %}">
+  {% if include.kit.icon %}
+    <img src="{{ include.kit.icon | relative_url }}" alt="">
+  {% else %}
+    <span class="kit-icon__letter" aria-hidden="true">{{ include.kit.title | slice: 0 }}</span>
+  {% endif %}
+</span>

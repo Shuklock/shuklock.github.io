@@ -1,0 +1,23 @@
+title: Shuklock's Kits
+description: Addons for WoW Forever that gather your consumables, gear and class tools into one kit button.
+url: https://shuklock.github.io
+baseurl: ""
+
+collections:
+  kits:
+    output: true
+    permalink: /:name/
+
+defaults:
+  - scope:
+      path: ""
+      type: kits
+    values:
+      layout: kit
+
+markdown: kramdown
+exclude:
+  - README.md
+  - .pages.yml
+  - Gemfile
+  - Gemfile.lock

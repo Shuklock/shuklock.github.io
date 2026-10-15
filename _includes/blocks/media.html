@@ -1,0 +1,14 @@
+{% if include.block.file %}
+<section class="block block--media block--media-{{ include.block.side | default: 'full' }}">
+  <figure>
+    {% include media-item.html src=include.block.file alt=include.block.caption %}
+  </figure>
+  {% if include.block.heading or include.block.body or include.block.caption %}
+  <div class="block__copy">
+    {% if include.block.heading %}<h2>{{ include.block.heading }}</h2>{% endif %}
+    {% if include.block.body %}{{ include.block.body | markdownify }}{% endif %}
+    {% if include.block.caption %}<p class="caption">{{ include.block.caption }}</p>{% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endif %}

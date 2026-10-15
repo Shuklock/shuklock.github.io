@@ -1,0 +1,7 @@
+{% comment %}Shows an image/GIF, or a muted looping video for .mp4/.webm.{% endcomment %}
+{% assign ext = include.src | split: "." | last | downcase %}
+{% if ext == "mp4" or ext == "webm" %}
+  <video src="{{ include.src | relative_url }}" autoplay loop muted playsinline{% if include.alt %} aria-label="{{ include.alt | escape }}"{% endif %}></video>
+{% else %}
+  <img src="{{ include.src | relative_url }}" alt="{{ include.alt | escape }}" loading="lazy">
+{% endif %}
