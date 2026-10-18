@@ -1314,14 +1314,14 @@ $('suggest').addEventListener('pointerdown',e=>{const b=e.target.closest('button
 const COACH={
  intro:[
   {t:'Welcome, warlock',h:'<p><b>Click the enemy</b> (or tap the space bar) to cast Shadow Bolt. Three clicks make one cast, and each cast hits the target.</p><p>When a soul runs out of health it dies and pays you shards and XP.</p>',sel:'#mframe'},
-  {t:'Shards and XP',h:'<p>The bar at the top is your <b>XP</b> toward the next level, with your <b>shards</b> below it. Shards are your currency: you spend them on demons and talents.</p><p>Shards come in five rarities. Harder souls pay better ones.</p>',sel:'#hudTC'},
+  {t:'Shards and XP',h:'<p>The bar at the top is your <b>XP</b> toward the next level, with your <b>shards</b> below it. Shards are what you spend on demons and a few other upgrades. Talents cost points instead, which you earn by leveling.</p><p>Shards come in five rarities. Harder souls pay better ones.</p>',sel:'#hudTC'},
   {t:'Your ability bar',h:'<p>Your spells and cooldowns sit along the bottom, under the cast bar. Your health bar is under your warlock.</p><p>Hover the small pills under either health bar (Demon Armor, Immolate and so on) to see what each effect is doing.</p>',sel:'#abilities'},
   {t:'The menu',h:'<p>The buttons on the right open your windows: demons, character, bags, spellbook, talents and more. Each has a hotkey, shown on the button. <b>Esc</b> closes a window.</p><p>Buttons glow when there is something worth doing there. The <b>?</b> button explains how everything works.</p>',sel:'#hudBR'}
  ],
  levelup:[
   {t:'You leveled up!',h:'<p>Three things are worth knowing now. Each one has a button on the right menu.</p>',sel:'#hudTC'},
   {t:'Bags: sell what you do not need',h:'<p>Kills drop gear and loot into your <b>Bags</b> 🎒. Equip anything better than what you wear, and <b>sell the rest for gold</b>. “Sell all grey” clears the junk in one press.</p><p>Gold buys bag space, auto-sell and other upgrades in the Gold Shop 💰.</p>',sel:'[data-win="bags"]',win:'bags',wl:'Open Bags'},
-  {t:'Talents: buy permanent upgrades',h:'<p>From <b>level 10</b> you earn a talent point every level, spent in <b>Talents</b> ✨. The button glows with a number when you have points to spend.</p><p>Talents change how you play: faster bolts, better shard luck, stronger demons.</p>',sel:'[data-win="talents"]',win:'talents',wl:'Look at Talents'},
+  {t:'Talents: buy permanent upgrades',h:'<p>From <b>level 10</b> you earn a talent point every level, spent in <b>Talents</b> ✨. Talents cost points, not shards. The button glows with a number when you have points to spend.</p><p>Talents change how you play: faster bolts, better shard luck, stronger demons.</p>',sel:'[data-win="talents"]',win:'talents',wl:'Look at Talents'},
   {t:'Demons: summon helpers',h:'<p>Spend shards in <b>Demons</b> 😈 to bind helpers who work for you. The <b>Imp</b> is available from level 1 for just 10 shards. Each one you add earns shards on its own, even while you are away.</p><p>The Demons button shows a star and pulses when you can afford one.</p>',sel:'[data-win="demons"]',win:'demons',wl:'Open Demons'}
  ]
 };
