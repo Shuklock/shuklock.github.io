@@ -380,7 +380,7 @@ const TALENTS=[
  {id:'pandemic',tree:0,tier:20,max:3,name:'Pandemic',desc:'Corruption and Bane of Agony ticks have a 7% chance per rank to crit for double damage.'},
  {id:'shmast',tree:0,tier:25,max:5,name:'Shadow Mastery',desc:'+2% speed for your own channel, Corruption, Immolate and Bane of Agony, per rank.'},
  {id:'wrack',tree:0,tier:30,max:1,ms:true,req:'siphonlife',name:'Wrack',desc:'Milestone: new ability. 15 instant Drain Soul ticks, each rolling for a shard. 45s cooldown. Needs Siphon Life.'},
- {id:'impfunnel',tree:1,tier:0,max:2,name:'Improved Health Funnel',desc:'Your demons feed you health: +0.05% of max health per second per rank, for each kind of demon you own.'},
+ {id:'impfunnel',tree:1,tier:0,max:2,name:'Improved Health Funnel',desc:'Your demons feed you health: +0.02% of max health per second per rank, for each kind of demon you own.'},
  {id:'impimp',tree:1,tier:0,max:3,name:'Improved Imp',desc:'+15% Imp damage per rank.'},
  {id:'embrace',tree:1,tier:0,max:5,name:'Demonic Embrace',desc:'+4% max health per rank.'},
  {id:'unholy',tree:1,tier:5,max:5,name:'Unholy Power',desc:'+5% damage for all demons per rank.'},
@@ -935,7 +935,7 @@ function loopBody(dt){
   else if(S.eatT>0){S.eatT-=dt;S.hp=Math.min(maxHp(),S.hp+maxHp()*.1*dt);if(S.eatT<=0){S.eatT=0;S.hp=maxHp();log('Full health. Back to it.','good');}}
   else{
     if(S.mode!=='life'){S.prog+=youTps()*dt;while(S.prog>=1&&S.soul>0){S.prog-=1;S.chanN=((S.chanN||0)+1)%5;tick('you');}}
-    if(tal('impfunnel')&&S.hp<maxHp())S.hp=Math.min(maxHp(),S.hp+maxHp()*.0005*tal('impfunnel')*demonTypes()*dt);
+    if(tal('impfunnel')&&S.hp<maxHp())S.hp=Math.min(maxHp(),S.hp+maxHp()*.0002*tal('impfunnel')*demonTypes()*dt);
     if(S.spells.darmor){S.armorT=(S.armorT||0)+dt;if(S.armorT>=2){S.armorT-=2;const h=maxHp()*armorRegen();if(S.hp<maxHp()){S.hp=Math.min(maxHp(),S.hp+h);fly('+'+Math.round(h),'#6fcf3a',null,null,true,'heal');}}}
     if(S.spells.corr){S.corrT+=corrTps()*dt;while(S.corrT>=1&&S.soul>0){S.corrT-=1;tick('dot');}}
     if(S.spells.immo){S.immoT=(S.immoT||0)+immoTps()*dt;while(S.immoT>=1&&S.soul>0){S.immoT-=1;tick('immo');}}
