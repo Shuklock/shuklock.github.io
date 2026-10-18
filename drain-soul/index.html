@@ -189,6 +189,11 @@ h1,h2,h3,.gem-slot .n,.lvlline,#pname,#mname,.bar .lbl,#wintitle,.zonename{font-
 @media (max-width:900px){.treecols{grid-template-columns:1fr}}
 .tree{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:6px}
 .tree h3{font-size:13px;padding:4px;display:flex;justify-content:space-between}
+.ttier{display:flex;align-items:center;gap:8px;margin:18px 0 6px;padding:5px 6px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);background:rgba(255,209,56,.07);border-top:2px solid var(--gold);border-radius:0 0 4px 4px}
+.ttier:first-of-type{margin-top:6px}
+.ttier small{margin-left:auto;font-weight:400;letter-spacing:0;text-transform:none;color:var(--muted)}
+.ttier.lock{color:var(--muted);background:rgba(255,255,255,.03);border-top-color:var(--line)}
+.tal.locked{opacity:.45}
 .tal{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:5px 6px;border-radius:6px;border:1px solid transparent;font-size:12px}
 .tal:hover{border-color:var(--line)}
 .tal.max{color:var(--fel)}
@@ -1278,8 +1283,8 @@ function renderTab(){
     const av=talPtsAvail();
     h+=`<div class="row"><div><div class="n">${av} point${av===1?'':'s'} available</div><div class="d">One per level from 10. Rows unlock at 5, 10, 15, 20, 25 and 30 points in a tree, and some talents need another first. Milestones in gold.</div></div><button data-a="respec" ${talPtsUsed()&&canAfford(respecCost())?'':'disabled'}>Respec (${respecCostText()})</button></div>`;
     h+='<div class="treecols">'+TREES.map((tn,ti)=>{let t=`<div class="tree"><h3><span>${tn}</span><span class="muted">${treePts(ti)} pts</span></h3>`;let lastTier=-1;
-      TALENTS.filter(x=>x.tree===ti).forEach(x=>{if(x.tier!==lastTier){lastTier=x.tier;t+=`<div class="tier">${x.tier} points</div>`;}const r=tal(x.id);const ok=av>0&&r<x.max&&treePts(ti)>=x.tier&&(!x.req||tal(x.req));
-        t+=`<div class="tal ${r>=x.max?'max':''} ${x.ms?'milestone':''}"><div><div class="n">${x.name} <span class="muted">${r}/${x.max}</span></div><div class="d">${x.desc}</div></div><button data-a="tal" data-id="${x.id}" ${ok?'':'disabled'}>+</button></div>`;});
+      TALENTS.filter(x=>x.tree===ti).forEach(x=>{if(x.tier!==lastTier){lastTier=x.tier;const lk=treePts(ti)<x.tier;t+=`<div class="ttier ${lk?'lock':''}">${lk?'🔒 ':''}${x.tier} points<small>${lk?(x.tier-treePts(ti))+' more to unlock':'unlocked'}</small></div>`;}const r=tal(x.id);const ok=av>0&&r<x.max&&treePts(ti)>=x.tier&&(!x.req||tal(x.req));
+        t+=`<div class="tal ${r>=x.max?'max':''} ${x.ms?'milestone':''} ${(treePts(ti)<x.tier||(x.req&&!tal(x.req)))?'locked':''}"><div><div class="n">${x.name} <span class="muted">${r}/${x.max}</span></div><div class="d">${x.desc}</div></div><button data-a="tal" data-id="${x.id}" ${ok?'':'disabled'}>+</button></div>`;});
       return t+'</div>';}).join('')+'</div>';
   }else if(tab==='ach'){
     h+=`<div class="muted" style="padding:4px">${achCount()}/${ACH.length} · +${achCount()}% drain speed (Fel Corruption)</div>`;
