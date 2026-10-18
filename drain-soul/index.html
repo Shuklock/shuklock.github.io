@@ -778,7 +778,7 @@ let landKey='';
 // ---------- the drain ----------
 function bossLock(z){const t=(S.bossDead||{})[z]||0;return Math.max(0,t-Date.now()/1000);}
 function spawn(){S.cast=null;S.castCd=6+Math.random()*6;S.enrageT=0;const base=curMob();if(!base.elite&&!base.ev){S.mobRar=rollMobRarity(base);if(S.mobRar===2){log(`A rare ${base.n} appears! Blue shards and better loot, if you can take it.`,'loot');fly('Rare!','#4aa3ff');}else if(S.mobRar===1)fly('Uncommon','#1eff00',null,null,true);}else S.mobRar=0;
-  const m=curMob();S.soulMax=soulNeed(m);S.soul=S.soulMax;S.bolt=0;
+  const m=curMob();S.soulMax=soulNeed(m);S.soul=S.soulMax;
   if(S.havoc>0){S.soul=Math.max(1,S.soul-S.havoc);S.havoc=0;}}
 function giveShard(r,tag){S.shards[r]++;S.life++;S.seen[r]=true;if(r>=2||tag==='★')fly('+1 '+RAR[r]+(tag?' '+tag:''),RCOL[r],null,null,false,'shard');else pendingShards[r]++;
   if(r>=2)log(`<span class="t${r}">${RAR[r]}</span> shard from ${curMob().n}${tag?' '+tag:''}.`,'loot');}
