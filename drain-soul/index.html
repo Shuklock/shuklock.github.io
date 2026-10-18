@@ -1200,13 +1200,14 @@ function renderTab(){
     if(selItem&&selItem.where==='bag'){const it=S.bag.find(x=>x.uid===selItem.uid);if(it)det=it.junk?`<span><span class="t0">${it.name}</span> ×${it.count} <span class="muted">junk · ${it.price}g each</span></span><button data-a="sellBag" data-id="${it.uid}">Sell ${sellPrice(it)}g</button>`:`<span>${pairHtml(it)}</span><span style="display:flex;gap:6px;align-self:flex-start"><button data-a="equipBag" data-id="${it.uid}">Equip</button><button data-a="sellBag" data-id="${it.uid}">Sell ${sellPrice(it)}g</button></span>`;}
     h+=`<div class="detail">${det}</div>`;
     // character sheet
-    const hc=Math.round(missBase()*1000)/10,hg=Math.round(hitPct()*1000)/10;const hitNote=hg>=hc?`<span class="t1">capped</span> (${hc}% needed in ${ZONES[S.zone].name}${hg>hc?', '+Math.round((hg-hc)*10)/10+'% wasted':''})`:`${hg}% of ${hc}% needed in ${ZONES[S.zone].name}`;
-    const sheet=[['Level',S.lvl],['Health',maxHp()],['Damage taken',Math.round(dmgTakenMult()*100)+'%'],['Demon Armor regen',S.spells.darmor?(Math.round(armorRegen()*1000)/10)+'% per 2s':'none'],
-      ['Channel speed',youTps().toFixed(2)+' ticks/s'],['Corruption',corrTps().toFixed(2)+' ticks/s'],['Immolate',immoTps().toFixed(2)+' ticks/s'],['Demons',petTps().toFixed(2)+' ticks/s'],['Shadow Bolt',clicksPerCast()+' clicks per cast, '+boltPower().toFixed(2)+' damage'],
-      ['Shard chance per tick',Math.round(shardChance()*100)+'%'],['Critical drain',Math.round(critChance()*100)+'%'],['Hit',hitNote],['Resist chance',Math.round(resistChance()*100)+'%'],['Shards per minute',fmt(shardsPerSec()*60)]];
-    h+='<div class="tier" style="padding:8px 4px 2px">Character</div><div class="row" style="display:block">'+sheet.map(([k,v])=>`<div class="stat"><span>${k}</span><span>${v}</span></div>`).join('')+'</div>';
+    const noGear=f=>{const g=S.gear;S.gear={};let v;try{v=f();}finally{S.gear=g;}return v;};
+    const sl=(label,f,fmt)=>{const t=f(),b=noGear(f),dd=t-b;return [label,`<b>${fmt(t)}</b>`+(Math.abs(dd)>1e-6?` <span class="muted">${fmt(b)} base</span> <span class="t1">${dd>0?'+':'−'}${fmt(Math.abs(dd))} gear</span>`:'')];};
+    const ps=v=>v.toFixed(2)+'/s',pc=v=>(Math.round(v*1000)/10)+'%',nn=v=>String(Math.round(v*100)/100);
+    const grp=(t,rows)=>`<div class="tier" style="padding:8px 4px 2px">${t}</div><div class="row" style="display:block">`+rows.map(([k,v])=>`<div class="stat"><span>${k}</span><span style="text-align:right">${v}</span></div>`).join('')+'</div>';
+    h+=grp('Damage · level '+S.lvl,[sl('Drain Soul speed',youTps,ps),sl('Corruption',corrTps,ps),sl('Immolate',immoTps,ps),['Demons',`<b>${petTps().toFixed(2)}/s</b>`],sl(`Shadow Bolt per cast (${clicksPerCast()} clicks)`,boltPower,nn)]);
+    h+=grp('Shards',[sl('Shard chance per tick',shardChance,pc),sl('Critical drain',critChance,pc),sl('Hit',hitPct,pc),['Resisted ticks',`<b>${pc(resistChance())}</b> <span class="muted">${hitPct()>=missBase()?'hit capped':'needs '+pc(missBase())+' hit to cap'}</span>`],['Shards per minute',`<b>${fmt(shardsPerSec()*60)}</b>`]]);
+    h+=grp('Survival',[sl('Health',maxHp,nn),sl('Demon Armor regen per 2s',()=>S.spells.darmor?armorRegen():0,pc),['Damage taken',`<b>${pc(dmgTakenMult())}</b>`]]);
     {const c=setCounts(S);const lines=Object.keys(c).map(nm=>`${nm} (${c[nm]}/4): `+Object.keys(SETS[nm].bonusText).map(n=>`<span class="${c[nm]>=+n?'t1':'muted'}">${n}pc ${SETS[nm].bonusText[n]}</span>`).join(' · '));if(lines.length)h+='<div class="tier" style="padding:8px 4px 2px">Set bonuses</div><div class="row"><div class="d">'+lines.join('<br>')+'</div></div>';}
-    h+='<div class="tier" style="padding:8px 4px 2px">Totals from gear</div><div class="row"><div class="d">'+Object.keys(STATS).map(k=>`${STATS[k]} +${Math.round(gearStat(k)*10)/10}%${k==='hit'&&hitPct()>=missBase()?' <span class="t1">(capped)</span>':''} <span class="muted">(${STATDESC[k]})</span>`).join(' · ')+'</div></div>';
     h+='<div class="muted" style="padding:6px 4px;font-size:12px">Account perks are in the Gold Shop (G).</div>'
   }else if(tab==='bags'){
     const AB={head:'Head',chest:'Chest',legs:'Legs',hands:'Hands',wand:'Wand',trinket:'Trinket'};
