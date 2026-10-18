@@ -518,8 +518,17 @@ const RANKS=[
  {id:'fear',name:'Fear',max:2,req:'fear',lvls:[32,56],desc:'+1 second per rank.',cost:r=>({g:trainGold(32+24*r),1:6*Math.pow(2,r),2:r>=1?2:0})},
  {id:'coil',name:'Death Coil',max:2,req:'coil',lvls:[42,54],desc:'Heals 5% more per rank.',cost:r=>({g:trainGold(42+12*r),1:8*Math.pow(2,r),2:2})},
  {id:'coe',name:'Curse of the Elements',max:2,req:'coe',lvls:[46,60],desc:'+5% extra-damage chance per rank.',cost:r=>({g:trainGold(46+14*r),1:8*Math.pow(2,r),2:2})},
- {id:'council',name:'Shadow Council',max:1,lvl:40,desc:'Unlocks breaking shards down: 1 shard of a tier into 5 of the tier below.',cost:r=>({g:60,1:40})},
+ {id:'council',name:'Shadow Council',max:1,lvl:40,desc:'Unlocks breaking shards down: 1 shard of a tier into 5 of the tier below, and making offerings.',cost:r=>({g:60,1:40})},
 ];
+// the Uncommon-shard part of every rank scales with the level it unlocks at (x1 at level 1, x2 at 30, x5 at 60)
+RANKS.forEach(rk=>{const f=rk.cost;rk.cost=r=>{const c=f(r);if(c[1]){const l=(rk.lvls&&rk.lvls[r])||rk.lvl||1;c[1]=Math.round(c[1]*(1+Math.pow(l/30,2)));}return c;};});
+// demon empowerment and Council offerings: shard sinks once demons are capped
+const EMP_MAX=8,EMP_BASE={imp:150,vw:250,succ:400,felh:700,inf:1200,doom:2000},OFFER_COST=800;
+const empLevel=id=>(S.emp&&S.emp[id])||0;
+function empCost(d){const n=empLevel(d.id);const c={0:Math.floor(EMP_BASE[d.id]*Math.pow(1.55,n))};if(n>=3)c[1]=n*2;if(n>=6)c[2]=n-4;return c;}
+function canEmp(d){return S.demons[d.id]>=d.max&&empLevel(d.id)<EMP_MAX&&canAfford(empCost(d));}
+function buyEmp(id){const d=DEMONS.find(x=>x.id===id);if(d&&canEmp(d)){pay(empCost(d));S.emp=S.emp||{};S.emp[id]=empLevel(id)+1;log(`${d.name} empowered to level ${S.emp[id]}.`);return true;}}
+function offer(){if(rank('council')&&S.shards[0]>=OFFER_COST){S.shards[0]-=OFFER_COST;const r=Math.random();const t=r<.03?4:r<.3?3:2;S.shards[t]++;S.life++;S.seen[t]=true;fly('+1 '+RAR[t],RCOL[t],null,null,false,'shard');log(`The Council accepts your offering and gives you a <span class="t${t}">${RAR[t]}</span> shard.`,'loot');}}
 const LEGACY=[
  {id:'veteran',name:'Veteran',max:1,cost:2,desc:'New warlocks start at level 10.'},
  {id:'rested',name:'Rested',max:3,cost:1,desc:'+20% XP per rank.'},
@@ -553,7 +562,7 @@ const ACH=[
 function freshState(keep){
   const lp=keep?keep.legacy:{points:0,perks:{}};
   const s={lvl:1,xp:0,hp:100,shards:[0,0,0,0,0],life:0,souls:0,clicks:0,deaths:0,corpse:0,corpseTotal:0,
-    demons:{},spells:{darmor:true},tal:{},ranks:{},zone:0,mob:0,cleared:[],cds:{},curse:null,hs:0,sstone:false,mode:'drain',
+    demons:{},emp:{},spells:{darmor:true},tal:{},ranks:{},zone:0,mob:0,cleared:[],cds:{},curse:null,hs:0,sstone:false,mode:'drain',
     soul:0,soulMax:1,prog:0,petProg:0,corrT:0,fear:0,conflagT:0,havoc:0,shield:0,eatT:0,lifeT:0,mobRar:0,coaBoost:false,autosell:{},cast:null,castCd:8,enrageT:0,lastInput:Date.now(),
     event:null,eventT:180+Math.random()*120,fighting:null,bossDead:{},
     seen:[false,false,false,false,false],flags:{},ach:keep?keep.ach:{},prestiges:keep?keep.prestiges:0,legacy:lp,last:Date.now(),
@@ -587,7 +596,7 @@ function clicksPerCast(){return Math.max(1,3-tal('bane'));}
 function boltPower(){let p=1*(1+.08*tal('isb'))*(1+.12*rank('bolt'))*(1+gearStat('power')/100);if(S.spells.immo)p*=1+.04*tal('fabr');p*=1+.03*tal('shadowflame')*((S.spells.corr?1:0)+(S.spells.immo?1:0)+(S.coaT>0?1:0));if(tal('incinerate')&&S.soul<S.soulMax*.35)p*=1.35;if(S.conflagT>0)p*=3;return p;} // health removed per bolt
 const clickPull=boltPower;
 function petTps(){let t=0;const u=(1+.05*tal('unholy'))*(1+.05*tal('energies'));
-  DEMONS.forEach(d=>{let m=u;if(d.id==='imp')m*=1+.15*tal('impimp');if(d.id==='vw')m*=1+.15*tal('impvw');if(d.id==='succ')m*=1+.15*tal('impsayaad');if(d.id==='felh')m*=1+.15*tal('impfelh');t+=S.demons[d.id]*d.tps*m;});
+  DEMONS.forEach(d=>{let m=u;if(d.id==='imp')m*=1+.15*tal('impimp');if(d.id==='vw')m*=1+.15*tal('impvw');if(d.id==='succ')m*=1+.15*tal('impsayaad');if(d.id==='felh')m*=1+.15*tal('impfelh');m*=1+.08*empLevel(d.id);t+=S.demons[d.id]*d.tps*m;});
   return t*globalHaste()*(1+.05*(S.lvl-1));}
 function immoTps(){if(!S.spells.immo)return 0;return .25*(1+.08*rank('immo'))*(1+.06*tal('aftermath'))*(1+.02*tal('shmast'))*(1+gearStat('haste')/100)*globalHaste();}
 function corrTps(){if(!S.spells.corr)return 0;return (1/3)*(1+.1*tal('impcorr'))*(1+.12*rank('corr'))*(1+.02*tal('shmast'))*(1+gearStat('haste')/100)*globalHaste();}
@@ -987,6 +996,8 @@ $('tab').addEventListener('pointerdown',e=>{const b=e.target.closest('button,[da
   else if(a==='craftHs'){if(S.spells.hstone&&S.hs<1&&S.shards[0]>=25){S.shards[0]-=25;S.hs=1;}}
   else if(a==='craftSs'){if(S.spells.sstone&&!S.sstone&&S.shards[3]>=1){S.shards[3]--;S.sstone=true;log('Soulstone active.','good');}}
   else if(a==='rank'){const r=RANKS.find(x=>x.id===id);const cur=rank(id);const c=r.cost(cur);const lvOk=!(r.lvls&&S.lvl<r.lvls[cur])&&(!r.lvl||S.lvl>=r.lvl);if(cur<r.max&&(!r.req||S.spells[r.req])&&lvOk&&canAfford(c)){pay(c);S.ranks[id]=cur+1;log(`${r.name} rank ${cur+2}.`);}}
+  else if(a==='emp'){buyEmp(id);}
+  else if(a==='offer'){offer();}
   else if(a==='tm10'){const t=+id;if(rank('council')&&t>=1&&t<=4&&S.shards[t]>=10){S.shards[t]-=10;S.shards[t-1]+=50;S.seen[t-1]=true;}}
   else if(a==='tm'){const t=+id;if(rank('council')&&t>=1&&t<=4&&S.shards[t]>=1){S.shards[t]-=1;S.shards[t-1]+=5;S.seen[t-1]=true;}}
   else if(a==='tal'){const t=TALENTS.find(x=>x.id===id);if(talPtsAvail()>0&&tal(id)<t.max&&treePts(t.tree)>=t.tier&&(!t.req||tal(t.req))){S.tal[id]=tal(id)+1;S.hp=Math.min(S.hp,maxHp());}}
@@ -1165,7 +1176,7 @@ function renderTab(){
   const row=(n,d,cost,btn,cls)=>`<div class="row ${cls||''}"><div><div class="n">${n}</div><div class="d">${d}</div></div><div style="display:flex;align-items:center;gap:8px"><div class="cost">${cost}</div>${btn}</div></div>`;
   if(tab==='demons'){
     h+=`<div class="muted" style="padding:4px;font-size:12px">Each demon attacks your target, all the time, even while you are dead or away: one point of damage per tick. Demons grow with you: +5% per level. Their hits do not pull shards until Demonic Pact. Total: ${petTps().toFixed(2)} ticks/s.</div>`;
-    DEMONS.forEach(d=>{const c=demonCost(d);const lk=S.lvl<d.lvl;h+=row(`${d.name} <span class="muted">×${S.demons[d.id]} / ${d.max}</span>`,`${d.desc} ${(d.tps*(1+.05*(S.lvl-1))).toFixed(2)} ticks/s each at your level. You can bind at most ${d.max}.${lk?' Requires level '+d.lvl+'.':''}`,S.demons[d.id]>=d.max?'':costStr(c),`<button data-a="demon" data-id="${d.id}" ${!lk&&S.demons[d.id]<d.max&&canAfford(c)?'':'disabled'}>${S.demons[d.id]>=d.max?'Full':'Summon'}</button>`,lk?'locked':(S.demons[d.id]>0?'owned':''));});
+    DEMONS.forEach(d=>{const c=demonCost(d);const lk=S.lvl<d.lvl;h+=row(`${d.name} <span class="muted">×${S.demons[d.id]} / ${d.max}</span>`,`${d.desc} ${(d.tps*(1+.05*(S.lvl-1))).toFixed(2)} ticks/s each at your level. You can bind at most ${d.max}.${lk?' Requires level '+d.lvl+'.':''}`,S.demons[d.id]>=d.max?'':costStr(c),`<button data-a="demon" data-id="${d.id}" ${!lk&&S.demons[d.id]<d.max&&canAfford(c)?'':'disabled'}>${S.demons[d.id]>=d.max?'Full':'Summon'}</button>`,lk?'locked':(S.demons[d.id]>0?'owned':''));if(S.demons[d.id]>=d.max&&!lk){const el=empLevel(d.id);h+=row(`&nbsp;&nbsp;Empower ${d.name} <span class="muted">${el} / ${EMP_MAX}</span>`,`Every ${d.name} does +8% more damage per level (now +${8*el}%). Resets with the Ritual.`,el<EMP_MAX?costStr(empCost(d)):'',`<button data-a="emp" data-id="${d.id}" ${canEmp(d)?'':'disabled'}>${el<EMP_MAX?'Empower':'Max'}</button>`);}});
   }else if(tab==='gear'){
     const DP={head:[115,8],chest:[18,80],legs:[18,160],hands:[212,110],wand:[212,200],trinket:[212,22]};const AB={head:'Head',chest:'Chest',legs:'Legs',hands:'Hands',wand:'Wand',trinket:'Trinket'};
     let doll=`<div class="doll"><svg class="fig" viewBox="0 0 140 290" xmlns="http://www.w3.org/2000/svg"><path d="M70 18c-14 0-22 12-22 26v10h44V44c0-14-8-26-22-26z" fill="#3a2a5a"/><ellipse cx="70" cy="42" rx="11" ry="13" fill="#d9b89a"/><path d="M52 54h36l10 40-4 120-20 10H60l-20-10-4-120z" fill="#4a2a7a" stroke="#2b1750" stroke-width="2"/><path d="M40 100l-14 60 10 6 16-56zM100 100l14 60-10 6-16-56z" fill="#4a2a7a" stroke="#2b1750" stroke-width="2"/><circle cx="26" cy="166" r="6" fill="#d9b89a"/><circle cx="114" cy="166" r="6" fill="#d9b89a"/><path d="M62 224h16l4 50H58z" fill="#2b1750"/><path d="M118 60v150" stroke="#6a4a2a" stroke-width="4"/><circle cx="118" cy="56" r="7" fill="#9b5cff"/></svg>`;
@@ -1205,7 +1216,8 @@ function renderTab(){
     S.ah.items.forEach(it=>{const p=ahPrice(it);h+=row(itemHtml(it),`vs equipped ${SLOTS.find(x=>x[0]===it.slot)[1]}: ${compareHtml(it)}`,`<span style="color:var(--gold)">${p}g</span>`,`<button data-a="ahbuy" data-id="${it.uid}" ${S.account.gold>=p?'':'disabled'}>Buy</button>`);});
   }else if(tab==='council'){
     if(!rank('council')){const need=S.lvl<40?'Reach level 40, then train Shadow Council at the Trainer.':'Train Shadow Council at the Trainer (60g + 40 Uncommon).';h+=row('Shadow Council','Breaks a shard into 5 of the tier below, for when you have the wrong kind. '+need,'','',' locked');}
-    else{h+='<div class="muted" style="padding:4px;font-size:12px">Break a shard into five of the tier below. There is no way back up; higher tiers only come from the mobs that pay them.</div>';
+    else{h+=row('Offering to the Council',`Give ${fmt(OFFER_COST)} Common shards. You get one better shard: 70% Rare, 27% Epic, 3% Legendary. You have ${fmt(S.shards[0])}.`,'',`<button data-a="offer" ${S.shards[0]>=OFFER_COST?'':'disabled'}>Offer</button>`);
+      h+='<div class="muted" style="padding:4px;font-size:12px">Break a shard into five of the tier below. There is no way back up; higher tiers only come from the mobs that pay them.</div>';
       for(let t=4;t>=1;t--)h+=row(`Break <span class="t${t}">${RAR[t]}</span> → 5 <span class="t${t-1}">${RAR[t-1]}</span>`,`You have ${fmt(S.shards[t])} ${RAR[t]}`,`<span class="t${t}">1 ${RAR[t]}</span>`,`<button data-a="tm" data-id="${t}" ${S.shards[t]>=1?'':'disabled'}>Break</button>`);
       for(let t=4;t>=1;t--)if(S.shards[t]>=10)h+=row(`Break 10 <span class="t${t}">${RAR[t]}</span> → 50 <span class="t${t-1}">${RAR[t-1]}</span>`,'','',`<button data-a="tm10" data-id="${t}">Break 10</button>`);}
   }else if(tab==='shop'){
@@ -1288,7 +1300,7 @@ function importCode(code){code=(code||'').replace(/\s/g,'');if(code.slice(0,4)!=
   const arr=(x,n,def)=>{const o=[];for(let i=0;i<n;i++)o[i]=Array.isArray(x)?(x[i]??def):(x&&x[i]!==undefined?x[i]:def);return o;};
   f.shards=arr(d.shards,5,0).map(Number);f.seen=arr(d.seen,5,false).map(Boolean);f.cleared=arr(d.cleared,6,false).map(Boolean);
   if(!Array.isArray(f.bag))f.bag=Object.values(f.bag||{});f.lootQ=[];f.gear=f.gear&&!Array.isArray(f.gear)?f.gear:{};
-  for(const k of ['tal','ranks','spells','ach','flags','demons','bossDead'])if(!f[k]||typeof f[k]!=='object'||Array.isArray(f[k]))f[k]={};
+  for(const k of ['tal','ranks','spells','ach','flags','demons','emp','bossDead'])if(!f[k]||typeof f[k]!=='object'||Array.isArray(f[k]))f[k]={};
   if(!f.legacy||typeof f.legacy!=='object')f.legacy={points:0,perks:{}};if(!f.legacy.perks)f.legacy.perks={};
   if(!f.account||typeof f.account!=='object')f.account={gold:0,perks:{}};if(!f.account.perks)f.account.perks={};f.account.gold=Number(f.account.gold)||0;
   DEMONS.forEach(dm=>f.demons[dm.id]=Number(f.demons[dm.id])||0);
