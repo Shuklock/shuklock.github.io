@@ -303,10 +303,10 @@ body{touch-action:manipulation;overscroll-behavior:none;-webkit-tap-highlight-co
   <button data-win="bags" title="Bags (B)">🎒<small>B</small></button>
   <button data-win="talents" title="Talents (T)">✨<small>T</small></button>
   <button data-win="ah" title="Auction House (A)">⚖<small>A</small></button>
-  <button data-win="shop" title="Gold Shop (G)">💰<small>G</small></button>
   <button data-win="council" title="Shadow Council (S)">🜏<small>S</small></button>
-  <button data-win="ach" title="Achievements (Y)">🏆<small>Y</small></button>
+  <button data-win="shop" title="Gold Shop (G)">💰<small>G</small></button>
   <button data-win="ritual" title="Ritual of Doom (R)">💀<small>R</small></button>
+  <button data-win="ach" title="Achievements (Y)">🏆<small>Y</small></button>
   <button data-win="spellbook" title="Spellbook (P)">📖<small>P</small></button>
   <button data-win="help" title="Help (H)">?<small>H</small></button>
   <button id="morebtn" title="More">⋯</button>
@@ -968,7 +968,7 @@ const TABS=[['demons','Demons'],['gear','Gear'],['trainer','Trainer'],['spellboo
 const WIN_TITLES={demons:'Demons',gear:'Character',bags:'Bags',trainer:'Trainer',spellbook:'Spellbook',talents:'Talents',ach:'Achievements',ritual:'Ritual of Doom',help:'How it works',map:'Map',ah:'Auction House',council:'Shadow Council',shop:'Gold Shop'};
 const WIN_KEYS={KeyD:'demons',KeyC:'gear',KeyB:'bags',KeyP:'spellbook',KeyT:'talents',KeyY:'ach',KeyR:'ritual',KeyH:'help',KeyM:'map',KeyN:'trainer',KeyA:'ah',KeyS:'council',KeyG:'shop'};
 let winOpen=null;
-const WIN_ORDER=['demons','gear','bags','talents','ah','shop','council','ach','ritual','spellbook','help'];
+const WIN_ORDER=['demons','gear','bags','talents','ah','council','shop','ritual','ach','spellbook','help'];
 let mapOpen=new Set();
 function openWin(name){if(winOpen===name){closeWin();return;}winOpen=name;if(name==='map')mapOpen=new Set([S.zone]);tab=name;tabDirty=true;$('wintitle').textContent=WIN_TITLES[name]||name;$('win').classList.add('open');$('win').classList.toggle('wide',name==='talents');$('tab').scrollTop=0;
   $('wintabs').innerHTML=WIN_ORDER.map(w=>`<button data-win="${w}" class="${w===name?'on':''}">${WIN_TITLES[w]}</button>`).join('');$('wintabs').style.display=WIN_ORDER.includes(name)?'':'none';}
