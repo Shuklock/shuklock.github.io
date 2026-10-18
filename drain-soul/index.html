@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Drain Soul — a warlock idle game</title>
+<title>Shardlock Idle — a warlock idle game</title>
+<link rel="icon" type="image/png" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&display=swap">
 <style>
 :root{
@@ -114,6 +115,7 @@ h1,h2,h3,.gem-slot .n,.lvlline,#pname,#mname,.bar .lbl,#wintitle,.zonename{font-
 .abilities .eat{margin-left:6px;border-color:#6a5a3a}
 .abilities button:disabled{opacity:.5}
 .corpse{background:#3a1515;border:1px solid #8a2a2a;padding:6px;border-radius:8px;text-align:center;margin:4px 0}
+#brand{position:fixed;left:14px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:2;display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none;user-select:none}#brand img{width:96px;height:96px;filter:drop-shadow(0 3px 8px rgba(0,0,0,.7))}#brand span{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.75);text-shadow:0 1px 3px #000}@media (max-width:1199px){#brand img{width:72px;height:72px}#brand span{display:none}}@media (max-width:999px){#brand{display:none}}
 #hudBR{right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:4px}
 .menu button{width:46px;height:46px;padding:0;display:grid;place-items:center;font-size:18px;position:relative;background:rgba(10,8,16,.85)}
 .menu button small{position:absolute;bottom:2px;right:4px;font-size:9px;color:var(--muted)}
@@ -297,6 +299,7 @@ body{touch-action:manipulation;overscroll-behavior:none;-webkit-tap-highlight-co
   <div class="mdesc muted" id="mdesc"></div>
 </div>
 
+<div id="brand" aria-label="Shardlock Idle"><img src="logo.png" alt="" width="96" height="96"><span>Shardlock Idle</span></div>
 <div class="hud menu" id="hudBR">
   <button data-win="demons" title="Demons (D)">😈<small>D</small></button>
   <button data-win="gear" title="Character (C)">🧙<small>C</small></button>
@@ -1313,7 +1316,7 @@ function renderTab(){
 // ---------- transfer codes (shared with the addon; this numbering is canonical) ----------
 function exportCode(){const c=Object.assign({},S);c.cds={};c.event=null;c.fighting=null;c.corpse=0;c.lootQ=[];c.cleared=[0,1,2,3,4,5].map(i=>!!S.cleared[i]);c.seen=[0,1,2,3,4].map(i=>!!S.seen[i]);c.source='web';
   return 'DS1.'+btoa(unescape(encodeURIComponent(JSON.stringify(c))));}
-function importCode(code){code=(code||'').replace(/\s/g,'');if(code.slice(0,4)!=='DS1.')return 'Not a Drain Soul code.';let d;
+function importCode(code){code=(code||'').replace(/\s/g,'');if(code.slice(0,4)!=='DS1.')return 'Not a Shardlock Idle code.';let d;
   try{d=JSON.parse(decodeURIComponent(escape(atob(code.slice(4)))));}catch(e){return 'Could not read that code.';}
   if(!d||typeof d.lvl!=='number')return 'Could not read that code.';
   const f=freshState();for(const k in d){if(k!=='source')f[k]=d[k];}
