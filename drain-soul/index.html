@@ -340,7 +340,7 @@ const ZONES=[
 // demons: ticks per second contributed to the drain
 const DEMONS=[
  {id:'imp',max:8,name:'Imp',lvl:1,cost:10,tps:.04,desc:'Firebolts. Many imps, many firebolts.'},
- {id:'vw',max:5,name:'Voidwalker',lvl:10,cost:60,tps:.08,desc:'Slow hitter, and fodder: Sacrifice one from the action bar for a shield worth 30% of your health. 60s cooldown. Cheap enough to keep a stack.'},
+ {id:'vw',max:5,name:'Voidwalker',lvl:10,cost:60,tps:.08,desc:'Slow hitter and protector: Sacrifice from the action bar for a shield worth 30% of your health. Voidwalkers stop attacking during the 60s cooldown.'},
  {id:'succ',max:4,name:'Succubus',lvl:20,cost:300,extra:{1:2},tps:.25,desc:'Lash of Pain. Costs 2 Uncommon to bind.'},
  {id:'felh',max:5,name:'Felhunter',lvl:30,cost:1500,extra:{1:5},tps:.7,desc:'Devours. Each one adds +1% shard chance per drain tick (max +10%). Owning one puts Spell Lock on your bar. Costs 5 Uncommon to bind.'},
  {id:'inf',max:2,name:'Infernal',lvl:50,cost:8000,extra:{2:1},tps:2.5,desc:'Immolation aura. Hits everything. Costs a Rare to bind.'},
@@ -604,7 +604,7 @@ function clicksPerCast(){return Math.max(1,3-tal('bane'));}
 function boltPower(){let p=1*(1+.08*tal('isb'))*(1+.12*rank('bolt'))*(1+gearStat('power')/100);if(S.spells.immo)p*=1+.04*tal('fabr');p*=1+.03*tal('shadowflame')*((S.spells.corr?1:0)+(S.spells.immo?1:0)+(S.coaT>0?1:0));if(tal('incinerate')&&S.soul<S.soulMax*.35)p*=1.35;if(S.conflagT>0)p*=3;return p;} // health removed per bolt
 const clickPull=boltPower;
 function petTps(){let t=0;const u=(1+.05*tal('unholy'))*(1+.05*tal('energies'));
-  DEMONS.forEach(d=>{let m=u;if(d.id==='imp')m*=1+.15*tal('impimp');if(d.id==='vw')m*=1+.15*tal('impvw');if(d.id==='succ')m*=1+.15*tal('impsayaad');if(d.id==='felh')m*=1+.15*tal('impfelh');m*=1+.08*empLevel(d.id);t+=S.demons[d.id]*d.tps*m;});
+  DEMONS.forEach(d=>{let m=u;if(d.id==='imp')m*=1+.15*tal('impimp');if(d.id==='vw')m*=1+.15*tal('impvw');if(d.id==='succ')m*=1+.15*tal('impsayaad');if(d.id==='felh')m*=1+.15*tal('impfelh');m*=1+.08*empLevel(d.id);if(d.id==='vw'&&S.cds.sacrifice>0)m=0;t+=S.demons[d.id]*d.tps*m;});
   return t*globalHaste()*(1+.05*(S.lvl-1));}
 function immoTps(){if(!S.spells.immo)return 0;return .25*(1+.08*rank('immo'))*(1+.06*tal('aftermath'))*(1+.02*tal('shmast'))*(1+gearStat('haste')/100)*globalHaste();}
 function corrTps(){if(!S.spells.corr)return 0;return (1/3)*(1+.1*tal('impcorr'))*(1+.12*rank('corr'))*(1+.02*tal('shmast'))*(1+gearStat('haste')/100)*globalHaste();}
@@ -901,7 +901,7 @@ function cast(id){
   if(id==='eat'){if(S.eatT>0)return;if(S.mode==='life'){S.mode='drain';S.lifeT=0;S.cds.drainlife=30;}S.eatT=10;S.cds.eat=180;const wasBoss=S.mob===4&&S.fighting!=='ev';if(S.fighting==='ev'){S.fighting=null;S.event=null;}if(wasBoss){S.mob=3;buildPickers();}spawn();S.coaT=0;fly('You run off to eat','#e8b94a',null,null,false,'heal');log(wasBoss?'You flee the elite and sit down to eat. You will face its minions when you get up.':'You back off and sit down to eat. The target resets.');return;}
   if(id==='craftHs'){if(S.spells.hstone&&S.hs<1&&S.shards[0]>=25){S.shards[0]-=25;S.hs=1;fly('Healthstone','#6fcf3a',null,null,true);}return;}
   if(id==='craftSs'){if(S.spells.sstone&&!S.sstone&&S.shards[3]>=1){S.shards[3]--;S.sstone=true;log('Soulstone active.','good');}return;}
-  if(id==='sacrifice'){if(S.demons.vw<1)return;S.demons.vw--;S.shield=shieldMax();S.cds.sacrifice=60;if(tal('sacrifice'))S.hp=Math.min(maxHp(),S.hp+maxHp()*.25);fly('Sacrifice','#7fb0ff',null,null,false,'heal');log('Your Voidwalker throws itself in the way. Shield up.');return;}
+  if(id==='sacrifice'){if(S.demons.vw<1)return;S.shield=shieldMax();S.cds.sacrifice=60;if(tal('sacrifice'))S.hp=Math.min(maxHp(),S.hp+maxHp()*.25);fly('Sacrifice','#7fb0ff',null,null,false,'heal');log('Your Voidwalkers throw themselves in the way. Shield up.');return;}
   if(id==='cow'){S.curse=S.curse==='cow'?null:'cow';return;}
   if(id==='coe'){S.curse=S.curse==='coe'?null:'coe';return;}
   if(id==='coex'){if(!tal('exhaust'))return;S.curse=S.curse==='coex'?null:'coex';return;}
@@ -1071,7 +1071,7 @@ function cdBtn(id,label,extra){const sp_=SPELLS.find(s=>s.id===id)||{};const cd=
 let abKey='';
 const ABIL_TIPS={spelllock:['Spell Lock','Your Felhunter silences the target, cancelling whatever it is casting and locking it out for 12s. Only usable while the target is casting.','24s cooldown, shorter with Improved Felhunter'],sstoneOn:['Soulstone','Active. If you die, you come back at half health and skip the corpse run.',''],eat:['Eat and rest','Back off, reset the target and heal to full over 10 seconds. Any click stops it. Fleeing an elite or Infernal puts you on the zone’s top regular mob.','3 min cooldown'],
  hs:['Healthstone','Heals 40% of your health, +10% per Healthstone rank.','60s cooldown'],craftHs:['Create Healthstone','Craft a Healthstone for 25 Common shards. You can hold one.',''],
- craftSs:['Create Soulstone','Costs 1 Epic shard. Die with it active and you skip the corpse run.',''],sacrifice:['Sacrifice','Consume one Voidwalker for a shield worth 30% of your health (+10% per Improved Voidwalker rank). Damage hits the shield first.','60s cooldown'],
+ craftSs:['Create Soulstone','Costs 1 Epic shard. Die with it active and you skip the corpse run.',''],sacrifice:['Sacrifice','Your Voidwalkers shield you for 30% of your health (+10% per Improved Voidwalker rank). Damage hits the shield first. Voidwalkers deal no damage until the cooldown ends.','60s cooldown'],
  shadowburn:['Shadowburn','Instantly kill a target at 25% health or less.','15s cooldown'],conflag:['Conflagrate','For 8 seconds Shadow Bolts deal triple damage.','30s cooldown'],coex:['Curse of Exhaustion','The target deals 15% less damage to you and your channel ticks 10% faster against it. One curse at a time.',''],wrack:['Wrack','15 instant Drain Soul ticks, each rolling for a shard.','45s cooldown']};
 function abilityTip(id){if(ABIL_TIPS[id])return ABIL_TIPS[id];const sp=SPELLS.find(x=>x.id===id);if(sp)return [sp.name,sp.desc,sp.cd?sp.cd+'s cooldown':''];return [id,'',''];}
 function showTip(btn){const [n,d,c]=abilityTip(btn.dataset.id);tipAt(btn,n,d,c);}
@@ -1123,7 +1123,7 @@ function slotAbility(id){
     case 'fear':return S.spells.fear?{id,lbl:'Fear'}:null;
     case 'coil':return S.spells.coil?{id,lbl:'Death Coil'}:null;
     case 'hs':return S.spells.hstone?(S.hs>=1?{id:'hs',lbl:'Healthstone (ready)'}:{id:'craftHs',lbl:'Create Healthstone (25)',craft:true}):null;
-    case 'sacrifice':return S.demons.vw>0?{id,lbl:`Sacrifice (${S.demons.vw})`}:null;
+    case 'sacrifice':return S.demons.vw>0?{id,lbl:'Sacrifice'}:null;
     case 'spelllock':return S.demons.felh>0?{id,lbl:S.cast?'Spell Lock!':'Spell Lock',on:!!S.cast}:null;
     case 'craftSs':return S.spells.sstone?(S.sstone?{id:'sstoneOn',lbl:'Soulstone active',on:true,dis:true}:{id:'craftSs',lbl:'Create Soulstone (1 Epic)',craft:true}):null;
     case 'shadowburn':return tal('shadowburn')?{id,lbl:'Shadowburn'}:null;
