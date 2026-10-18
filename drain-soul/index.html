@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Drain Soul — a warlock idle game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&display=swap">
+<style>
+:root{
+  --bg:#0c0a12;--bg2:#15111f;--panel:#1b1626;--panel2:#231c33;--line:#352b4a;
+  --text:#e6ddf5;--muted:#9a8db3;--fel:#7fe03a;--shadow:#9b5cff;--fire:#ff7a2a;
+  --hp:#c43b3b;--hp2:#5a1a1a;--gold:#e8b94a;--xp:#8a5cff;
+  --c0:#bdbdbd;--c1:#1eff00;--c2:#0070dd;--c3:#a335ee;--c4:#ff8000;
+  box-sizing:border-box;color-scheme:dark;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0c0a12;--text:#e6ddf5;}}
+:root[data-theme="dark"],:root[data-theme="light"]{--bg:#0c0a12;--text:#e6ddf5;}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;-webkit-text-size-adjust:none;text-size-adjust:none}
+/* Chrome on Android inflates text inside frames; a max-height on the block switches that heuristic off */
+.row,.row *,.list,.list *,#win,#win *{max-height:999999px}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,sans-serif;font-size:14px;line-height:1.4;-webkit-user-select:none;user-select:none}
+h1,h2,h3{margin:0;font-weight:600}
+button{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer}
+button:hover{border-color:var(--shadow)}
+button:disabled{opacity:.4;cursor:not-allowed}
+select{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+.muted{color:var(--muted)}
+.t0{color:var(--c0)}.t1{color:var(--c1)}.t2{color:var(--c2)}.t3{color:var(--c3)}.t4{color:var(--c4)}
+.gem{width:11px;height:11px;transform:rotate(45deg);border-radius:2px;display:inline-block}
+.r0{background:var(--c0)}.r1{background:var(--c1)}.r2{background:var(--c2)}.r3{background:var(--c3)}.r4{background:var(--c4)}
+/* stage */
+#stage{position:fixed;inset:0;cursor:pointer;z-index:0}
+#stage canvas{position:absolute;inset:0;width:100%;height:100%}
+.zonename{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.75);text-shadow:0 1px 3px #000;pointer-events:none;z-index:2}
+/* HUD */
+.hud{position:fixed;z-index:3;pointer-events:none}
+.hud>*{pointer-events:auto}
+.panel{background:linear-gradient(180deg,rgba(22,16,32,.82),rgba(10,8,16,.86));border:1px solid rgba(190,160,255,.18);border-radius:10px;padding:10px 12px;box-shadow:0 8px 24px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06)}
+h1,h2,h3,.gem-slot .n,.lvlline,#pname,#mname,.bar .lbl,#wintitle,.zonename{font-family:Cinzel,"Segoe UI",system-ui,serif;letter-spacing:.02em}
+#mname{font-weight:700}
+#tpanel.elite{border-color:var(--gold);box-shadow:0 0 18px rgba(232,185,74,.25),0 8px 24px rgba(0,0,0,.45)}
+#tpanel.infernal{border-color:var(--fire);box-shadow:0 0 18px rgba(255,122,42,.3),0 8px 24px rgba(0,0,0,.45)}
+.gem{box-shadow:0 0 6px currentColor}
+.gem.r0{color:#bdbdbd}.gem.r1{color:#1eff00}.gem.r2{color:#0070dd}.gem.r3{color:#a335ee}.gem.r4{color:#ff8000}
+#hudTL{top:calc(10px + env(safe-area-inset-top,0px));left:10px;width:300px}
+.lvlline{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;gap:8px}
+.gems{display:flex;gap:6px;margin-top:6px}
+.gem-slot{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 2px;border-radius:8px;background:rgba(255,255,255,.04);cursor:default}
+.gem-slot .gem{width:14px;height:14px;margin:3px}
+.gem-slot .n{font-size:13px;font-variant-numeric:tabular-nums;line-height:1}
+.gem-slot.main .n{font-size:16px;font-weight:700}
+.gem-slot .r{font-size:9px;color:var(--muted);line-height:1}
+.gem-slot.active{background:rgba(255,255,255,.1)}
+.bar{position:relative;height:16px;background:rgba(21,17,31,.9);border:1px solid var(--line);border-radius:5px;overflow:hidden;margin:4px 0}
+.bar>div{height:100%;transition:width .06s linear}
+.bar .hp{background:linear-gradient(90deg,var(--hp2),var(--hp))}
+.bar .xp{background:linear-gradient(90deg,#3b2a6e,var(--xp))}
+.bar .soul{background:linear-gradient(90deg,#6b1a1a,#d94a3a)}
+.bar .cast{background:linear-gradient(90deg,#3b2a6e,var(--shadow));transition:none}
+.bar .cast.life{background:linear-gradient(90deg,#2f5a1a,#6fcf3a)}
+.bar .cast.bolt{background:linear-gradient(90deg,#5a2a7a,#c9a6ff)}
+.bar.tall{height:22px}
+.bar .lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;text-shadow:0 1px 2px #000}
+.ticks{position:absolute;inset:0;display:flex;pointer-events:none}
+.ticks span{flex:1;border-right:2px solid rgba(255,255,255,.28)}
+.ticks span:last-child{border-right:none}
+#hudTR{top:calc(10px + env(safe-area-inset-top,0px));right:10px;display:flex;gap:8px;align-items:flex-start}
+.head{display:flex;align-items:center;gap:8px;padding:6px 10px 6px 6px;border-radius:10px;background:rgba(10,8,16,.78);border:1px solid rgba(255,255,255,.1);cursor:pointer}
+.head .face{width:40px;height:40px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#d9b89a,#8a6a4a 70%);border:2px solid #6a4a2a;position:relative;flex:none}
+.head .face::after{content:"";position:absolute;inset:-6px -4px auto -4px;height:22px;border-radius:50% 50% 0 0;background:#3a2a5a}
+.head .lbl{font-size:12px;line-height:1.2}
+.head .badge{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:#c43b3b;color:#fff;font-size:11px;display:grid;place-items:center;padding:0 5px;font-weight:700}
+.head.ready{border-color:var(--fel);box-shadow:0 0 10px rgba(127,224,58,.4)}
+.head{position:relative}
+.boltfloat{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(248px + env(safe-area-inset-bottom,0px));width:min(420px,70vw);z-index:3;pointer-events:none}
+.boltfloat .bar{height:22px;margin:0;background:rgba(10,8,16,.8);border-color:#6a4fa0;box-shadow:0 2px 10px rgba(0,0,0,.6)}
+#hudB{left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom,0px));width:min(760px,calc(100vw - 20px))}
+#tpanel{position:relative}
+#tpanel.elite{border-color:var(--gold)}
+#tpanel.infernal{border-color:var(--fire)}
+#tpanel.grey{border-color:#6a2a2a;background:rgba(40,10,14,.8)}
+.evbar{height:6px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden;margin-top:4px}.evbar>div{height:100%;background:var(--fire)}
+#tpanel h2{font-size:22px;text-shadow:0 2px 4px #000}
+.auras{display:flex;gap:6px;flex-wrap:wrap;min-height:20px;margin-top:4px}
+.dot{font-size:11px;padding:1px 7px;border-radius:10px;border:1px solid var(--line);background:var(--bg2)}
+.dot.sh{border-color:var(--shadow)}.dot.fi{border-color:var(--fire)}.dot.cu{border-color:var(--c1)}.dot.gd{border-color:var(--gold)}
+.pulse{animation:pulse .35s ease-out}
+@keyframes pulse{from{box-shadow:0 0 0 0 rgba(155,92,255,.6)}to{box-shadow:0 0 0 14px rgba(155,92,255,0)}}
+.abilities{display:grid;grid-template-columns:repeat(15,1fr);gap:5px;margin-top:8px}
+.abilities button,.abilities .empty{position:relative;height:48px;padding:0;font-size:11px;overflow:hidden;background:rgba(35,28,51,.9);display:grid;place-items:center;border:1px solid var(--line);border-radius:7px}
+.abilities .empty{background:rgba(18,13,28,.5);border-style:dashed;opacity:.5}
+.abilities button.craft{border-style:dashed}
+.abilities .ico{width:30px;height:30px;border-radius:6px;background:#120d1c;border:1px solid #3a2d52;display:grid;place-items:center;flex:none}
+.abilities .ico svg{width:22px;height:22px}
+.abilities button.on .ico{border-color:var(--fel);box-shadow:0 0 6px rgba(127,224,58,.5)}
+.abilities button .cdfill{position:absolute;left:0;top:0;bottom:0;background:rgba(0,0,0,.5);pointer-events:none}
+.abilities button.on{border-color:var(--fel);background:#1f3317}
+.abilities .key,.abilities .empty .key{position:absolute;top:1px;left:4px;font-size:9px;color:var(--muted)}
+.abilities .lb{display:none}
+.abilities .cdt{position:absolute;bottom:1px;right:4px;font-size:10px;text-shadow:0 1px 2px #000}
+.abilities .eat{margin-left:6px;border-color:#6a5a3a}
+.abilities button:disabled{opacity:.5}
+.corpse{background:#3a1515;border:1px solid #8a2a2a;padding:6px;border-radius:8px;text-align:center;margin:4px 0}
+#hudBR{right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:4px}
+.menu button{width:46px;height:46px;padding:0;display:grid;place-items:center;font-size:18px;position:relative;background:rgba(10,8,16,.85)}
+.menu button small{position:absolute;bottom:2px;right:4px;font-size:9px;color:var(--muted)}
+.menu button.on{border-color:var(--fel)}
+.menu button .badge{position:absolute;top:-6px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#c43b3b;color:#fff;font-size:11px;display:grid;place-items:center;padding:0 5px;font-weight:700}
+.menu button.glow{border-color:var(--gold);box-shadow:0 0 10px rgba(232,185,74,.5)}
+#tip{position:fixed;z-index:7;max-width:280px;background:rgba(10,8,16,.96);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;pointer-events:none;display:none;box-shadow:0 6px 20px rgba(0,0,0,.6)}
+#tip b{display:block;font-size:13px;margin-bottom:2px}
+#tip .muted{display:block;margin-top:3px}
+#notice{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%);z-index:6;background:rgba(10,8,16,.9);border:1px solid var(--gold);border-radius:12px;padding:18px 26px;text-align:center;font-size:20px;color:var(--gold);text-shadow:0 2px 6px #000;pointer-events:none;opacity:0;transition:opacity .4s}
+#notice.show{opacity:1}
+#notice small{display:block;font-size:13px;color:var(--text);margin-top:6px}
+#hudBL{left:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));width:300px;display:flex;flex-direction:column;gap:6px}
+#pframe.dead .bar .hp{background:linear-gradient(90deg,#3a1515,#5a2a2a)}
+.log{font-size:11px;color:var(--muted);max-height:48px;overflow:hidden;cursor:pointer;padding:4px 8px;background:rgba(10,8,16,.5);border-radius:8px}
+.log.open{max-height:220px;overflow:auto;background:rgba(10,8,16,.85)}
+.log div.good{color:var(--fel)}.log div.bad{color:#ff6b6b}.log div.loot{color:var(--c3)}.log div.lvl{color:var(--gold)}
+#banners{top:calc(44px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);width:min(680px,calc(100vw - 300px));display:flex;flex-direction:column;gap:6px}
+.event{background:#4a2010;border:1px solid var(--fire);border-radius:8px;padding:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px}
+/* windows */
+#win{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(620px,calc(100vw - 20px));max-height:min(78vh,760px) !important;display:none;flex-direction:column;z-index:5;background:rgba(14,11,20,.96);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.7)}
+#win.open{display:flex}
+#win .titlebar{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+#win .titlebar h3{font-size:15px}
+.winbody{display:flex;min-height:0;flex:1}
+#wintabs{display:flex;flex-direction:column;gap:4px;padding:10px 6px;border-right:1px solid var(--line);width:120px;flex:none;overflow:auto}
+#wintabs button{text-align:left;font-size:12px;padding:6px 8px;background:transparent;border-color:transparent}
+#wintabs button.on{background:var(--panel2);border-color:var(--line)}
+.list{display:flex;flex-direction:column;gap:6px;overflow:auto;padding:12px;flex:1;min-width:0}
+.list>*{flex:none}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.row.owned{border-color:#2d4a1f}
+.row.locked{opacity:.55}
+.row .n{font-weight:600;font-size:14px;line-height:1.3}
+.row .n .muted,.row .n small,.row .n .lv-grey,.row .n .lv-green,.row .n .lv-yellow,.row .n .lv-orange,.row .n .lv-red{font-size:12px;font-weight:400}
+.row .d{font-size:12px;color:var(--muted);line-height:1.35}
+.row .d span{font-size:12px}
+.row .cost{font-size:12px;white-space:nowrap;text-align:right}
+.row button{white-space:nowrap}
+.row button.on{border-color:var(--fel);background:#1f3317}
+.tier{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:6px 0 0}
+.stat{display:flex;justify-content:space-between;font-size:12px;padding:1px 0}
+.doll{position:relative;width:280px;height:320px;margin:0 auto;background:radial-gradient(ellipse at center,#2a1a3f,#15111f 75%);border:1px solid var(--line);border-radius:10px}
+.doll svg.fig{position:absolute;left:70px;top:20px;width:140px;height:290px}
+.slot{position:absolute;width:50px;height:50px;border:2px solid #3a2d52;border-radius:8px;background:#120d1c;display:grid;place-items:center;font-size:11px;color:var(--muted);cursor:pointer;text-align:center;line-height:1.1}
+.slot.q0{border-color:#8a8a8a}.slot.q1{border-color:var(--c1)}.slot.q2{border-color:#4aa3ff}.slot.q3{border-color:var(--c3)}.slot.q4{border-color:var(--c4)}
+.slot.sel,.bagslot.sel{outline:2px solid var(--fel)}
+.slot .lb{font-size:9px;text-transform:uppercase;letter-spacing:.05em}
+.bag{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin-top:6px}
+.bagslot{aspect-ratio:1;border:2px solid #2d2440;border-radius:6px;background:#120d1c;display:grid;place-items:center;font-size:11px;cursor:pointer;position:relative;color:var(--text)}
+.bagslot.empty{opacity:.45;cursor:default}
+.bagslot.q0{border-color:#8a8a8a}.bagslot.q1{border-color:var(--c1)}.bagslot.q2{border-color:#4aa3ff}.bagslot.q3{border-color:var(--c3)}.bagslot.q4{border-color:var(--c4)}
+.bagslot.junk{border-color:#6a6a6a;color:#bdbdbd}
+.bagslot .cnt{position:absolute;right:3px;bottom:1px;font-size:10px;color:#fff;text-shadow:0 1px 2px #000}
+.detail{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px}
+.treecols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+@media (max-width:900px){.treecols{grid-template-columns:1fr}}
+.tree{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:6px}
+.tree h3{font-size:13px;padding:4px;display:flex;justify-content:space-between}
+.tal{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:5px 6px;border-radius:6px;border:1px solid transparent;font-size:12px}
+.tal:hover{border-color:var(--line)}
+.tal.max{color:var(--fel)}
+.tal.milestone .n{color:var(--gold)}
+.tal .d{font-size:11px;color:var(--muted)}
+.tal button{padding:2px 8px;font-size:12px}
+small{color:var(--muted)}
+.lv-grey{color:#888}.lv-green{color:#5bd65b}.lv-yellow{color:#e8e04a}.lv-orange{color:#ff9c3a}.lv-red{color:#ff5a5a}
+#hidden{display:none}
+@media (max-width:820px){#hudTL{width:220px}#hudBL .log{display:none}#banners{width:calc(100vw - 20px);top:calc(120px + env(safe-area-inset-top,0px))}}
+#morebtn{display:none}
+/* phones */
+body{touch-action:manipulation;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+.boltfloat.inpanel{position:static;transform:none;width:100%;margin:0 0 6px;pointer-events:none}
+.boltfloat.inpanel .bar{height:18px}
+@media (max-width:700px){
+  .zonename{font-size:10px;top:calc(6px + env(safe-area-inset-top,0px))}
+  #hudTL{top:calc(6px + env(safe-area-inset-top,0px));left:6px;right:120px;width:auto;padding:6px 8px}
+  .gem-slot .r{display:none}.gem-slot .n{font-size:11px}.gem-slot.main .n{font-size:13px}
+  #hudTL .bar{height:10px;margin:3px 0}#hudTL .bar .lbl{font-size:9px}
+  #rate{display:none}
+  #hudTR{top:calc(6px + env(safe-area-inset-top,0px));right:6px;flex-direction:column;gap:6px;align-items:flex-end}
+  #mapbtn{padding:6px 10px;font-size:12px}
+  .head{padding:4px}.head .face{width:32px;height:32px}.head .lbl{display:none}
+  #banners{top:calc(96px + env(safe-area-inset-top,0px));width:calc(100vw - 12px)}
+  .event{font-size:11px;padding:5px 7px;flex-wrap:wrap;gap:4px;line-height:1.25}.event button{padding:3px 7px;font-size:11px}#banners{gap:4px}#banners .cmp{display:none}
+  #hudB{width:calc(100vw - 12px);bottom:calc(116px + env(safe-area-inset-bottom,0px))}
+  #hudBL{left:6px;right:6px;width:auto;bottom:calc(60px + env(safe-area-inset-bottom,0px))}
+  #pframe{padding:6px 8px}#pframe .lvlline{font-size:11px}
+  .abilities{display:flex;flex-wrap:nowrap;overflow-x:auto}.abilities button,.abilities .empty{min-width:48px;flex:none}.abilities .empty{display:none}
+  #hudBR button:nth-child(n+6):not(#morebtn){display:none}#morebtn{display:grid}#hudBR.more button:nth-child(n+6):not(#morebtn){display:grid}#hudBR.more{flex-wrap:wrap}
+  #wintabs{display:none}
+  #tpanel{padding:8px}
+  #tpanel h2{font-size:17px}
+  #mdesc{display:none}
+  .bar.tall{height:18px}
+  .abilities .ico{width:32px;height:32px}
+  #hudBR{left:6px;right:6px;bottom:calc(6px + env(safe-area-inset-bottom,0px));justify-content:space-between}
+  .menu button{flex:1;height:46px;width:auto}
+  #win{inset:0;left:0;top:0;transform:none;width:100vw;max-height:none !important;height:100%;border-radius:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+  .treecols{grid-template-columns:1fr}
+  .doll{width:260px;height:300px}
+  .bag{grid-template-columns:repeat(6,1fr)}
+}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="land"></canvas></div>
+<div class="zonename" id="zonename"></div>
+
+<div class="hud panel" id="hudTL">
+  <div class="lvlline"><span id="hdr"></span><span id="goldtxt" style="color:var(--gold)"></span></div>
+  <div class="bar"><div class="xp" id="xpbar"></div><div class="lbl" id="xplbl"></div></div>
+  <div class="gems" id="shards"></div>
+  <span id="rate" class="muted" style="display:none"></span>
+</div>
+
+<div class="hud" id="hudTR">
+  <button class="panel" id="mapbtn" title="Map (M)" style="padding:8px 12px">🗺 Map <small>M</small></button>
+  <div class="head" id="trainerhead" title="Trainer">
+    <div class="face"></div>
+    <div class="lbl" id="trainerlbl">Trainer<br><span class="muted">nothing new</span></div>
+    <div class="badge" id="trainerbadge" style="display:none">0</div>
+  </div>
+</div>
+
+<div class="hud" id="banners"><div id="event"></div><div id="loot"></div><div id="suggest"></div></div>
+
+<div class="hud" id="hudB">
+  <div class="panel" id="tpanel">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><h2 id="mname">—</h2><span class="muted" id="mdesc" style="font-size:12px;text-align:right"></span></div>
+    <div class="bar tall"><div class="soul" id="soulbar"></div><div class="lbl" id="soullbl"></div></div>
+    <div class="bar" id="mobcast" style="display:none;height:12px"><div class="cast" id="mobcastbar" style="width:0%;background:linear-gradient(90deg,#7a3a10,#ff9c3a)"></div><div class="lbl" id="mobcastlbl" style="font-size:11px"></div></div>
+    <div class="bar"><div class="cast bolt" id="boltbar" style="width:0%"></div><div class="lbl" id="boltlbl"></div></div>
+    <div class="bar" id="drainrow"><div class="cast" id="castbar" style="width:0%"></div><div class="ticks"><span></span><span></span><span></span><span></span><span></span></div><div class="lbl" id="castlbl"></div></div>
+    <div class="auras" id="auras"></div>
+    <div class="abilities" id="abilities"></div>
+  </div>
+</div>
+
+<div class="hud" id="hudBL">
+  <div class="log" id="log" title="Click to expand"></div>
+  <div class="panel" id="pframe">
+    <div class="lvlline"><span id="pname"></span><span class="muted" id="pstate"></span></div>
+    <div class="bar"><div class="hp" id="hpbar"></div><div class="lbl" id="hplbl"></div></div>
+    <div class="auras" id="pauras"></div>
+    <div id="corpse"></div>
+  </div>
+</div>
+
+<div class="hud menu" id="hudBR">
+  <button data-win="demons" title="Demons (D)">😈<small>D</small></button>
+  <button data-win="gear" title="Character (C)">🧙<small>C</small></button>
+  <button data-win="bags" title="Bags (B)">🎒<small>B</small></button>
+  <button data-win="spellbook" title="Spellbook (P)">📖<small>P</small></button>
+  <button data-win="ah" title="Auction House (A)">⚖<small>A</small></button>
+  <button data-win="shop" title="Gold Shop (G)">💰<small>G</small></button>
+  <button data-win="council" title="Shadow Council (S)">🜏<small>S</small></button>
+  <button data-win="talents" title="Talents (T)">✨<small>T</small></button>
+  <button data-win="ach" title="Achievements (Y)">🏆<small>Y</small></button>
+  <button data-win="ritual" title="Ritual of Doom (R)">💀<small>R</small></button>
+  <button data-win="help" title="Help (H)">?<small>H</small></button>
+  <button id="morebtn" title="More">⋯</button>
+</div>
+
+<div id="notice"></div>
+<div id="tip"></div>
+<div id="win"><div class="titlebar"><h3 id="wintitle"></h3><button id="winclose" style="padding:2px 8px">✕ Esc</button></div><div class="winbody"><div id="wintabs"></div><div class="list" id="tab"></div></div></div>
+
+<div id="hidden">
+  <div id="tabs"></div>
+  <select id="zone"></select><select id="mob"></select>
+  <span id="s_you"></span><span id="s_click"></span><span id="s_pet"></span><span id="s_dot"></span><span id="s_chance"></span><span id="s_crit"></span><span id="s_res"></span><span id="s_mit"></span><span id="s_souls"></span>
+  <a id="helplink"></a><button id="reset"></button>
+</div>
+<script>
+'use strict';
+const RAR=['Common','Uncommon','Rare','Epic','Legendary'];
+const RCOL=['#bdbdbd','#1eff00','#4aa3ff','#a335ee','#ff8000'];
+const IS_TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;
+// ---------- content ----------
+const ZONES=[
+ {name:'Durotar & Tirisfal',band:[1,10],w:[92,7,1,0,0],mobs:[{n:'Scorpid',l:1},{n:'Kobold Miner',l:3},{n:'Mindless Zombie',l:5},{n:'Razormane Quilboar',l:8}],elite:{n:'Razormane Chieftain',l:10}},
+ {name:'Westfall & The Barrens',band:[10,20],w:[86,11,2.5,.5,0],mobs:[{n:'Defias Thug',l:11},{n:'Harpy Windcaller',l:14},{n:'Kolkar Centaur',l:17},{n:'Defias Enforcer',l:19}],elite:{n:'Edwin VanCleef',l:21}},
+ {name:'Duskwood',band:[20,30],w:[78,16,4.5,1.3,.2],mobs:[{n:'Skeletal Horror',l:22},{n:'Black Widow',l:25},{n:'Nightbane Worgen',l:27},{n:'Plague Ghoul',l:29}],elite:{n:'Stitches',l:32}},
+ {name:'Stranglethorn Vale',band:[30,40],w:[68,22,7,2.5,.5],mobs:[{n:'Bloodscalp Troll',l:32},{n:'Jungle Stalker',l:35},{n:'Bloodsail Pirate',l:37},{n:'Skullsplitter Witch Doctor',l:39}],elite:{n:'Bloodlord Mandokir',l:42}},
+ {name:'Tanaris & Searing Gorge',band:[40,50],w:[56,27,11,5,1],mobs:[{n:'Dunemaul Ogre',l:42},{n:'Silithid Swarmer',l:45},{n:'Dark Iron Slaver',l:47},{n:'Twilight Cultist',l:49}],elite:{n:'Overseer Maltorius',l:52}},
+ {name:'Blackrock & Winterspring',band:[50,60],w:[40,30,18,9,3],mobs:[{n:'Winterfall Shaman',l:52},{n:'Black Dragonkin',l:55},{n:'Twilight Dark Shaman',l:57},{n:'Dreadlord',l:59}],elite:{n:'General Drakkisath',l:62}},
+ {name:'Molten Core',band:[60,60],w:[30,30,25,12,3],mobs:[{n:'Molten Giant',l:60},{n:'Firelord',l:60},{n:'Core Hound',l:61},{n:'Lava Surger',l:62}],elite:{n:'Ragnaros',l:63}},
+];
+// demons: ticks per second contributed to the drain
+const DEMONS=[
+ {id:'imp',name:'Imp',lvl:1,cost:10,tps:.04,desc:'Firebolts. Many imps, many firebolts.'},
+ {id:'vw',name:'Voidwalker',lvl:10,cost:60,tps:.08,desc:'Slow hitter, and fodder: Sacrifice one from the action bar for a shield worth 30% of your health. 60s cooldown. Cheap enough to keep a stack.'},
+ {id:'succ',name:'Succubus',lvl:20,cost:300,extra:{1:2},tps:.25,desc:'Lash of Pain. Costs 2 Uncommon to bind.'},
+ {id:'felh',name:'Felhunter',lvl:30,cost:1500,extra:{1:5},tps:.7,desc:'Devours. Each one adds +1% shard chance per drain tick (max +10%). Owning one puts Spell Lock on your bar. Costs 5 Uncommon to bind.'},
+ {id:'inf',name:'Infernal',lvl:50,cost:8000,extra:{2:1},tps:2.5,desc:'Immolation aura. Hits everything. Costs a Rare to bind.'},
+ {id:'doom',name:'Doomguard',lvl:60,cost:50000,extra:{3:1},tps:8,desc:'Ritual of Doom. Costs an Epic to bind.'},
+];
+const SPELLS=[
+ {id:'drainsoul',name:'Drain Soul',lvl:10,cost:0,kind:'passive',desc:'Learned at level 10. Your channel ticks on its own (one tick every 1.5s), and each of your ticks has a chance to drain a shard. Before this, shards only come from kills.'},
+ {id:'corr',name:'Corruption',lvl:4,cost:0.2,kind:'aura',desc:'A DoT on the target: one bonus damage tick every 3s, always on. Damage only; it never rolls for shards.'},
+ {id:'immo',name:'Immolate',lvl:2,cost:0.1,kind:'aura',desc:'Burns the soul loose: 25% chance of an extra shard when a soul completes.'},
+ {id:'cow',name:'Curse of Weakness',lvl:4,cost:0.2,kind:'curse',desc:'Target deals 30% less damage. One curse at a time.'},
+ {id:'lifetap',name:'Life Tap',lvl:6,cost:0.4,kind:'active',cd:2,desc:'Burn 20% health for common shards worth about 4 seconds of your total drain income. 2s cooldown. Your health is a currency; the mob decides how much you can afford to spend.'},
+ {id:'fear',name:'Fear',lvl:8,cost:0.8,kind:'active',cd:30,desc:'Target stops attacking for 6s and any cast it was winding up is interrupted. Bosses and Infernals are immune.'},
+ {id:'coa',name:'Bane of Agony',lvl:8,cost:0.8,kind:'active',cd:30,desc:'Costs 5% of your health. 24s of ramping damage: a tick every 2s of 1, then 2, then 3 health, 24 in all. Carries across kills. While it runs, 10% of a regular mob’s death shards come up one rarity, and the next mob to spawn is twice as likely to be uncommon or rare. No effect on bosses. 30s cooldown.'},
+ {id:'hstone',name:'Create Healthstone',lvl:10,cost:1.5,kind:'craft',desc:'Craft a Healthstone for 25 shards. You can hold one. Heals 40%, 60s cooldown. The bar shows Create when you have none and Healthstone when you do.'},
+ {id:'drainlife',name:'Drain Life',lvl:14,cost:3,kind:'active',cd:30,desc:'Channel Drain Life for 6 seconds, healing 40% of your health over the channel. No shards from anything while it runs, including kills. Press it again to stop early and get back on Drain Soul before the kill.'},
+ {id:'sstone',name:'Create Soulstone',lvl:18,cost:6,extra:{3:1},kind:'craft',desc:'Craft a Soulstone (1 Epic). Die with it active and you skip the corpse run.'},
+ {id:'darmor',name:'Demon Armor',lvl:1,cost:0,kind:'passive',desc:'Known from the start. Always on: regenerate 1% of your health every 2 seconds, and take 10% less damage. Slows the bleed; it does not stop it. Higher ranks at the trainer.'},
+ {id:'coil',name:'Death Coil',lvl:30,cost:25,extra:{2:1},kind:'active',cd:120,desc:'Heal 30%, interrupt the target’s cast, and make a regular mob cower for 3s. Works on bosses.'},
+ {id:'coe',name:'Curse of the Elements',lvl:32,cost:12,kind:'curse',desc:'Your spells hit harder: each of your drain, bolt, Corruption and Agony ticks has a 10% chance (+5% per rank) to deal an extra point of damage. One curse at a time.'},
+ {id:'autohs',name:'Improved Healthstone',lvl:36,cost:45,extra:{2:2},kind:'passive',desc:'Healthstones are used automatically below 30% health.'},
+];
+const TALENTS=[
+ {id:'suppression',tree:0,tier:0,max:3,name:'Suppression',desc:'−3% chance for a tick to be resisted, per rank.'},
+ {id:'impcorr',tree:0,tier:0,max:5,name:'Improved Corruption',desc:'Corruption ticks 10% faster per rank.'},
+ {id:'impdrains',tree:0,tier:5,max:3,name:'Improved Drains',desc:'+5% shard chance per tick, per rank.'},
+ {id:'malediction',tree:0,tier:5,max:5,name:'Malediction',desc:'Drain Soul ticks 4% faster per rank.'},
+ {id:'soulharvest',tree:0,tier:10,max:2,name:'Soul Harvest',desc:'+1 shard per rank when a soul completes.'},
+ {id:'nightfall',tree:0,tier:10,max:2,name:'Nightfall',desc:'Corruption ticks have 10% chance per rank to deal an extra point of damage.'},
+ {id:'siphonlife',tree:0,tier:16,max:1,ms:true,name:'Siphon Life',desc:'Milestone: every Drain Soul, Corruption and Bane of Agony tick heals you 1% of max health. Demon hits and Shadow Bolts do not.'},
+ {id:'pandemic',tree:0,tier:21,max:3,name:'Pandemic',desc:'Corruption and Bane of Agony ticks have a 7% chance per rank to crit for double damage.'},
+ {id:'soulsiphon',tree:0,tier:21,max:3,name:'Soul Siphon',desc:'+4% shard chance per rank for each aura on the target (Corruption, Immolate, curse).'},
+ {id:'wrack',tree:0,tier:25,max:1,ms:true,name:'Wrack',desc:'Milestone: new ability. 15 instant Drain Soul ticks, each rolling for a shard. 45s cooldown.'},
+ {id:'impimp',tree:1,tier:0,max:3,name:'Improved Imp',desc:'+15% Imp damage per rank.'},
+ {id:'embrace',tree:1,tier:0,max:5,name:'Demonic Embrace',desc:'+4% max health per rank.'},
+ {id:'impvw',tree:1,tier:5,max:3,name:'Improved Voidwalker',desc:'+15% Voidwalker damage, and Sacrifice shields +10% per rank.'},
+ {id:'feldom',tree:1,tier:5,max:1,name:'Fel Domination',desc:'Demons cost 15% less.'},
+ {id:'aegis',tree:1,tier:5,max:2,name:'Demonic Aegis',desc:'Demon Armor regenerates 15% more per rank.'},
+ {id:'unholy',tree:1,tier:10,max:5,name:'Unholy Power',desc:'+5% damage for all demons per rank.'},
+ {id:'impsayaad',tree:1,tier:10,max:3,name:'Improved Sayaad',desc:'+15% Succubus damage per rank.'},
+ {id:'soullink',tree:1,tier:16,max:1,ms:true,name:'Soul Link',desc:'Milestone: while you have any demon out, 20% of damage you take goes to it instead. The damage reduction talent.'},
+ {id:'demknow',tree:1,tier:21,max:3,name:'Demonic Knowledge',desc:'Drain Soul ticks 4% faster per rank for each demon type you own.'},
+ {id:'impfelh',tree:1,tier:21,max:3,name:'Improved Felhunter',desc:'+15% Felhunter damage and Spell Lock cooldown −3s, per rank.'},
+ {id:'dempact',tree:1,tier:25,max:1,ms:true,name:'Demonic Pact',desc:'Milestone: your demons join the drain. Their ticks roll for shards at your chance, including while you are away.'},
+ {id:'isb',tree:2,tier:0,max:5,name:'Improved Shadow Bolt',desc:'+8% Shadow Bolt damage per rank.'},
+ {id:'bane',tree:2,tier:0,max:1,name:'Bane',desc:'Shadow Bolt needs 2 clicks per cast instead of 3.'},
+ {id:'impimmo',tree:2,tier:5,max:3,name:'Improved Immolate',desc:'Immolate’s extra-shard chance +10% per rank.'},
+ {id:'devastation',tree:2,tier:5,max:5,name:'Devastation',desc:'+2% critical drain chance per rank. A critical drain always yields a shard.'},
+ {id:'shadowburn',tree:2,tier:10,max:1,ms:true,name:'Shadowburn',desc:'Milestone: new ability. Instantly kill a target at 25% health or less. 15s cooldown.'},
+ {id:'ruin',tree:2,tier:16,max:1,ms:true,name:'Ruin',desc:'Milestone: critical drains yield 2 shards instead of 1.'},
+ {id:'emberstorm',tree:2,tier:10,max:5,name:'Emberstorm',desc:'+4% Immolate extra-shard chance and +4% Bane of Agony damage per rank.'},
+ {id:'shadowflame',tree:2,tier:21,max:3,name:'Shadow and Flame',desc:'+5% Shadow Bolt damage per rank while Immolate is on the target.'},
+ {id:'havoc',tree:2,tier:21,max:1,name:'Bane of Havoc',desc:'15% of your Shadow Bolt damage carries over to the next target.'},
+ {id:'conflag',tree:2,tier:25,max:1,ms:true,name:'Conflagrate',desc:'Milestone: new ability. For 8s Shadow Bolts deal triple damage. 30s cooldown.'},
+];
+const TREES=['Affliction','Demonology','Destruction'];
+// ---------- gear ----------
+const SLOTS=[['head','Head'],['chest','Chest'],['legs','Legs'],['hands','Hands'],['wand','Wand'],['trinket','Trinket']];
+const STATS={haste:'Haste',crit:'Crit',hit:'Hit',stam:'Stamina',power:'Shadow power',regen:'Regen',affinity:'Soul affinity'};
+const STATDESC={haste:'channel and Corruption speed',crit:'critical drain chance',hit:'fewer resisted ticks',stam:'max health',power:'pull per click',regen:'Demon Armor regen',affinity:'shard chance per tick'};
+const NOUNS={head:['Hood','Cowl','Crown'],chest:['Robe','Vestments','Raiment'],legs:['Leggings','Trousers','Kilt'],hands:['Gloves','Handwraps','Grips'],wand:['Wand','Rod','Scepter'],trinket:['Charm','Talisman','Idol']};
+const SUFFIX={haste:'of the Channeler',crit:'of Intellect',hit:'of Suppression',stam:'of Stamina',power:'of Shadow Wrath',regen:'of Spirit',affinity:'of the Soul'};
+const PAIRS={'crit+stam':'of the Dreadbinder','crit+regen':'of Dark Insight','regen+stam':'of the Felsworn',
+ 'haste+stam':'of the Enduring','crit+haste':'of Nightfall','haste+regen':'of the Felweaver',
+ 'power+stam':'of the Sorcerer','crit+power':'of the Destroyer','power+regen':'of the Drainer','haste+power':'of the Siphoner',
+ 'hit+stam':'of the Warden','crit+hit':'of the Seer','haste+hit':'of the Invoker','hit+power':'of the Nathrezim','hit+regen':'of the Hermit',
+ 'affinity+haste':'of Soul Harvest','affinity+stam':'of the Soulkeeper','affinity+crit':'of the Reaper','affinity+power':'of the Grim Harvest','affinity+regen':'of Siphoning','affinity+hit':'of the Harvester'};
+function itemName(it){const stats=it.stats;const keys=Object.keys(stats);const norm=k=>stats[k]/(k==='affinity'?.4:1);const ranked=keys.slice().sort((a,b)=>norm(b)-norm(a));
+  const pairKey=ranked.length>1?[ranked[0],ranked[1]].sort().join('+'):'';const suffix=PAIRS[pairKey]||SUFFIX[ranked[0]];
+  const mat=it.ilvl<16?'Linen':it.ilvl<31?'Woolen':it.ilvl<46?'Silk':'Felcloth';const noun=NOUNS[it.slot][Math.min(2,Math.floor(it.q/2))];
+  return (it.slot==='wand'||it.slot==='trinket'?noun:mat+' '+noun)+' '+suffix;}
+// Epics and Legendaries are fixed, named items with set bonuses. Greys have 1 stat, greens 2, blues 3.
+const SETS={
+ Dreadmist:{minIlvl:0,pieces:{head:{name:'Dreadmist Mask',stats:{stam:22,regen:24}},chest:{name:'Dreadmist Robe',stats:{stam:26,power:22}},legs:{name:'Dreadmist Leggings',stats:{stam:22,haste:24}},hands:{name:'Dreadmist Wraps',stats:{power:24,hit:20}}},bonus:{2:{haste:10},4:{affinity:5}},bonusText:{2:'+10% Haste',4:'+5% Soul affinity'}},
+ Felheart:{minIlvl:45,pieces:{head:{name:'Felheart Horns',stats:{stam:36,crit:40}},chest:{name:'Felheart Robes',stats:{stam:40,power:42}},legs:{name:'Felheart Pants',stats:{stam:38,haste:42}},hands:{name:'Felheart Gloves',stats:{power:40,hit:36}}},bonus:{2:{regen:20},4:{affinity:8}},bonusText:{2:'+20% Regen',4:'+8% Soul affinity'}},
+};
+const EPIC_OFFSET={wand:[{name:'Fel-Touched Wand',min:0,stats:{power:28,crit:18}},{name:'Nightfall Rod',min:45,stats:{power:44,haste:34}}],trinket:[{name:'Tome of Shadow',min:0,stats:{affinity:8,crit:20}},{name:'Soul Harvester’s Idol',min:45,stats:{affinity:12,haste:34}}]};
+const LEGENDARIES=[{slot:'wand',name:'Sulfuras, Hand of Ragnaros',stats:{power:60,crit:30,haste:30}},{slot:'trinket',name:'Talisman of the Firelord',stats:{affinity:20,stam:50}}];
+function makeEpic(ilvl,slot){
+  if(slot==='wand'||slot==='trinket'){const opts=EPIC_OFFSET[slot].filter(o=>ilvl>=o.min);const o=opts[opts.length-1];return {slot,name:o.name,ilvl,q:3,stats:Object.assign({},o.stats)};}
+  const setName=ilvl>=45?'Felheart':'Dreadmist';const pc=SETS[setName].pieces[slot];return {slot,name:pc.name,ilvl,q:3,stats:Object.assign({},pc.stats),set:setName};}
+function makeLegendary(){const o=LEGENDARIES[Math.floor(Math.random()*LEGENDARIES.length)];return {slot:o.slot,name:o.name,ilvl:60,q:4,stats:Object.assign({},o.stats)};}
+function setCounts(s){const c={};for(const sl in (s.gear||{})){const it=s.gear[sl];if(it&&it.set)c[it.set]=(c[it.set]||0)+1;}return c;}
+function setBonusStat(s,k){let t=0;const c=setCounts(s);for(const nm in c){const b=SETS[nm].bonus;for(const n in b){if(c[nm]>=+n&&b[n][k])t+=b[n][k];}}return t;}
+function makeItem(ilvl,q,slot){
+  if(q>=3)return makeEpic(ilvl,slot);
+  const pool=['haste','crit','hit','stam','power','regen'];if(q>=2)pool.push('affinity');
+  const n=Math.min(3,1+q);const keys=[];while(keys.length<n){const k=pool[Math.floor(Math.random()*pool.length)];if(!keys.includes(k))keys.push(k);}
+  const budget=ilvl*.5*[1,1.5,2.2,3,4][q];const stats={};keys.forEach(k=>{let v=budget/n*(.8+Math.random()*.4);if(k==='affinity')v*=.4;stats[k]=Math.round(v*10)/10;});
+  const it={slot,ilvl,q,stats};it.name=itemName(it);return it;}
+function sellPrice(it){if(it.junk)return Math.round(it.price*it.count*100)/100;return Math.round(it.ilvl*Math.pow(it.q+1,2)*.05*10)/10;}
+function equipFromBag(uid){const i=S.bag.findIndex(x=>x.uid===uid);if(i<0)return;const it=S.bag[i];if(it.junk)return;const old=S.gear[it.slot];S.gear[it.slot]=it;S.bag.splice(i,1);if(old){old.uid=++S.uid;if(!addToBag(old)){S.account.gold+=sellPrice(old);log(`No room, sold ${old.name} for ${sellPrice(old)}g.`);}}S.hp=Math.min(S.hp,maxHp());if(S.lastDrop===uid)S.lastDrop=null;log(`Equipped ${it.name}.`,'good');autosellSweep();}
+function sellFromBag(uid){const i=S.bag.findIndex(x=>x.uid===uid);if(i<0)return;const it=S.bag[i];const g=sellPrice(it);S.account.gold=Math.round((S.account.gold+g)*100)/100;S.bag.splice(i,1);if(S.lastDrop===uid)S.lastDrop=null;log(`Sold ${it.name}${it.junk&&it.count>1?' ×'+it.count:''} for ${g}g.`);}
+function sellJunk(){let g=0;S.bag=S.bag.filter(x=>{if(x.junk||x.q===0){g+=sellPrice(x);if(S.lastDrop===x.uid)S.lastDrop=null;return false;}return true;});g=Math.round(g*100)/100;S.account.gold=Math.round((S.account.gold+g)*100)/100;if(g>0)log(`Sold all grey items for ${g}g.`,'good');}
+function gearStatOf(s,k){let t=0;const g=s.gear||{};for(const sl in g){const it=g[sl];if(it&&it.stats[k])t+=it.stats[k];}return t+setBonusStat(s,k);}
+const gearStat=k=>gearStatOf(S,k);
+function itemHtml(it){return `<span class="t${it.q}">${it.name}</span> <span class="muted">ilvl ${it.ilvl}${it.set?' · '+it.set+' set':''}</span> · `+Object.keys(it.stats).map(k=>`+${it.stats[k]}% ${STATS[k]}`).join(', ');}
+function compareHtml(it){const cur=S.gear[it.slot];if(!cur)return '<span class="t1">empty slot</span>';const keys=[...new Set([...Object.keys(it.stats),...Object.keys(cur.stats)])];return keys.map(k=>{const d=(it.stats[k]||0)-(cur.stats[k]||0);return `<span class="${d>=0?'t1':''}" style="${d<0?'color:#ff6b6b':''}">${d>=0?'+':''}${Math.round(d*10)/10}% ${STATS[k]}</span>`;}).join(', ');}
+// drop rate and quality by mob level: full greys by 10, greens by 20, a few blues by 30, blues everywhere by 40
+function lootBand(l){if(l<10)return {rate:.15,w:[95,5,0,0,0],boss:[40,55,5,0,0]};if(l<20)return {rate:.12,w:[40,55,5,0,0],boss:[10,60,30,0,0]};if(l<30)return {rate:.10,w:[20,55,25,0,0],boss:[0,45,50,5,0]};if(l<40)return {rate:.08,w:[10,35,53,2,0],boss:[0,25,65,10,0]};return {rate:.07,w:[5,25,60,10,0],boss:[0,15,70,15,0]};}
+// Auction house: six listings around your level, blue-heavy, refreshed every 30 minutes. Priced at about ten times vendor value.
+const AH_PERIOD=30*60*1000;
+function ahPrice(it){return Math.round(it.ilvl*Math.pow(it.q+1,2)*.5*10)/10;}
+function ahRefresh(force){const now=Date.now();if(!force&&S.ah&&S.ah.items&&S.ah.t>now)return;const items=[];const lvl=Math.max(1,S.lvl);
+  for(let i=0;i<6;i++){const ilvl=Math.max(1,Math.min(60,lvl+Math.floor(Math.random()*5)-2));let q;const r=Math.random();
+    if(lvl<10)q=r<.7?0:1;else if(lvl<20)q=r<.3?0:r<.9?1:2;else if(lvl<35)q=r<.6?1:2;else q=r<.3?1:r<.9?2:3;
+    const slot=SLOTS[Math.floor(Math.random()*SLOTS.length)][0];const it=makeItem(ilvl,q,slot);it.uid='ah'+Date.now()+'_'+i;items.push(it);}
+  S.ah={t:now+AH_PERIOD,items};}
+function ahBuy(uid){ahRefresh();const i=S.ah.items.findIndex(x=>x.uid===uid);if(i<0)return;const it=S.ah.items[i];const p=ahPrice(it);if(S.account.gold<p){log('Not enough gold.');return;}
+  const copy=Object.assign({},it,{stats:Object.assign({},it.stats)});delete copy.uid;if(!addToBag(copy)){log('Your bags are full.');return;}S.account.gold=Math.round((S.account.gold-p)*100)/100;S.ah.items.splice(i,1);S.lastDrop=copy.uid;log(`Bought ${it.name} for ${p}g.`,'good');}
+function dropLoot(m){dropJunk(m);if(noShards(m))return;const chance=m.elite||m.ev||m.rar===2?1:lootBand(m.l).rate;if(Math.random()>=chance)return;
+  const band=lootBand(Math.min(60,m.l+10*(m.rar||0)));
+  const w=m.n==='Ragnaros'?[0,0,20,70,10]:(m.elite||m.ev?band.boss:band.w);let r=Math.random()*100,q=0;for(let i=0;i<5;i++){r-=w[i];if(r<0){q=i;break;}}
+  // bias toward slots this drop would actually improve, so sets fill in at a predictable pace
+  let slot=SLOTS[Math.floor(Math.random()*SLOTS.length)][0];const needy=SLOTS.map(x=>x[0]).filter(sl=>!S.gear[sl]||S.gear[sl].q<q);if(needy.length&&Math.random()<.6)slot=needy[Math.floor(Math.random()*needy.length)];
+  const it=q===4?makeLegendary():makeItem(m.l,q,slot);if(addToBag(it)){S.lastDrop=it.uid;log(`${m.n} dropped <span class="t${q}">${it.name}</span>.`,'loot');}}
+// gold shop: bought with gold from selling gear, persists through the Ritual
+const SHOP=[
+ {id:'riding',name:'Riding and a mount',max:1,cost:()=>100,desc:'Corpse runs are half as long.'},
+ {id:'epicmount',name:'Epic mount',max:1,req:'riding',cost:()=>1000,desc:'Corpse runs are a quarter as long.'},
+ {id:'rain',name:'Rain of Chaos',max:3,cost:r=>150*Math.pow(3,r),desc:'Infernals crash down 25% more often per rank.'},
+ {id:'books',name:'Training books',max:1,cost:()=>400,desc:'New warlocks start knowing Corruption, Immolate and Curse of Weakness.'},
+ {id:'bank',name:'Bank tab',max:2,cost:r=>500*Math.pow(3,r),desc:'Carry 10% of your common shards per rank through the Ritual.'},
+ {id:'handme2',name:'Hand-me-down robe',max:1,cost:()=>300,desc:'New warlocks start with a Woolen Robe of Shadow Wrath (ilvl 15, Uncommon).'},
+];
+const perk=id=>(S.account&&S.account.perks[id])||0;
+// bags and junk
+const BAGS=[{name:'Linen Bag',slots:6,cost:5},{name:'Woolen Bag',slots:8,cost:25},{name:'Runecloth Bag',slots:10,cost:100,rare:2},{name:'Mooncloth Bag',slots:12,cost:400,epic:1}];
+// each bag, once you also wear a full set of that quality or better, unlocks auto-selling gear of that quality
+const AUTOSELL=[{q:'junk',name:'junk',cost:5},{q:0,name:'grey',cost:10},{q:1,name:'green',cost:50},{q:2,name:'blue',cost:200},{q:3,name:'epic',cost:800}];
+function fullSet(q){return SLOTS.every(([sl])=>S.gear[sl]&&S.gear[sl].q>=q);}
+function autosellAvail(q){if(q==='junk')return S.bags>=1;return S.bags>=q+1&&fullSet(q);}
+const JUNK=[['Scorpid Stinger','Kobold Candle','Zombie Rag','Quilboar Tusk'],['Defias Bandana','Harpy Feather','Centaur Bracer','Red Mask'],['Bone Fragment','Spider Silk','Worgen Pelt','Rotting Finger'],['Troll Tusk','Raptor Claw','Pirate’s Coin','Voodoo Doll'],['Ogre Toe','Silithid Carapace','Dark Iron Scrap','Twilight Pendant'],['Winterfall Firewater','Dragonkin Scale','Twilight Lexicon','Nathrezim Horn'],['Core Hound Tooth','Molten Scrap','Fiery Core','Lava Pearl']];
+const TREASURE=['Weathered Spellbook','Fine Pearl','Old Boot (full of silver)','Jade Figurine','Essence of Undeath','Black Lotus','Sulfuron Ingot'];
+function bagCap(){return 16+BAGS.slice(0,S.bags||0).reduce((a,b)=>a+b.slots,0);}
+function junkPrice(ilvl,t){return Math.round(.01*Math.pow(ilvl,1.5)*(t?10:1)*100)/100;}
+// sweep the bag with the active auto-sell rules (on purchase, on toggle, and after loot lands)
+function autosellSweep(){if(!S.autosell)return;let g=0,n=0;const off=S.autosellOff||{};S.bag=S.bag.filter(it=>{let sell=false;if(it.junk)sell=!!S.autosell.junk&&!off.junk;else sell=!!S.autosell[it.q]&&!off[it.q]&&S.gear[it.slot]&&S.gear[it.slot].q>=it.q;if(sell){g+=sellPrice(it);n++;if(S.lastDrop===it.uid)S.lastDrop=null;return false;}return true;});
+  if(n){g=Math.round(g*100)/100;S.account.gold=Math.round((S.account.gold+g)*100)/100;log(`Auto-sold ${n} item${n>1?'s':''} from your bags for ${g}g.`,'good');}}
+function addToBag(it){
+  if(it.junk&&S.autosell&&S.autosell.junk&&!(S.autosellOff&&S.autosellOff.junk)){const g=it.price*it.count;S.account.gold=Math.round((S.account.gold+g)*100)/100;return true;}
+  if(!it.junk&&S.autosell&&S.autosell[it.q]&&!(S.autosellOff&&S.autosellOff[it.q])&&S.gear[it.slot]&&S.gear[it.slot].q>=it.q){const g=sellPrice(it);S.account.gold=Math.round((S.account.gold+g)*100)/100;fly(`auto-sold ${it.name} ${g}g`,'#e8b94a',null,null,true);return false;}
+  if(it.junk){const st=S.bag.find(x=>x.junk&&x.name===it.name&&x.count<20);if(st){st.count++;return true;}}
+  if(S.bag.length>=bagCap()){fly('bag full, loot lost','#ff6b6b');S.flags.bagFullLost=(S.flags.bagFullLost||0)+1;return false;}
+  it.uid=++S.uid;S.bag.push(it);return true;}
+function dropJunk(m){if(noShards(m))return;if(Math.random()>=.35)return;const t=Math.random()<.02;const name=t?TREASURE[S.zone]:JUNK[S.zone][Math.floor(Math.random()*4)];
+  addToBag({junk:true,name,ilvl:m.l,q:0,count:1,price:junkPrice(m.l,t)});}
+// spell ranks: bought at the trainer, mostly with Uncommon shards
+// trainer prices in gold by the level a rank unlocks at
+function trainGold(l){return Math.round(.08*Math.pow(1.12,l-1)*100)/100;}
+const RANKS=[
+ {id:'drain',name:'Drain Soul',max:3,req:'drainsoul',lvls:[24,38,52],desc:'Your channel ticks 6% faster per rank.',cost:r=>({g:trainGold(24+14*r)*2,1:4*Math.pow(2,r),2:r>=2?2:0})},
+ {id:'bolt',name:'Shadow Bolt',max:8,lvls:[6,12,20,28,36,44,52,60],desc:'+12% Shadow Bolt damage per rank.',cost:r=>({g:trainGold([6,12,20,28,36,44,52,60][r]),1:Math.round(2*Math.pow(1.5,r)),2:r>=5?2:0})},
+ {id:'corr',name:'Corruption',max:5,req:'corr',lvls:[14,24,34,44,54],desc:'Corruption ticks 12% faster per rank.',cost:r=>({g:trainGold(14+10*r),1:3*Math.pow(2,r),2:r>=4?2:0})},
+ {id:'immo',name:'Immolate',max:6,req:'immo',lvls:[10,20,30,40,50,60],desc:'Immolate’s extra-shard chance +8% per rank.',cost:r=>({g:trainGold(10+10*r),1:Math.round(3*Math.pow(1.6,r)),2:r>=5?2:0})},
+ {id:'darmor',name:'Demon Armor',max:4,req:'darmor',lvls:[20,30,40,50],desc:'Regenerates a further +0.25% health per 2 seconds, per rank.',cost:r=>({g:trainGold(20+10*r),1:3*Math.pow(2,r)})},
+ {id:'hstone',name:'Healthstone',max:4,req:'hstone',lvls:[22,34,46,58],desc:'Healthstones heal +10% per rank.',cost:r=>({g:trainGold(22+12*r),1:3*Math.pow(2,r)})},
+ {id:'lifetap',name:'Life Tap',max:5,req:'lifetap',lvls:[16,26,36,46,56],desc:'+15% shards per tap, per rank.',cost:r=>({g:trainGold(16+10*r),1:3*Math.pow(2,r),2:r>=4?2:0})},
+ {id:'drainlife',name:'Drain Life',max:5,req:'drainlife',lvls:[22,30,38,46,54],desc:'Heals 5% more per channel, per rank.',cost:r=>({g:trainGold(22+8*r),1:3*Math.pow(2,r),2:r>=4?2:0})},
+ {id:'coa',name:'Bane of Agony',max:5,req:'coa',lvls:[18,28,38,48,58],desc:'+15% tick damage per rank.',cost:r=>({g:trainGold(18+10*r),1:3*Math.pow(2,r),2:r>=4?2:0})},
+ {id:'fear',name:'Fear',max:2,req:'fear',lvls:[32,56],desc:'+1 second per rank.',cost:r=>({g:trainGold(32+24*r),1:6*Math.pow(2,r),2:r>=1?2:0})},
+ {id:'coil',name:'Death Coil',max:2,req:'coil',lvls:[42,54],desc:'Heals 5% more per rank.',cost:r=>({g:trainGold(42+12*r),1:8*Math.pow(2,r),2:2})},
+ {id:'coe',name:'Curse of the Elements',max:2,req:'coe',lvls:[46,60],desc:'+5% extra-damage chance per rank.',cost:r=>({g:trainGold(46+14*r),1:8*Math.pow(2,r),2:2})},
+ {id:'council',name:'Shadow Council',max:1,lvl:40,desc:'Unlocks breaking shards down: 1 shard of a tier into 5 of the tier below.',cost:r=>({g:60,1:40})},
+];
+const LEGACY=[
+ {id:'veteran',name:'Veteran',max:1,cost:2,desc:'New warlocks start at level 10.'},
+ {id:'rested',name:'Rested',max:3,cost:1,desc:'+20% XP per rank.'},
+ {id:'hunter',name:'Soul Hunter',max:3,cost:1,desc:'+5% shard chance per tick, per rank.'},
+ {id:'handme',name:'Hand-me-downs',max:1,cost:1,desc:'Start with 5 Imps.'},
+ {id:'inherit',name:'Inheritance',max:2,cost:2,desc:'Keep 10% of your common shards per rank through the ritual.'},
+ {id:'bloodline',name:'Bloodline',max:3,cost:2,desc:'All drains 10% faster per rank.'},
+];
+const ACH=[
+ {id:'a1',name:'First Soul',desc:'Drain a soul to completion.',c:s=>s.souls>=1},
+ {id:'a2',name:'Soul Harvest',desc:'Your first shard.',c:s=>s.life>=1},
+ {id:'a3',name:'Shard Hoarder',desc:'10,000 lifetime shards.',c:s=>s.life>=1e4},
+ {id:'a4',name:'Soul Economy',desc:'1,000,000 lifetime shards.',c:s=>s.life>=1e6},
+ {id:'a5',name:'Green Means Go',desc:'Find an Uncommon shard.',c:s=>s.seen[1]},
+ {id:'a6',name:'Purple Rain',desc:'Find an Epic shard.',c:s=>s.seen[3]},
+ {id:'a7',name:'Sulfuras Who',desc:'Find a Legendary shard.',c:s=>s.seen[4]},
+ {id:'a8',name:'Ding',desc:'Reach level 10.',c:s=>s.lvl>=10},
+ {id:'a9',name:'Mount Money',desc:'Reach level 40.',c:s=>s.lvl>=40},
+ {id:'a10',name:'Sixty',desc:'Reach level 60.',c:s=>s.lvl>=60},
+ {id:'a11',name:'Imp Army',desc:'Own 10 Imps.',c:s=>s.demons.imp>=10},
+ {id:'a12',name:'Candle Thief',desc:'Die to a Kobold Miner.',c:s=>s.flags.koboldDeath},
+ {id:'a13',name:'Corpse Run Regular',desc:'Die 10 times in one run.',c:s=>s.deaths>=10},
+ {id:'a14',name:'Carpal Tunnel',desc:'Click 1,000 times.',c:s=>s.clicks>=1000},
+ {id:'a15',name:'Too Soon',desc:'Drain Ragnaros.',c:s=>s.flags.rag},
+ {id:'a16',name:'Fire From the Sky',desc:'Drain an Infernal.',c:s=>s.flags.infernal},
+ {id:'a17',name:'Ritualist',desc:'Complete a Ritual of Doom.',c:s=>s.prestiges>=1},
+ {id:'a18',name:'Number of the Beast',desc:'666 souls in one run.',c:s=>s.souls>=666},
+];
+
+// ---------- state ----------
+function freshState(keep){
+  const lp=keep?keep.legacy:{points:0,perks:{}};
+  const s={lvl:1,xp:0,hp:100,shards:[0,0,0,0,0],life:0,souls:0,clicks:0,deaths:0,corpse:0,corpseTotal:0,
+    demons:{},spells:{darmor:true},tal:{},ranks:{},zone:0,mob:0,cleared:[],cds:{},curse:null,hs:0,sstone:false,mode:'drain',
+    soul:0,soulMax:1,prog:0,petProg:0,corrT:0,fear:0,conflagT:0,havoc:0,shield:0,eatT:0,lifeT:0,mobRar:0,coaBoost:false,autosell:{},cast:null,castCd:8,enrageT:0,lastInput:Date.now(),
+    event:null,eventT:180+Math.random()*120,fighting:null,bossDead:{},
+    seen:[false,false,false,false,false],flags:{},ach:keep?keep.ach:{},prestiges:keep?keep.prestiges:0,legacy:lp,last:Date.now(),
+    gear:{},lootQ:[],bag:[],bags:0,uid:0,lastDrop:null,account:keep&&keep.account?keep.account:{gold:0,perks:{}}};
+  DEMONS.forEach(d=>s.demons[d.id]=0);
+  if(s.account.perks.books){s.spells.corr=true;s.spells.immo=true;s.spells.cow=true;}
+  if(s.account.perks.handme2)s.gear.chest={slot:'chest',name:'Woolen Robe of Shadow Wrath',ilvl:15,q:1,stats:{power:6,stam:5}};
+  if(lp.perks.veteran)s.lvl=10;
+  if(lp.perks.handme)s.demons.imp=5;
+  if(keep&&keep.carry)s.shards[0]=keep.carry;
+  s.hp=maxHpOf(s);
+  return s;
+}
+let S=freshState();
+const tal=id=>S.tal[id]||0;const leg=id=>S.legacy.perks[id]||0;const rank=id=>(S.ranks&&S.ranks[id])||0;
+const achCount=()=>Object.keys(S.ach).filter(k=>S.ach[k]).length;
+const treePts=t=>TALENTS.filter(x=>x.tree===t).reduce((a,x)=>a+tal(x.id),0);
+const talPtsUsed=()=>TALENTS.reduce((a,x)=>a+tal(x.id),0);
+const talPtsAvail=()=>Math.max(0,S.lvl-9)-talPtsUsed();
+const demonTypes=()=>DEMONS.filter(d=>S.demons[d.id]>0).length;
+
+// ---------- math ----------
+function maxHpOf(s){return Math.floor((50+18*s.lvl)*(1+.04*(s.tal&&s.tal.embrace||0))*(1+gearStatOf(s,'stam')/100));}
+const maxHp=()=>maxHpOf(S);
+function globalHaste(){return (1+.1*leg('bloodline'))*(1+achCount()*.01);}
+function youTps(){ // your channel, ticks per second
+  if(!S.spells.drainsoul)return 0;
+  let m=1+.04*tal('malediction')+.05*tal('bane')+.04*tal('demknow')*demonTypes()+.06*rank('drain')+gearStat('haste')/100;
+  return (1/1.5)*m*globalHaste();}
+function clicksPerCast(){return Math.max(1,3-tal('bane'));}
+function boltPower(){let p=1*(1+.08*tal('isb'))*(1+.12*rank('bolt'))*(1+gearStat('power')/100);if(S.spells.immo)p*=1+.05*tal('shadowflame');if(S.conflagT>0)p*=3;return p;} // health removed per bolt
+const clickPull=boltPower;
+function petTps(){let t=0;const u=1+.05*tal('unholy');
+  DEMONS.forEach(d=>{let m=u;if(d.id==='imp')m*=1+.15*tal('impimp');if(d.id==='vw')m*=1+.15*tal('impvw');if(d.id==='succ')m*=1+.15*tal('impsayaad');if(d.id==='felh')m*=1+.15*tal('impfelh');t+=S.demons[d.id]*d.tps*m;});
+  return t*globalHaste()*(1+.05*(S.lvl-1));}
+function corrTps(){if(!S.spells.corr)return 0;return (1/3)*(1+.1*tal('impcorr'))*(1+.12*rank('corr'))*(1+gearStat('haste')/100)*globalHaste();}
+function auraCount(){return (S.spells.corr?1:0)+(S.spells.immo?1:0)+(S.curse?1:0)+(S.coaT>0?1:0);}
+function shardChance(){if(!S.spells.drainsoul)return 0;let c=.1+.05*tal('impdrains')+Math.min(.1,S.demons.felh*.01)+.05*leg('hunter')+.04*tal('soulsiphon')*auraCount()+gearStat('affinity')/100;return Math.min(.95,c);}
+function critChance(){return .02*tal('devastation')+(tal('devastation')?.03:0)+gearStat('crit')/100;}
+function armorRegen(){return (.01+.0025*rank('darmor'))*(1+.15*tal('aegis'))*(1+gearStat('regen')/100);}
+function hitCap(){return Math.max(0,.08+.02*S.zone-.03*tal('suppression'));}
+function resistChance(){const m=curMob();const d=Math.max(0,m.l-S.lvl);return Math.max(0,hitCap()-gearStat('hit')/100)+.03*d+(m.rar===2?.05:0);}
+function dmgTakenMult(){
+  let m=1;
+  if(S.spells.darmor)m*=.9;
+  if(tal('soullink')&&demonTypes()>0)m*=.8;
+  if(S.curse==='cow')m*=.7;
+  return m;}
+function shieldMax(){return maxHp()*(.3+.1*tal('impvw'));}
+function takeDamage(d){if(S.shield>0){const a=Math.min(S.shield,d);S.shield-=a;d-=a;}S.hp-=d;}
+function demonCost(d){const c={0:Math.floor(d.cost*Math.pow(1.15,S.demons[d.id])*(tal('feldom')?.85:1))};if(d.extra)Object.assign(c,d.extra);return c;}
+function xpNeed(l){return Math.floor(150*Math.pow(1.27,l-1));}
+function curMob(){
+  if(S.event&&S.fighting==='ev')return {n:'Infernal',l:S.lvl+2,hpm:5,dm:2,shards:10,ev:true,w:[20,30,28,15,7]};
+  const z=ZONES[S.zone];if(S.mob===4)return Object.assign({elite:true,hpm:10,dm:3,shards:5},z.elite);const rr=S.mobRar||0;return Object.assign({hpm:[1,1.5,2.5][rr],dm:[1,1.25,1.5][rr],shards:1,rar:rr},z.mobs[S.mob]);}
+function soulNeed(m){const d=Math.max(0,m.l-S.lvl);return Math.max(3,Math.round((4+.4*m.l)*m.hpm*Math.pow(1.25,d)));}
+function mobDps(m){const d=m.l-S.lvl;const diff=d>=0?Math.pow(1.3,d):Math.max(.5,Math.pow(1.15,d));return ((50+18*m.l)/40)*m.dm*diff*(CASTERS[m.n]?.8:1)*(S.enrageT>0?2:1);}
+function greyLevel(l){return l<=5?0:l<40?l-5-Math.floor(l/10):l<60?l-5-Math.floor(l/5):l-9;}
+function lvlDiff(m){const d=m.l-S.lvl;if(m.l<=greyLevel(S.lvl))return 'grey';return d>=5?'red':d>=3?'orange':d>=-2?'yellow':'green';}
+function xpFor(m){const f={red:1.5,orange:1.25,yellow:1,green:.6,grey:0}[lvlDiff(m)];if(m.ev)return xpNeed(S.lvl)*.15;return 12*Math.pow(1.15,m.l-1)*f*(m.elite?6:1)*dangerPay(m)*(1+.2*leg('rested'));}
+function deathShards(m){if(noShards(m))return 0;const f={red:1.5,orange:1.25,yellow:1,green:.6,grey:0}[lvlDiff(m)];return Math.max(1,Math.round((1+Math.floor(m.l/10))*m.shards*f*dangerPay(m)))+tal('soulharvest');}
+// Rarity sources. Ticks on anything roll from the zone's trash table (Common/Uncommon only).
+// Death shards roll from the source table: trash = zone table; elites = Rare source, Epics from Duskwood on; Infernals = Epic source scaling with level; Ragnaros = raid boss, Legendary chance.
+// ---------- mob rarity: the mob decides the shard tier ----------
+// 0 common, 1 uncommon (green name), 2 rare (blue name), 3 epic (zone bosses), 4 legendary (Ragnaros). Infernals pay Uncommon with a zone-based Epic chance.
+const RAR_NAMES=['','Uncommon','Rare','Elite','Legendary'];
+function rollMobRarity(m){if(m.ev)return 1;if(m.elite)return m.n==='Ragnaros'?4:3;const boost=S.coaBoost?2:1;S.coaBoost=false;const r=Math.random();if(r<.015*boost)return 2;if(r<(.015+.08)*boost)return 1;return 0;}
+// mob abilities: casters wind up a big bolt, brutes enrage, bosses have a signature. Interrupt with Fear (not bosses), Death Coil, or the Felhunter's Spell Lock.
+const CASTERS={'Harpy Windcaller':'Lightning Bolt','Skullsplitter Witch Doctor':'Shadow Shock','Twilight Cultist':'Shadow Bolt','Winterfall Shaman':'Chain Lightning','Twilight Dark Shaman':'Fireball','Firelord':'Pyroblast'};
+const BRUTES={'Razormane Quilboar':'Frenzy','Kolkar Centaur':'Berserk','Nightbane Worgen':'Howl','Dunemaul Ogre':'Rage','Core Hound':'Enrage'};
+const BOSS_CASTS={'Razormane Chieftain':['bolt','Thunderclap'],'Edwin VanCleef':['bolt','Fan of Knives'],'Stitches':['bolt','Hateful Strike'],'Bloodlord Mandokir':['enrage','Enrage'],'Overseer Maltorius':['bolt','Fireblast'],'General Drakkisath':['bolt','Conflagration'],'Ragnaros':['enrage','Sons of Flame']};
+function mobAbility(m){if(m.ev)return {type:'bolt',name:'Immolation',dur:3,cd:18};if(m.elite){const b=BOSS_CASTS[m.n];return b?{type:b[0],name:b[1],dur:3,cd:20,boss:true}:null;}if(CASTERS[m.n])return {type:'bolt',name:CASTERS[m.n],dur:2.5,cd:18};if(BRUTES[m.n])return {type:'enrage',name:BRUTES[m.n],dur:2.5,cd:22};return null;}
+function dangerPay(m){return !m.elite&&!m.ev&&(CASTERS[m.n]||BRUTES[m.n])?1.25:1;}
+function interrupt(source){if(!S.cast)return false;const nm=S.cast.name;S.cast=null;S.castCd=Math.max(S.castCd||0,source==='spelllock'?12:8);fly('Interrupted: '+nm,'#ff9c3a',null,null,false,'dmg');return true;}
+function mobRarity(m){return m.ev?1:(m.elite?(m.n==='Ragnaros'?4:3):(S.mobRar||0));}
+function rollRarity(m,kind){
+  if(m.ev){const z=S.zone;const r=Math.random();if(z>=5&&r<.005)return 4;if(r<.02*(z+1))return 3;return 1;}
+  if(m.elite)return 1; // boss ticks pay Uncommon; the kill pays the pile (see complete)
+  let r=mobRarity(m);
+  if(kind==='death'&&S.coaT>0&&!m.elite&&!m.ev&&r<4&&Math.random()<.1)r++;
+  return r;}
+function fmt(n){if(!isFinite(n))return '∞';if(n<1000)return (Math.round(n*10)/10).toString();const u=['K','M','B','T','Qa','Qi'];let i=-1;while(n>=1000&&i<u.length-1){n/=1000;i++;}return n.toFixed(2)+u[i];}
+function canAfford(c){return Object.keys(c).every(k=>k==='g'?S.account.gold>=c[k]:S.shards[k]>=c[k]);}
+function pay(c){Object.keys(c).forEach(k=>{if(k==='g')S.account.gold=Math.round((S.account.gold-c[k])*100)/100;else S.shards[k]-=c[k];});}
+function goldStr(g){return g>=1?(Math.round(g*100)/100)+'g':Math.round(g*100)+'s';}
+function costStr(c){return Object.keys(c).filter(k=>c[k]>0).map(k=>k==='g'?`<span style="color:var(--gold)">${goldStr(c[k])}</span>`:`<span class="t${k}">${fmt(c[k])} ${RAR[k]}</span>`).join(' + ')||'free';}
+function spellCost(s){const c={};if(s.cost>0)c.g=s.cost;return Object.assign(c,s.extra||{});}
+function drainTps(){return youTps()+(tal('dempact')?petTps():0);}
+function shardsPerSec(){if(S.mode==='life')return 0;const tps=drainTps();const need=soulNeed(curMob());return tps*(1-resistChance())*shardChance()+(youTps()+corrTps()+petTps())/need*deathShards(curMob());}
+
+function ratePerRarity(){const m=curMob();if(noShards(m)||S.mode==='life')return [0,0,0,0,0];
+  const tps=drainTps();const tickRate=tps*(1-resistChance())*shardChance();const deathRate=(youTps()+corrTps()+petTps())/soulNeed(m)*deathShards(m);
+  const out=[0,0,0,0,0];if(m.elite){const kps=(youTps()+corrTps()+petTps())/soulNeed(m);const rares=1+Math.floor(S.zone/2)+.5;out[1]=tickRate+deathRate*.4;out[0]=deathRate*.6;out[2]=kps*rares;out[3]=kps;if(m.n==='Ragnaros')out[4]=kps;return out;}out[mobRarity(m)]=tickRate+deathRate;return out;}
+// ---------- log & fx ----------
+const logEl=document.getElementById('log');const logs=[];
+function log(t,cls){logs.unshift(`<div class="${cls||''}">${t}</div>`);if(logs.length>40)logs.length=40;logEl.innerHTML=logs.join('');}
+const card=document.getElementById('stage');const tpanel=document.getElementById('tpanel');
+
+// ---------- canvas play space: landscape + floating text are painted every frame; nothing here touches the DOM ----------
+const cv=document.getElementById('land');const ctx=cv.getContext('2d');let pressFlash=0;
+const floaters=[];const MAX_FLY=40;
+// kinds: dmg (above the target frame), shard (rises from the target toward the shard HUD), heal (above the player frame)
+function fly(text,color,x,y,small,kind){
+  if(floaters.length>=MAX_FLY){floaters.shift();}
+  const w=cv.clientWidth||600,h=cv.clientHeight||400;const tp=tpanel.getBoundingClientRect();const pf=document.getElementById('pframe').getBoundingClientRect();
+  const f={text,color:color||'#fff',t:0,dur:small?1.6:2.4,size:small?13:18,rise:120};
+  if(x!=null&&y!=null){f.x=x;f.y=y;}
+  else if(kind==='shard'){const mp=actorPos.mob||{x:w*.6,y:h*.5,size:80};f.x=mp.x-40+Math.random()*80;f.y=mp.y-mp.size*.9;f.tx=60+Math.random()*40;f.ty=110;f.dur=1.8;f.rise=0;}
+  else if(kind==='heal'){const lp=actorPos.lock||{x:w*.35,y:h*.5,size:60};f.x=lp.x-50+Math.random()*60;f.y=lp.y-lp.size*1.5;f.rise=70;}
+  else{const mp=actorPos.mob||{x:w*.6,y:h*.5,size:80};f.x=mp.x-70+Math.random()*100;f.y=mp.y-mp.size*(.8+Math.random()*.6);}
+  floaters.push(f);}
+function sizeCanvas(){const w=card.clientWidth,h=card.clientHeight;const dpr=Math.min(2,window.devicePixelRatio||1);const W=Math.round(w*dpr),H=Math.round(h*dpr);if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}return dpr;}
+// ---------- scene: procedural parallax landscape, mob silhouette, warlock + beams (all canvas, nothing external) ----------
+const ZONE_ART=[
+ {sky:['#2b1030','#e0742a'],far:'#5a2a1c',mid:'#8a3f22',near:'#c0632c',ground:'#d9793a',style:'mesa',sun:'#ffd27a'},
+ {sky:['#4a3a6a','#f0b24a'],far:'#6a5a2a',mid:'#a88a2e',near:'#d0b03a',ground:'#e2c04a',style:'rolling',sun:'#fff2b0'},
+ {sky:['#05060f','#1a1f3a'],far:'#0d1020',mid:'#0a0c18',near:'#06070f',ground:'#04050a',style:'forest',moon:'#d8dcff',fog:true},
+ {sky:['#0f3a3a','#5fb79a'],far:'#1f5a2e',mid:'#2f7a3a',near:'#3f8f3f',ground:'#2a6a2a',style:'jungle',sun:'#ffe9a0'},
+ {sky:['#3a0f0a','#d9772a'],far:'#4a1a10',mid:'#b8862a',near:'#e0b05a',ground:'#f0c060',style:'dunes',sun:'#ffb347',lava:true},
+ {sky:['#06070f','#2a1a3a'],far:'#120a14',mid:'#dfe8f2',near:'#bfcfe0',ground:'#a9bbd0',style:'peaks',stars:true,snow:true},
+ {sky:['#1a0604','#4a1208'],far:'#2a0a06',mid:'#3a0e08',near:'#4a1408',ground:'#5a1808',style:'core',lava:true,embers:true},
+];
+// seeded shapes per zone+layer so the hills are stable between frames
+function seeded(seed){let x=seed*9301+49297;return()=>{x=(x*9301+49297)%233280;return x/233280;};}
+const layerCache={};
+function layerPoints(z,li){const key=z+':'+li;if(layerCache[key])return layerCache[key];const rnd=seeded(z*7+li*13+1);const style=ZONE_ART[z].style;const pts=[];const n=24;
+  for(let i=0;i<=n;i++){let h;const t=i/n;
+    if(style==='mesa')h=(li===0?.55:.35)+(rnd()<.35?.25:0)*(li===0?1:.5);
+    else if(style==='peaks')h=(li===0?.25:.5)+Math.abs(Math.sin(i*1.7+li))*(li===0?.6:.2)+rnd()*.1;
+    else if(style==='forest')h=.4+rnd()*.15*(li+1);
+    else if(style==='core')h=.3+rnd()*.5;
+    else if(style==='dunes')h=.45+Math.sin(i*.9+li*2)*.12+rnd()*.05;
+    else h=.4+Math.sin(i*.8+li*1.3)*.15+rnd()*.12;
+    pts.push(h);}
+  layerCache[key]=pts;return pts;}
+function drawLayer(ctx,w,h,z,li,offset,color,baseY,amp,flatTop){
+  const pts=layerPoints(z,li);const n=pts.length-1;const segW=w*1.4/n;const x0=-(offset%segW)-segW;
+  ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(x0,h);
+  for(let i=0;i<=n+3;i++){const p=pts[i%n];const x=x0+i*segW;const y=baseY-p*amp;if(flatTop){ctx.lineTo(x,y);ctx.lineTo(x+segW*.6,y);}else ctx.lineTo(x,y);}
+  ctx.lineTo(x0+(n+4)*segW,h);ctx.closePath();ctx.fill();}
+function drawTrees(ctx,w,h,z,offset,baseY,color,count,size){const rnd=seeded(z*31+count);for(let i=0;i<count;i++){const x=((rnd()*w*1.4-offset%(w*1.4))+w*1.4)%(w*1.4)-w*.2;const s=size*(.7+rnd()*.6);ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(x,baseY);ctx.lineTo(x+s*.5,baseY-s*2.2);ctx.lineTo(x+s,baseY);ctx.closePath();ctx.fill();ctx.fillRect(x+s*.45,baseY,s*.12,s*.4);}}
+// the procedural scene is the look. Enemy artwork loads from art/mob_<slug>.png when present, silhouettes otherwise.
+const mobImgs={};
+function mobSlug(n){return n.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');}
+function mobImage(n){const k=mobSlug(n);if(mobImgs[k]!==undefined)return mobImgs[k];mobImgs[k]=null;const im=new Image();im.onload=()=>{mobImgs[k]=im;};im.onerror=()=>{mobImgs[k]=false;};im.src='art/mob_'+k+'.png';return null;}
+const actorPos={mob:null,lock:null};
+let sceneT=0;const embers=[];let mobFlash=0,mobDeathT=0,lastSoul=-1,lastMobKey='',mobEnter=0;const bolts=[];
+function timeTint(){const hr=new Date().getHours()+new Date().getMinutes()/60;const night=hr<6||hr>=20?1:(hr<8?(8-hr)/2:(hr>=18?(hr-18)/2:0));return night;}
+function mobFamily(n){n=n.toLowerCase();if(/scorpid|spider|silithid|widow/.test(n))return 'crawler';if(/hound|worgen|raptor|stalker|surger/.test(n))return 'beast';if(/zombie|skeletal|ghoul|stitches|horror/.test(n))return 'undead';if(/dragonkin|drakkisath/.test(n))return 'dragon';if(/dreadlord|infernal|ragnaros|firelord|giant/.test(n))return 'demon';if(/harpy/.test(n))return 'winged';if(/ogre|centaur|mandokir/.test(n))return 'brute';return 'humanoid';}
+function drawMob(ctx,cx,baseY,size,fam,outline,flash,alpha){
+  ctx.save();ctx.globalAlpha=alpha;ctx.translate(cx,baseY);const s=size;
+  const sq=1-flash*.12;ctx.scale(1+flash*.08,sq);
+  ctx.fillStyle=flash>0?'#5a2a3a':'#120a16';ctx.strokeStyle=outline||'rgba(255,255,255,.08)';ctx.lineWidth=outline?3:1.5;
+  ctx.beginPath();
+  if(fam==='crawler'){ctx.ellipse(0,-s*.25,s*.6,s*.25,0,0,Math.PI*2);ctx.moveTo(s*.4,-s*.3);ctx.quadraticCurveTo(s*.9,-s*1.1,s*.5,-s*1.2);for(let i=-3;i<=3;i++){ctx.moveTo(i*s*.15,-s*.2);ctx.lineTo(i*s*.2,0);}}
+  else if(fam==='beast'){ctx.ellipse(0,-s*.45,s*.55,s*.28,0,0,Math.PI*2);ctx.moveTo(s*.4,-s*.6);ctx.lineTo(s*.8,-s*.75);ctx.lineTo(s*.75,-s*.45);ctx.lineTo(s*.45,-s*.4);for(const x of[-.35,-.15,.15,.35]){ctx.rect(x*s-s*.05,-s*.3,s*.1,s*.3);}}
+  else if(fam==='undead'){ctx.rect(-s*.22,-s*.9,s*.44,s*.9);ctx.arc(0,-s*1.02,s*.16,0,Math.PI*2);ctx.moveTo(-s*.22,-s*.7);ctx.lineTo(-s*.5,-s*.3);ctx.moveTo(s*.22,-s*.75);ctx.lineTo(s*.55,-s*.55);}
+  else if(fam==='dragon'){ctx.rect(-s*.25,-s*1.1,s*.5,s*1.1);ctx.arc(0,-s*1.25,s*.18,0,Math.PI*2);ctx.moveTo(-s*.25,-s*.9);ctx.lineTo(-s*.95,-s*1.4);ctx.lineTo(-s*.5,-s*.6);ctx.moveTo(s*.25,-s*.9);ctx.lineTo(s*.95,-s*1.4);ctx.lineTo(s*.5,-s*.6);}
+  else if(fam==='demon'){ctx.rect(-s*.35,-s*1.3,s*.7,s*1.3);ctx.arc(0,-s*1.45,s*.22,0,Math.PI*2);ctx.moveTo(-s*.15,-s*1.6);ctx.lineTo(-s*.4,-s*2);ctx.lineTo(-s*.05,-s*1.65);ctx.moveTo(s*.15,-s*1.6);ctx.lineTo(s*.4,-s*2);ctx.lineTo(s*.05,-s*1.65);ctx.moveTo(-s*.35,-s*1);ctx.lineTo(-s*.75,-s*.5);ctx.moveTo(s*.35,-s*1);ctx.lineTo(s*.75,-s*.5);}
+  else if(fam==='winged'){ctx.rect(-s*.15,-s*.9,s*.3,s*.9);ctx.arc(0,-s*1.02,s*.15,0,Math.PI*2);ctx.moveTo(-s*.15,-s*.8);ctx.lineTo(-s*.9,-s*1.1);ctx.lineTo(-s*.3,-s*.5);ctx.moveTo(s*.15,-s*.8);ctx.lineTo(s*.9,-s*1.1);ctx.lineTo(s*.3,-s*.5);}
+  else if(fam==='brute'){ctx.rect(-s*.4,-s*1.1,s*.8,s*1.1);ctx.arc(0,-s*1.2,s*.2,0,Math.PI*2);ctx.moveTo(-s*.4,-s*.9);ctx.lineTo(-s*.7,-s*.3);ctx.moveTo(s*.4,-s*.9);ctx.lineTo(s*.8,-s*.4);}
+  else{ctx.rect(-s*.2,-s*.95,s*.4,s*.95);ctx.arc(0,-s*1.08,s*.15,0,Math.PI*2);ctx.moveTo(-s*.2,-s*.8);ctx.lineTo(-s*.45,-s*.4);ctx.moveTo(s*.2,-s*.8);ctx.lineTo(s*.5,-s*.5);}
+  ctx.fill();ctx.stroke();
+  // eyes
+  ctx.fillStyle=outline||'#c43b3b';const ey=fam==='crawler'?-s*.3:fam==='beast'?-s*.7:fam==='demon'?-s*1.45:fam==='dragon'?-s*1.25:fam==='brute'?-s*1.2:-s*1.05;const ex=fam==='beast'?s*.7:0;ctx.fillRect(ex-s*.07,ey-s*.02,s*.05,s*.04);ctx.fillRect(ex+s*.02,ey-s*.02,s*.05,s*.04);
+  ctx.restore();}
+function drawWarlock(ctx,x,baseY,s,channel){
+  ctx.save();ctx.translate(x,baseY);ctx.scale(-1,1);ctx.fillStyle='#1a1026';ctx.strokeStyle='#4a2a7a';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(-s*.35,0);ctx.lineTo(-s*.2,-s*1.1);ctx.lineTo(s*.2,-s*1.1);ctx.lineTo(s*.35,0);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-s*.22,-s*1.05);ctx.lineTo(0,-s*1.45);ctx.lineTo(s*.22,-s*1.05);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle='#d9b89a';ctx.beginPath();ctx.ellipse(0,-s*1.12,s*.1,s*.12,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#6a4a2a';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(s*.42,-s*1.55);ctx.lineTo(s*.42,0);ctx.stroke();ctx.fillStyle='#9b5cff';ctx.beginPath();ctx.arc(s*.42,-s*1.6,s*.07,0,Math.PI*2);ctx.fill();
+  if(channel){ctx.strokeStyle=channel;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-s*.3,-s*.7);ctx.lineTo(-s*.55,-s*.85);ctx.stroke();}
+  ctx.restore();return {hx:x+s*.55,hy:baseY-s*.85};}
+function drawScene(dt){
+  const dpr=sizeCanvas();ctx.setTransform(dpr,0,0,dpr,0,0);const w=cv.width/dpr,h=cv.height/dpr;sceneT+=dt;
+  const m=curMob();const ev=S.fighting==='ev'&&S.event;const z=S.zone;const A=ZONE_ART[z];const night=timeTint();
+  const img=null;
+  if(img){const sc=Math.max(w/img.width,h/img.height);const dw=img.width*sc,dh=img.height*sc;ctx.drawImage(img,(w-dw)/2,(h-dh)/2,dw,dh);
+    if(night>0&&!ev){ctx.fillStyle=`rgba(4,3,10,${(night*.45).toFixed(2)})`;ctx.fillRect(0,0,w,h);}
+    if(A.embers||ev){if(embers.length<40&&Math.random()<.4)embers.push({x:Math.random()*w,y:h*.9,vy:20+Math.random()*30,vx:Math.random()*10-5,t:0});for(let i=embers.length-1;i>=0;i--){const e=embers[i];e.t+=dt;e.y-=e.vy*dt;e.x+=e.vx*dt;if(e.t>4){embers.splice(i,1);continue;}ctx.fillStyle=`rgba(255,${120+Math.random()*80|0},40,${(1-e.t/4).toFixed(2)})`;ctx.fillRect(e.x,e.y,2,2);}}
+  }else{
+  // sky
+  const g=ctx.createLinearGradient(0,0,0,h);const top=ev?'#2a0a06':A.sky[0],bot=ev?'#7a2a0c':A.sky[1];g.addColorStop(0,top);g.addColorStop(1,bot);ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+  if(night>0&&!ev){ctx.fillStyle=`rgba(4,3,10,${(night*.55).toFixed(2)})`;ctx.fillRect(0,0,w,h);}
+  if(A.stars||night>.3||ev){const rnd=seeded(99);for(let i=0;i<60;i++){const x=rnd()*w,y=rnd()*h*.5;ctx.fillStyle=`rgba(255,255,255,${(.2+rnd()*.6)*(A.stars?1:Math.max(night,ev?.6:0))})`;ctx.fillRect(x,y,1.5,1.5);}}
+  // sun / moon / eye of the infernal
+  if(ev){ctx.fillStyle='rgba(255,106,26,.35)';ctx.beginPath();ctx.arc(w*.5,h*.3,90,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ffb347';ctx.beginPath();ctx.arc(w*.5,h*.3,46,0,Math.PI*2);ctx.fill();}
+  else if(A.sun&&night<.9){ctx.fillStyle=A.sun;ctx.globalAlpha=1-night;ctx.beginPath();ctx.arc(w*.78,h*.22+night*h*.3,34,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}
+  if(A.moon||(night>.5&&!ev)){ctx.fillStyle=A.moon||'#d8dcff';ctx.beginPath();ctx.arc(w*.2,h*.18,26,0,Math.PI*2);ctx.fill();ctx.fillStyle=ev?'#2a0a06':A.sky[0];ctx.beginPath();ctx.arc(w*.2-10,h*.18-8,22,0,Math.PI*2);ctx.fill();}
+  // parallax hills: far, mid, near
+  const flat=A.style==='mesa';
+  drawLayer(ctx,w,h,z,0,sceneT*4,ev?'#1b0a08':A.far,h*.72,h*.42,flat);
+  if(A.style==='forest'||A.style==='jungle')drawTrees(ctx,w,h,z,sceneT*7,h*.74,ev?'#160808':A.mid,26,h*.09);
+  drawLayer(ctx,w,h,z,1,sceneT*9,ev?'#2a0e0a':A.mid,h*.82,h*.22,flat);
+  if(A.style==='forest'||A.style==='jungle')drawTrees(ctx,w,h,z,sceneT*13,h*.86,ev?'#0c0404':A.near,18,h*.13);
+  if(A.fog){ctx.fillStyle='rgba(138,143,176,.10)';ctx.fillRect(0,h*.7,w,h*.12);}
+  drawLayer(ctx,w,h,z,2,sceneT*16,ev?'#3a1208':A.near,h*.9,h*.1,false);
+  ctx.fillStyle=ev?'#1b0a08':A.ground;ctx.fillRect(0,h*.9,w,h*.1);
+  if(A.lava||ev){ctx.fillStyle='rgba(255,106,26,.75)';ctx.beginPath();ctx.moveTo(0,h*.92);for(let x=0;x<=w;x+=40)ctx.lineTo(x,h*.92+Math.sin(x*.03+sceneT*2)*3);ctx.lineTo(w,h*.95);ctx.lineTo(0,h*.95);ctx.fill();}
+  if(A.snow){for(let i=0;i<40;i++){const rnd=seeded(i+1);const x=(rnd()*w+sceneT*8*(1+rnd()))%w;const y=(rnd()*h+sceneT*25*(1+rnd()))%h;ctx.fillStyle='rgba(255,255,255,.6)';ctx.fillRect(x,y,2,2);}}
+  if(A.embers||ev){if(embers.length<40&&Math.random()<.4)embers.push({x:Math.random()*w,y:h*.9,vy:20+Math.random()*30,vx:Math.random()*10-5,t:0});for(let i=embers.length-1;i>=0;i--){const e=embers[i];e.t+=dt;e.y-=e.vy*dt;e.x+=e.vx*dt;if(e.t>4){embers.splice(i,1);continue;}ctx.fillStyle=`rgba(255,${120+Math.random()*80|0},40,${(1-e.t/4).toFixed(2)})`;ctx.fillRect(e.x,e.y,2,2);}}
+  }
+  // actors
+  const tp=tpanel.getBoundingClientRect();const pf=document.getElementById('pframe').getBoundingClientRect();
+  const mobKey=m.n+':'+S.soulMax+':'+S.souls;if(mobKey!==lastMobKey){lastMobKey=mobKey;mobEnter=0;}mobEnter=Math.min(1,mobEnter+dt*3);
+  if(lastSoul>=0&&S.soul<lastSoul)mobFlash=.18;lastSoul=S.soul;mobFlash=Math.max(0,mobFlash-dt);
+  const rr=mobRarity(m);let outline=rr===1?'#1eff00':rr===2?'#4aa3ff':rr===3?'#a335ee':rr===4?'#ff8000':null;if(S.cast&&Math.floor(sceneT*6)%2===0)outline='#ff9c3a';if(S.enrageT>0)outline='#ff5a1a';
+  const narrow=w<700;const topFree=narrow?130:120;const freeH=Math.max(120,tp.top-topFree);const baseY=topFree+freeH*(narrow?.78:.62);
+  const size=Math.min(170,Math.max(60,freeH*.3))*(m.elite?1.5:m.ev?1.6:1)*(1+(m.rar||0)*.15);
+  const mobX=narrow?w*.68:w*.5+Math.min(260,w*.17);actorPos.mob={x:mobX,y:baseY,size};
+  if(S.soul>0){const mi=mobImage(m.n);const mx=mobX+(1-mobEnter)*120;
+    if(mi){const mh=size*1.9,mw=mh*mi.width/mi.height;ctx.save();ctx.globalAlpha=.98*mobEnter;ctx.translate(mx,baseY);const fl=mobFlash>0?mobFlash/.18:0;ctx.scale(1+fl*.06,1-fl*.1);
+      if(outline){ctx.shadowColor=outline;ctx.shadowBlur=22;}ctx.drawImage(mi,-mw/2,-mh,mw,mh);ctx.shadowBlur=0;
+      if(fl>0){ctx.globalCompositeOperation='source-atop';ctx.fillStyle=`rgba(255,120,120,${(fl*.5).toFixed(2)})`;ctx.fillRect(-mw/2,-mh,mw,mh);}ctx.restore();}
+    else drawMob(ctx,mx,baseY,size,m.ev?'demon':mobFamily(m.n),outline,mobFlash>0?mobFlash/.18:0,.95*mobEnter);}
+  const wx=narrow?w*.3:w*.5-Math.min(260,w*.17),wy=baseY;const ws=Math.min(80,Math.max(42,freeH*.14));actorPos.lock={x:wx,y:wy,size:ws};
+  const channel=S.corpse>0||S.eatT>0?null:(S.mode==='life'?'#6fcf3a':(S.spells.drainsoul?'#9b5cff':null));
+  const hand=drawWarlock(ctx,wx,wy,ws,channel);
+  if(channel&&S.soul>0){ctx.strokeStyle=channel;ctx.globalAlpha=.75;ctx.lineWidth=2.5;ctx.setLineDash([6,8]);ctx.lineDashOffset=-sceneT*60;ctx.beginPath();ctx.moveTo(mobX,baseY-size*.5);ctx.quadraticCurveTo((hand.hx+mobX)/2,Math.min(hand.hy,baseY-size*.5)-40,hand.hx,hand.hy);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
+    // soul motes drifting from the target into the warlock's hand
+    for(let k=0;k<5;k++){const p=((sceneT*.6)+k/5)%1;const x0=mobX,y0=baseY-size*.5,cx=(hand.hx+mobX)/2,cy=Math.min(hand.hy,baseY-size*.5)-40;const x=(1-p)*(1-p)*x0+2*(1-p)*p*cx+p*p*hand.hx,y=(1-p)*(1-p)*y0+2*(1-p)*p*cy+p*p*hand.hy;ctx.fillStyle=channel;ctx.globalAlpha=.9*(1-Math.abs(p-.5)*.6);ctx.beginPath();ctx.arc(x,y,3+p*2,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;}
+  for(let i=bolts.length-1;i>=0;i--){const b=bolts[i];b.t+=dt;const p=Math.min(1,b.t/.28);const x=hand.hx+(mobX-hand.hx)*p,y=hand.hy+(baseY-size*.5-hand.hy)*p-Math.sin(p*Math.PI)*90;ctx.fillStyle='#c9a6ff';ctx.shadowColor='#9b5cff';ctx.shadowBlur=12;ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;if(p>=1)bolts.splice(i,1);}
+  if(S.corpse>0){ctx.fillStyle='rgba(60,10,16,.35)';ctx.fillRect(0,0,w,h);}
+  // floaters
+  for(let i=floaters.length-1;i>=0;i--){const f=floaters[i];f.t+=dt;const p=f.t/f.dur;if(p>=1){floaters.splice(i,1);continue;}
+    let x=f.x,y=f.y-p*f.rise;if(f.tx!=null){const e=p*p;x=f.x+(f.tx-f.x)*e;y=f.y+(f.ty-f.y)*e-Math.sin(p*Math.PI)*40;}
+    ctx.globalAlpha=p<.7?1:1-(p-.7)/.3;ctx.font=`700 ${f.size}px Cinzel,"Segoe UI",system-ui,sans-serif`;
+    ctx.fillStyle='rgba(0,0,0,.9)';ctx.fillText(f.text,x+1.5,y+1.5);ctx.fillStyle=f.color;ctx.fillText(f.text,x,y);}
+  ctx.globalAlpha=1;
+}
+function setLand(){const m=curMob();const key=S.zone+':'+(m.ev?1:0);if(key===landKey)return;landKey=key;document.getElementById('zonename').textContent=m.ev?'The sky is falling':ZONES[S.zone].name;}
+
+// shard pickups are batched so a fast drain shows "+12 Common" every third of a second instead of a hundred separate floaters
+const pendingShards=[0,0,0,0,0];let shardFlushT=0;
+function flushShardFly(){for(let r=0;r<5;r++){if(pendingShards[r]>0){fly('+'+pendingShards[r]+' '+RAR[r],RCOL[r],null,null,false,'shard');pendingShards[r]=0;}}}
+let landKey='';
+
+// ---------- the drain ----------
+function bossLock(z){const t=(S.bossDead||{})[z]||0;return Math.max(0,t-Date.now()/1000);}
+function spawn(){S.cast=null;S.castCd=6+Math.random()*6;S.enrageT=0;const base=curMob();if(!base.elite&&!base.ev){S.mobRar=rollMobRarity(base);if(S.mobRar===2){log(`A rare ${base.n} appears! Blue shards and better loot, if you can take it.`,'loot');fly('Rare!','#4aa3ff');}else if(S.mobRar===1)fly('Uncommon','#1eff00',null,null,true);}else S.mobRar=0;
+  const m=curMob();S.soulMax=soulNeed(m);S.soul=S.soulMax;S.prog=0;S.chanN=0;S.bolt=0;
+  if(S.havoc>0){S.soul=Math.max(1,S.soul-S.havoc);S.havoc=0;}}
+function giveShard(r,tag){S.shards[r]++;S.life++;S.seen[r]=true;if(r>=2||tag==='★')fly('+1 '+RAR[r]+(tag?' '+tag:''),RCOL[r],null,null,false,'shard');else pendingShards[r]++;
+  if(r>=2)log(`<span class="t${r}">${RAR[r]}</span> shard from ${curMob().n}${tag?' '+tag:''}.`,'loot');}
+// source: you | pet | dot | burst
+function noShards(m){return lvlDiff(m)==='grey';}
+function tick(source){
+  if(S.corpse>0||S.soul<=0)return;
+  if(Math.random()<resistChance()){return;}
+  S.soul--;
+  if(tal('siphonlife')&&(source==='you'||source==='dot'||source==='burst'))S.hp=Math.min(maxHp(),S.hp+maxHp()*.01);
+  if(S.mode==='life'){}
+  else if(noShards(curMob())){}
+  else if(source==='dot'||source==='bolt'){}
+  else if(source==='pet'&&!tal('dempact')){}
+  else if(shardChance()<=0){}
+  else{
+    const chance=shardChance();
+    let crit=false;if(source==='you'||source==='burst'){if(Math.random()<critChance())crit=true;}
+    if(crit){giveShard(rollRarity(curMob()),'★');if(tal('ruin'))giveShard(rollRarity(curMob()),'★');}
+    else if(Math.random()<chance)giveShard(rollRarity(curMob()));
+  }
+  if(source==='dot'&&Math.random()<.1*tal('nightfall')){fly('Nightfall','#e8e04a');S.soul--;}
+  if(S.curse==='coe'&&(source==='you'||source==='dot'||source==='burst'||source==='bolt')&&S.soul>0&&Math.random()<.1+.05*rank('coe')){S.soul--;}
+  if(source==='dot'&&tal('pandemic')&&Math.random()<.07*tal('pandemic')){fly('★ crit','#ff9c3a',null,null,true);S.soul--;}
+  if(S.soul<=0)complete();
+}
+function complete(){
+  const m=curMob();S.souls++;
+  let n=noShards(m)||S.mode==='life'?0:deathShards(m);
+  if(S.mode==='life'&&!noShards(m))fly('no shard (Drain Life)','#6fcf3a');
+  if(n&&S.spells.immo&&Math.random()<.25+.1*tal('impimmo')+.08*rank('immo')+.04*tal('emberstorm'))n++;
+  if(m.elite&&n>0){ // boss kill: one Epic (one Legendary too for Ragnaros), a few Rares, the rest Common/Uncommon
+    const rares=1+Math.floor(S.zone/3)+(Math.random()<.5?1:0);giveShard(3,'(boss)');if(m.n==='Ragnaros')giveShard(4,'(boss)');
+    for(let i=0;i<rares;i++)giveShard(2,'(boss)');
+    for(let i=0;i<n;i++)giveShard(Math.random()<.4?1:0,'(boss)');
+  }else for(let i=0;i<n;i++)giveShard(rollRarity(m,'death'),'(soul)');
+  gainXp(xpFor(m));dropLoot(m);
+  if(m.elite&&!S.cleared[S.zone]){S.cleared[S.zone]=true;buildPickers();log(`${m.n}’s soul is yours. ${ZONES[S.zone+1]?ZONES[S.zone+1].name+' is open.':'The world is yours.'}`,'lvl');}
+  if(m.elite){const lock=m.n==='Ragnaros'?7200:1200;S.bossDead[S.zone]=Date.now()/1000+lock;log(`${m.n} is dead. It returns in ${lock/60} minutes.`);S.mob=3;buildPickers();}
+  if(m.n==='Ragnaros')S.flags.rag=true;
+  if(m.ev){S.flags.infernal=true;S.event=null;S.fighting=null;log('The Infernal crumbles.','good');}
+  tpanel.classList.remove('pulse');void tpanel.offsetWidth;tpanel.classList.add('pulse');
+  spawn();
+}
+let noticeT=null;
+function notice(html){const n=$('notice');n.innerHTML=html;n.classList.add('show');clearTimeout(noticeT);noticeT=setTimeout(()=>n.classList.remove('show'),4500);}
+function gainXp(x){if(S.lvl>=60)return;S.xp+=x;while(S.lvl<60&&S.xp>=xpNeed(S.lvl)){S.xp-=xpNeed(S.lvl);S.lvl++;S.hp=maxHp();log(`Level ${S.lvl}!${S.lvl>=10?' Talent point available.':''}`,'lvl');
+  if(S.lvl===10&&!S.spells.drainsoul){S.spells.drainsoul=true;log('You have learned Drain Soul. Your channel now runs on its own and every tick can pull a shard.','lvl');notice('Level 10<small>You have learned Drain Soul, and your first talent point is waiting. Press T.</small>');}
+  else if(S.lvl>10)notice(`Level ${S.lvl}<small>Talent point available. Press T.</small>`);
+  else notice(`Level ${S.lvl}`);
+  SPELLS.filter(s=>s.lvl===S.lvl).forEach(s=>log(`The trainer can teach ${s.name}.`));DEMONS.filter(d=>d.lvl===S.lvl).forEach(d=>log(`You can now summon a ${d.name}.`));}
+  if(S.lvl>=60)S.xp=0;}
+function die(){
+  const m=curMob();if(S.mode==='life'){S.mode='drain';S.lifeT=0;S.cds.drainlife=30;}
+  if(S.sstone){S.sstone=false;S.hp=maxHp()*.5;S.fear=4;log('You died. The Soulstone pulled you back.','good');return;}
+  S.deaths++;S.hp=0;if(m.n==='Kobold Miner')S.flags.koboldDeath=true;
+  S.corpseTotal=Math.round(Math.min(90,30+10*(S.deaths-1))*(perk('epicmount')?.25:perk('riding')?.5:1));S.corpse=S.corpseTotal;const wasEv=!!m.ev;S.event=null;S.fighting=null;if(wasEv)spawn();
+  log(`You died to ${m.n}. Your channel is down for ${S.corpseTotal}s; your demons keep draining.`,'bad');
+}
+function revive(){S.corpse=0;S.hp=maxHp();log('You run back to your corpse and pick the channel back up.');}
+function pull(){if(S.soul<=0)return;
+  if(S.corpse>0){S.corpse-=.5;fly('run','#ff9c3a',lastPull?lastPull.x-14:null,lastPull?lastPull.y-20:null,true);if(S.corpse<=0)revive();return;}
+  if(S.eatT>0){S.eatT=0;log('You stop eating.');}
+  S.clicks++;S.bolt=(S.bolt||0)+1/clicksPerCast();
+  if(S.bolt>=1-1e-9){S.bolt=0;boltLand();}
+  else fly('casting…','#8a7aa8',null,null,true,'heal');}
+function boltLand(){bolts.push({t:0});const p=boltPower();if(tal('havoc'))S.havoc+=p*.15;S.boltAcc=(S.boltAcc||0)+p;let n=0;while(S.boltAcc>=1&&S.soul>0){S.boltAcc-=1;tick('bolt');n++;}
+  fly('Shadow Bolt'+(n>1?' ×'+n:''),'#c9a6ff',null,null,n===0,'dmg');}
+function lifeTapShards(){return Math.round(Math.max(Math.ceil(S.lvl/6),Math.round(4*shardsPerSec()))*(1+.15*rank('lifetap')));}
+function mobDescLine(m){const n=deathShards(m);return noShards(m)?'no shards, too far below you':n+' shard'+(n>1?'s':'')+' when it dies';}
+function cast(id){
+  if(S.cds[id]>0&&!(id==='drainlife'&&S.mode==='life'))return;const sp_=SPELLS.find(s=>s.id===id);
+  if(id==='drainlife'){if(S.mode==='life'){S.mode='drain';S.lifeT=0;S.prog=0;S.chanN=0;S.cds.drainlife=30;fly('Drain Soul','#c9a6ff',null,null,true,'heal');return;}if(S.corpse>0||S.eatT>0)return;S.mode='life';S.lifeT=6;S.prog=0;S.chanN=0;fly('Drain Life','#6fcf3a',null,null,false,'heal');return;}
+  if(S.corpse>0)return;
+  if(id==='eat'){if(S.eatT>0)return;if(S.mode==='life'){S.mode='drain';S.lifeT=0;S.cds.drainlife=30;}S.eatT=10;S.cds.eat=180;const wasBoss=S.mob===4&&S.fighting!=='ev';if(S.fighting==='ev'){S.fighting=null;S.event=null;}if(wasBoss){S.mob=3;buildPickers();}spawn();S.coaT=0;fly('You run off to eat','#e8b94a',null,null,false,'heal');log(wasBoss?'You flee the elite and sit down to eat. You will face its minions when you get up.':'You back off and sit down to eat. The target resets.');return;}
+  if(id==='craftHs'){if(S.spells.hstone&&S.hs<1&&S.shards[0]>=25){S.shards[0]-=25;S.hs=1;fly('Healthstone','#6fcf3a',null,null,true);}return;}
+  if(id==='craftSs'){if(S.spells.sstone&&!S.sstone&&S.shards[3]>=1){S.shards[3]--;S.sstone=true;log('Soulstone active.','good');}return;}
+  if(id==='sacrifice'){if(S.demons.vw<1)return;S.demons.vw--;S.shield=shieldMax();S.cds.sacrifice=60;fly('Sacrifice','#7fb0ff',null,null,false,'heal');log('Your Voidwalker throws itself in the way. Shield up.');return;}
+  if(id==='cow'){S.curse=S.curse==='cow'?null:'cow';return;}
+  if(id==='coe'){S.curse=S.curse==='coe'?null:'coe';return;}
+  if(id==='coa'){if(S.hp<=maxHp()*.15){log('Not enough health to cast.');return;}S.hp-=maxHp()*.05;S.coaT=24;S.coaTick=0;S.coaAcc=0;S.coaBoost=true;S.cds.coa=30;fly('Bane of Agony','#1eff00');return;}
+  if(id==='lifetap'){if(S.hp<=maxHp()*.25){log('Not enough health to tap.');return;}S.hp-=maxHp()*.2;const n=lifeTapShards();S.shards[0]+=n;S.life+=n;fly('+'+n+' Common (Life Tap)',RCOL[0],null,null,false,'shard');S.cds.lifetap=2;return;}
+  if(id==='fear'){const m=curMob();if(m.elite||m.ev){fly('Immune to Fear','#ff6b6b',null,null,true,'dmg');return;}interrupt('fear');S.fear=6+rank('fear');S.cds.fear=30;fly('feared','#e8e04a');return;}
+  if(id==='spelllock'){if(S.demons.felh<1||!S.cast)return;interrupt('spelllock');S.cds.spelllock=Math.max(12,24-3*tal('impfelh'));return;}
+  if(id==='coil'){S.hp=Math.min(maxHp(),S.hp+maxHp()*(.3+.05*rank('coil')));interrupt('coil');const m=curMob();if(!m.elite&&!m.ev)S.fear=Math.max(S.fear,3);S.cds.coil=120;return;}
+  if(id==='hs'){if(S.hs<1)return;S.hs--;S.hp=Math.min(maxHp(),S.hp+maxHp()*(.4+.1*rank('hstone')));S.cds.hs=60;return;}
+  if(id==='wrack'){for(let i=0;i<15;i++)tick('burst');S.cds.wrack=45;fly('Wrack!','#ffd24a');return;}
+  if(id==='shadowburn'){if(S.soul>S.soulMax*.25)return;S.cds.shadowburn=15;fly('Shadowburn!','#ff5a9a');while(S.soul>0){S.soul--;}complete();return;}
+  if(id==='conflag'){S.conflagT=8;S.cds.conflag=30;fly('Conflagrate!','#ff7a2a');return;}
+}
+
+// ---------- loop ----------
+let last=performance.now();
+function loop(){
+  const now=performance.now();const dt=Math.min(.5,(now-last)/1000);last=now;
+  try{loopBody(dt);drawScene(dt);}catch(e){console.error(e);log('Error: '+e.message,'bad');}
+  requestAnimationFrame(loop);
+}
+function loopBody(dt){
+  Object.keys(S.cds).forEach(k=>{if(S.cds[k]>0)S.cds[k]-=dt;});
+  shardFlushT+=dt;if(shardFlushT>=.35){shardFlushT=0;flushShardFly();}
+  if(S.fear>0)S.fear-=dt;if(S.conflagT>0)S.conflagT-=dt;
+  if(S.mode==='life'){S.lifeT=(S.lifeT||0)-dt;if(S.corpse<=0&&S.eatT<=0)S.hp=Math.min(maxHp(),S.hp+maxHp()*((.4+.05*rank('drainlife'))/6)*dt);if(S.lifeT<=0){S.mode='drain';S.lifeT=0;S.prog=0;S.chanN=0;S.cds.drainlife=30;}}
+  if(!S.event){S.eventT-=dt;if(S.eventT<=0&&S.corpse<=0&&S.lvl>=5){S.event={t:45};S.eventT=(180+Math.random()*120)/(1+.25*perk('rain'));log('An Infernal crashes down nearby! 45 seconds.','lvl');}}
+  else{S.event.t-=dt;if(S.event.t<=0){S.event=null;log('The Infernal burns out and leaves.');if(S.fighting==='ev'){S.fighting=null;spawn();}}}
+  const m=curMob();
+  if(S.corpse>0){S.corpse-=dt;if(S.corpse<=0)revive();}
+  else if(S.eatT>0){S.eatT-=dt;S.hp=Math.min(maxHp(),S.hp+maxHp()*.1*dt);if(S.eatT<=0){S.eatT=0;S.hp=maxHp();log('Full health. Back to it.','good');}}
+  else{
+    if(S.mode!=='life'){S.prog+=youTps()*dt;while(S.prog>=1&&S.soul>0){S.prog-=1;S.chanN=((S.chanN||0)+1)%5;tick('you');}}
+    if(S.spells.darmor){S.armorT=(S.armorT||0)+dt;if(S.armorT>=2){S.armorT-=2;const h=maxHp()*armorRegen();if(S.hp<maxHp()){S.hp=Math.min(maxHp(),S.hp+h);fly('+'+Math.round(h),'#6fcf3a',null,null,true,'heal');}}}
+    if(S.spells.corr){S.corrT+=corrTps()*dt;while(S.corrT>=1&&S.soul>0){S.corrT-=1;tick('dot');}}
+    if(S.coaT>0){S.coaT-=dt;S.coaTick=(S.coaTick||0)+dt;if(S.coaTick>=2){S.coaTick-=2;const elapsed=24-S.coaT;const ramp=(elapsed<8?1:elapsed<16?2:3)*(1+.15*rank('coa'))*(1+.04*tal('emberstorm'));S.coaAcc=(S.coaAcc||0)+ramp;while(S.coaAcc>=1&&S.soul>0){S.coaAcc-=1;tick('dot');}}if(S.coaT<=0)log('Bane of Agony faded.');}
+    if(S.enrageT>0)S.enrageT-=dt;
+    if(S.soul>0&&S.fear<=0){const ab=mobAbility(m);
+      if(ab){if(S.cast){S.cast.t+=dt;if(S.cast.t>=S.cast.dur){const c=S.cast;S.cast=null;S.castCd=ab.cd+Math.random()*6;
+          if(c.type==='bolt'){const dmg=maxHp()*(ab.boss?.35:.25)*dmgTakenMult();takeDamage(dmg);fly(c.name+' −'+Math.round(dmg),'#ff6b6b',null,null,false,'heal');if(S.hp<=0){die();}}
+          else{S.enrageT=ab.boss?12:10;fly(c.name+'!','#ff9c3a',null,null,false,'dmg');}}}
+        else{S.castCd=(S.castCd||0)-dt;if(S.castCd<=0)S.cast={name:ab.name,t:0,dur:ab.dur,type:ab.type};}}}
+    // auto-eat when you are away: low health, nobody has touched the game for a minute, and the meal is ready
+    if(Date.now()-(S.lastInput||0)>60000&&S.hp<maxHp()*.25&&!(S.cds.eat>0)&&S.eatT<=0&&S.corpse>0===false){cast('eat');log('You sit down to eat while nobody is looking.');}
+    if(S.fear<=0&&S.soul>0){takeDamage(mobDps(m)*dmgTakenMult()*dt);
+      if(S.spells.autohs&&S.hs>0&&!(S.cds.hs>0)&&S.hp<maxHp()*.3)cast('hs');
+      if(S.hp<=0)die();}
+  }
+  if(S.eatT>0){S.petProg=0;}else{S.petProg+=petTps()*dt;while(S.petProg>=1&&S.soul>0){S.petProg-=1;tick('pet');}}
+  ACH.forEach(a=>{if(!S.ach[a.id]&&a.c(S)){S.ach[a.id]=true;log(`Achievement: ${a.name} (+1% drain speed)`,'good');}});
+  render();
+}
+
+// ---------- UI ----------
+const $=id=>document.getElementById(id);
+// only touch the DOM when the text actually changed; rewriting innerHTML 60 times a second is what made the page crawl
+const memo={};function setHTML(id,h){if(memo[id]===h)return;memo[id]=h;$(id).innerHTML=h;}
+function setText(id,t){if(memo['t'+id]===t)return;memo['t'+id]=t;$(id).textContent=t;}
+let tab='demons',tabDirty=true,frame=0,selItem=null;
+const TABS=[['demons','Demons'],['gear','Gear'],['trainer','Trainer'],['spellbook','Spellbook'],['talents','Talents'],['ach','Achievements'],['ritual','Ritual of Doom'],['help','How it works']];
+const WIN_TITLES={demons:'Demons',gear:'Character',bags:'Bags',trainer:'Trainer',spellbook:'Spellbook',talents:'Talents',ach:'Achievements',ritual:'Ritual of Doom',help:'How it works',map:'Map',ah:'Auction House',council:'Shadow Council',shop:'Gold Shop'};
+const WIN_KEYS={KeyD:'demons',KeyC:'gear',KeyB:'bags',KeyP:'spellbook',KeyT:'talents',KeyY:'ach',KeyR:'ritual',KeyH:'help',KeyM:'map',KeyN:'trainer',KeyA:'ah',KeyS:'council',KeyG:'shop'};
+let winOpen=null;
+const WIN_ORDER=['gear','bags','talents','spellbook','demons','ah','shop','council','ach','ritual','help'];
+function openWin(name){if(winOpen===name){closeWin();return;}winOpen=name;tab=name;tabDirty=true;$('wintitle').textContent=WIN_TITLES[name]||name;$('win').classList.add('open');$('tab').scrollTop=0;
+  $('wintabs').innerHTML=WIN_ORDER.map(w=>`<button data-win="${w}" class="${w===name?'on':''}">${WIN_TITLES[w]}</button>`).join('');$('wintabs').style.display=WIN_ORDER.includes(name)?'':'none';}
+$('wintabs').addEventListener('pointerdown',e=>{const b=e.target.closest('button');if(!b)return;e.preventDefault();if(b.dataset.win!==winOpen)openWin(b.dataset.win);});
+$('morebtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();$('hudBR').classList.toggle('more');});
+$('log').addEventListener('pointerdown',e=>{e.preventDefault();$('log').classList.toggle('open');});
+function closeWin(){winOpen=null;$('win').classList.remove('open');}
+$('winclose').addEventListener('pointerdown',e=>{e.preventDefault();closeWin();});
+$('hudBR').addEventListener('pointerdown',e=>{const b=e.target.closest('button');if(!b)return;e.preventDefault();openWin(b.dataset.win);});
+$('mapbtn').addEventListener('pointerdown',e=>{e.preventDefault();openWin('map');});
+$('trainerhead').addEventListener('pointerdown',e=>{e.preventDefault();openWin('trainer');});
+window.addEventListener('keydown',e=>{const t=e.target;if(t&&(t.tagName==='INPUT'||t.tagName==='SELECT'||t.tagName==='TEXTAREA'))return;if(e.code==='Escape'){closeWin();return;}
+  if(!e.repeat&&!e.ctrlKey&&!e.metaKey&&!e.altKey){const ki=SLOT_KEYS.indexOf(e.key);if(ki>=0){const a=slotAbility(SLOT_ORDER[ki]);if(a&&!a.dis){e.preventDefault();cast(a.id);}return;}if(e.key==='e'||e.key==='E'){e.preventDefault();cast('eat');return;}}
+  const w=WIN_KEYS[e.code];if(w&&!e.repeat&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();openWin(w);}});
+document.getElementById('helplink').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();tab='help';tabDirty=true;document.getElementById('tabs').scrollIntoView({behavior:'smooth',block:'start'});});
+function buildPickers(){
+  $('zone').innerHTML=ZONES.map((z,i)=>`<option value="${i}" ${i===S.zone?'selected':''} ${i>0&&!S.cleared[i-1]?'disabled':''}>${z.name} (${z.band[0]}–${z.band[1]})${i>0&&!S.cleared[i-1]?' 🔒':''}</option>`).join('');
+  const z=ZONES[S.zone];
+  $('mob').innerHTML=z.mobs.map((m,i)=>`<option value="${i}" ${i===S.mob?'selected':''}>${m.n} (${m.l})</option>`).join('')+`<option value="4" ${S.mob===4?'selected':''} ${bossLock(S.zone)>0?'disabled':''}>★ ${z.elite.n} (${z.elite.l}) elite${bossLock(S.zone)>0?' — dead, '+Math.ceil(bossLock(S.zone)/60)+' min':''}</option>`;
+}
+$('zone').onchange=e=>{S.zone=+e.target.value;S.mob=0;S.fighting=null;buildPickers();spawn();};
+$('mob').onchange=e=>{const v=+e.target.value;if(v===4&&bossLock(S.zone)>0){log(`${ZONES[S.zone].elite.n} is still dead. ${Math.ceil(bossLock(S.zone))}s.`);buildPickers();return;}S.mob=v;S.fighting=null;spawn();};
+card.addEventListener('pointerdown',e=>{e.preventDefault();pull();});
+window.addEventListener('pointerdown',()=>{S.lastInput=Date.now();},true);window.addEventListener('keydown',()=>{S.lastInput=Date.now();},true);
+// space bar casts Shadow Bolt too (held space does not auto-repeat; one press, one bolt)
+window.addEventListener('keydown',e=>{if(e.code!=='Space'||e.repeat)return;const t=e.target;if(t&&(t.tagName==='INPUT'||t.tagName==='SELECT'||t.tagName==='TEXTAREA'))return;e.preventDefault();const r=card.getBoundingClientRect();lastPull={x:r.width/2-30+(Math.random()*120-60),y:r.height*.45};pull();});
+function pullAt(e){const r=card.getBoundingClientRect();lastPull={x:e.clientX-r.left,y:e.clientY-r.top};}
+let lastPull=null;card.addEventListener('pointerdown',pullAt,true);
+$('event').addEventListener('pointerdown',e=>{const b=e.target.closest('button');if(!b)return;e.preventDefault();if(b.dataset.a==='face'){S.fighting='ev';spawn();}else if(b.dataset.a==='run'){S.fighting=null;S.event=null;spawn();log('You run. The Infernal loses interest and leaves.');}});
+$('abilities').addEventListener('pointerdown',e=>{const b=e.target.closest('button');if(b&&!b.disabled){e.preventDefault();cast(b.dataset.id);}});
+
+$('tab').addEventListener('pointerdown',e=>{const b=e.target.closest('button,[data-a]');if(!b||b.disabled)return;e.preventDefault();const a=b.dataset.a,id=b.dataset.id;
+  if(a==='demon'){const d=DEMONS.find(x=>x.id===id);const c=demonCost(d);if(S.lvl>=d.lvl&&canAfford(c)){pay(c);S.demons[id]++;}}
+  else if(a==='spell'){const s=SPELLS.find(x=>x.id===id);const c=spellCost(s);if(S.lvl>=s.lvl&&canAfford(c)&&!S.spells[id]){pay(c);S.spells[id]=true;log(`Learned ${s.name}.`);}}
+  else if(a==='craftHs'){if(S.spells.hstone&&S.hs<1&&S.shards[0]>=25){S.shards[0]-=25;S.hs=1;}}
+  else if(a==='craftSs'){if(S.spells.sstone&&!S.sstone&&S.shards[3]>=1){S.shards[3]--;S.sstone=true;log('Soulstone active.','good');}}
+  else if(a==='rank'){const r=RANKS.find(x=>x.id===id);const cur=rank(id);const c=r.cost(cur);const lvOk=!(r.lvls&&S.lvl<r.lvls[cur])&&(!r.lvl||S.lvl>=r.lvl);if(cur<r.max&&(!r.req||S.spells[r.req])&&lvOk&&canAfford(c)){pay(c);S.ranks[id]=cur+1;log(`${r.name} rank ${cur+2}.`);}}
+  else if(a==='tm10'){const t=+id;if(rank('council')&&t>=1&&t<=4&&S.shards[t]>=10){S.shards[t]-=10;S.shards[t-1]+=50;S.seen[t-1]=true;}}
+  else if(a==='tm'){const t=+id;if(rank('council')&&t>=1&&t<=4&&S.shards[t]>=1){S.shards[t]-=1;S.shards[t-1]+=5;S.seen[t-1]=true;}}
+  else if(a==='tal'){const t=TALENTS.find(x=>x.id===id);if(talPtsAvail()>0&&tal(id)<t.max&&treePts(t.tree)>=t.tier){S.tal[id]=tal(id)+1;S.hp=Math.min(S.hp,maxHp());}}
+  else if(a==='respec'){const c=respecCost();if(canAfford(c)&&arm('respec','Press again: '+respecCostText(),b)){pay(c);S.tal={};S.respecTier=respecTierNow()+1;S.respecAt=Date.now();}}
+  else if(a==='legacy'){const p=LEGACY.find(x=>x.id===id);if(S.legacy.points>=p.cost&&leg(id)<p.max){S.legacy.points-=p.cost;S.legacy.perks[id]=leg(id)+1;}}
+  else if(a==='prestige')doPrestige(b);
+  else if(a==='ahbuy'){ahBuy(id);}
+  else if(a==='ahreset'){if(S.shards[3]>=1){S.shards[3]-=1;ahRefresh(true);log('The auctioneer finds some new stock.','good');}}
+  else if(a==='autotoggle'){S.autosellOff=S.autosellOff||{};S.autosellOff[id]=!S.autosellOff[id];autosellSweep();}
+  else if(a==='autosell'){const q=id==='junk'?'junk':+id;const o=AUTOSELL.find(x=>String(x.q)===String(q));if(autosellAvail(q)&&!S.autosell[q]&&S.account.gold>=o.cost){S.account.gold=Math.round((S.account.gold-o.cost)*100)/100;S.autosell[q]=true;log(`Auto-sell for ${o.name} items is on.`,'good');autosellSweep();}}
+  else if(a==='go'){S.zone=+b.dataset.z;S.mob=+b.dataset.m;S.fighting=null;buildPickers();spawn();closeWin();}
+  else if(a==='wipe'){if(!arm('reset','Press again to wipe everything',b))return;try{localStorage.removeItem('drainsoul3');}catch(e2){}S=freshState();buildPickers();spawn();log('Fresh warlock.');}
+  else if(a==='export'){const code=exportCode();const box=document.createElement('textarea');box.value=code;document.body.appendChild(box);box.select();let copied=false;try{copied=document.execCommand('copy');}catch(e2){}box.remove();if(navigator.clipboard)navigator.clipboard.writeText(code).catch(()=>{});const m=$('exportmsg');if(m)m.textContent=copied?'Copied to clipboard ('+code.length+' chars).':'Could not copy; code is in the import box.';const ib=$('importbox');if(ib&&!copied)ib.value=code;return;}
+  else if(a==='import'){const ib=$('importbox');const err=importCode(ib?ib.value:'');const m=$('importmsg');if(m)m.textContent=err||'Imported. Level '+S.lvl+'.';if(err)return;}
+  else if(a==='sellEq'){const it=S.gear[id];if(it){S.account.gold+=sellPrice(it);delete S.gear[id];S.hp=Math.min(S.hp,maxHp());log(`Sold ${it.name} for ${sellPrice(it)}g.`);selItem=null;}}
+  else if(a==='unequip'){const it=S.gear[id];if(it){it.uid=++S.uid;if(addToBag(it)){delete S.gear[id];S.hp=Math.min(S.hp,maxHp());}selItem=null;}}
+  else if(a==='selSlot'){selItem=S.gear[id]?{where:'gear',slot:id}:null;}
+  else if(a==='selBag'){selItem={where:'bag',uid:+id};}
+  else if(a==='equipBag'){equipFromBag(+id);selItem=null;}
+  else if(a==='sellBag'){sellFromBag(+id);selItem=null;}
+  else if(a==='sellJunk'){sellJunk();selItem=null;}
+  else if(a==='buyBag'){const nb=BAGS[S.bags];if(nb&&S.bags<4&&S.account.gold>=nb.cost&&S.shards[2]>=(nb.rare||0)&&S.shards[3]>=(nb.epic||0)){S.account.gold=Math.round((S.account.gold-nb.cost)*100)/100;S.shards[2]-=(nb.rare||0);S.shards[3]-=(nb.epic||0);S.bags++;log(`Bought a ${nb.name} (+${nb.slots} slots).`,'good');}}
+  else if(a==='shop'){const p=SHOP.find(x=>x.id===id);const cur=perk(id);const c=p.cost(cur);if(cur<p.max&&(!p.req||perk(p.req))&&S.account.gold>=c){S.account.gold-=c;S.account.perks[id]=cur+1;log(`Bought ${p.name}.`,'good');}}
+  tabDirty=true;});
+// two-press confirmation (the page cannot open browser dialogs)
+const armed={};function arm(key,label,el){const now=Date.now();if(armed[key]&&now-armed[key]<5000){delete armed[key];return true;}armed[key]=now;if(el){const t=el.textContent;el.textContent=label||'Press again to confirm';setTimeout(()=>{if(el.isConnected&&armed[key])el.textContent=t;delete armed[key];tabDirty=true;},5000);}return false;}
+$('reset').addEventListener('pointerdown',e=>{e.preventDefault();if(!arm('reset','Press again to wipe everything',e.currentTarget))return;try{localStorage.removeItem('drainsoul3');}catch(e2){}S=freshState();buildPickers();spawn();tabDirty=true;log('Fresh warlock.');});
+function doPrestige(btn){
+  if(!S.flags.rag)return;const pts=3;
+  if(!arm('prestige','Press again to perform the Ritual. This warlock is consumed.',btn))return;
+  const keep={ach:S.ach,prestiges:S.prestiges+1,legacy:{points:S.legacy.points+pts,perks:S.legacy.perks},account:S.account,carry:Math.floor(S.shards[0]*.1*(leg('inherit')+perk('bank')))};
+  S=freshState(keep);buildPickers();spawn();log(`The ritual is complete. A new warlock takes up the grimoire with ${S.legacy.points} Legacy points to spend.`,'lvl');
+}
+// ---------- ability icons (original glyphs; the addon build maps these ids to Interface\Icons texture paths instead) ----------
+const ICON={
+ drainlife:'<svg viewBox="0 0 24 24" fill="none" stroke="#6fcf3a" stroke-width="2"><path d="M12 3c3 5 6 8 6 12a6 6 0 0 1-12 0c0-4 3-7 6-12z"/><path d="M9 15c0 2 1.5 3 3 3" stroke="#bff0a0"/></svg>',
+ coe:'<svg viewBox="0 0 24 24" fill="none" stroke="#1eff00" stroke-width="2"><path d="M12 3v18M3 12h18M6 6l12 12M18 6L6 18"/></svg>',
+ cow:'<svg viewBox="0 0 24 24" fill="none" stroke="#1eff00" stroke-width="2"><rect x="3" y="9" width="7" height="6" rx="3"/><rect x="14" y="9" width="7" height="6" rx="3"/><path d="M10 12h4"/></svg>',
+ coa:'<svg viewBox="0 0 24 24" fill="none" stroke="#1eff00" stroke-width="2"><path d="M6 3h12M6 21h12M8 3c0 5 8 7 8 9s-8 4-8 9M16 3c0 5-8 7-8 9s8 4 8 9"/></svg>',
+ lifetap:'<svg viewBox="0 0 24 24" fill="#c43b3b" stroke="#ff8a8a" stroke-width="1.5"><path d="M12 2c-3 5-7 8-7 13a7 7 0 0 0 14 0c0-5-4-8-7-13z"/><path d="M12 10v7M9 14l3 3 3-3" fill="none" stroke="#fff"/></svg>',
+ fear:'<svg viewBox="0 0 24 24" fill="none" stroke="#e8e04a" stroke-width="2"><circle cx="12" cy="10" r="6"/><path d="M8 16l-1 5M16 16l1 5M9 9l2 1M15 9l-2 1M10 13h4"/></svg>',
+ coil:'<svg viewBox="0 0 24 24" fill="none" stroke="#9b5cff" stroke-width="2"><path d="M4 12c0-4 3-7 8-7s8 3 8 7-3 7-8 7-8-3-8-7z"/><path d="M8 12c0-2 2-3 4-3s4 1 4 3-2 3-4 3" stroke="#d9c6ff"/></svg>',
+ eat:'<svg viewBox="0 0 24 24" fill="#c9a05a" stroke="#e8b94a" stroke-width="1.5"><path d="M4 10c0-3 3-5 8-5s8 2 8 5v2c0 1-1 2-2 2H6c-1 0-2-1-2-2z"/><path d="M6 14h12l-1 5H7z" fill="#a07a3a"/></svg>',
+ spelllock:'<svg viewBox="0 0 24 24" fill="none" stroke="#9b5cff" stroke-width="2"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg>',
+ sacrifice:'<svg viewBox="0 0 24 24" fill="none" stroke="#7fb0ff" stroke-width="2"><path d="M12 3l8 4v6c0 4-3 7-8 8-5-1-8-4-8-8V7z"/><path d="M12 8v5M12 16h.01" stroke="#d0e4ff"/></svg>',
+ hs:'<svg viewBox="0 0 24 24" fill="#2f7a3a" stroke="#7fe03a" stroke-width="1.5"><path d="M12 3l8 5v8l-8 5-8-5V8z"/><path d="M12 8v8M8 12h8" stroke="#bff0a0"/></svg>',
+ craftHs:'<svg viewBox="0 0 24 24" fill="none" stroke="#7fe03a" stroke-width="2" stroke-dasharray="3 2"><path d="M12 3l8 5v8l-8 5-8-5V8z"/><path d="M12 9v6M9 12h6" stroke-dasharray="0"/></svg>',
+ craftSs:'<svg viewBox="0 0 24 24" fill="none" stroke="#a335ee" stroke-width="2" stroke-dasharray="3 2"><path d="M12 2l3 7 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>',
+ shadowburn:'<svg viewBox="0 0 24 24" fill="none" stroke="#ff5a9a" stroke-width="2"><path d="M12 2l2 6 6 2-5 4 1 7-4-3-4 3 1-7-5-4 6-2z"/><path d="M12 9v5" stroke="#ffd0e0"/></svg>',
+ conflag:'<svg viewBox="0 0 24 24" fill="#ff7a2a" stroke="#ffd24a" stroke-width="1.5"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-3 2-4 2-7 1 1 2 2 3 2 0-2 0-4 0-6z"/></svg>',
+ wrack:'<svg viewBox="0 0 24 24" fill="none" stroke="#ffd24a" stroke-width="2"><path d="M4 20L20 4M4 4l16 16M12 2v20M2 12h20"/></svg>',
+};
+const ico=id=>`<span class="ico">${ICON[id]||'<svg viewBox="0 0 24 24" fill="none" stroke="#9b5cff" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg>'}</span>`;
+function cdBtn(id,label,extra){const sp_=SPELLS.find(s=>s.id===id)||{};const cd=S.cds[id]>0?S.cds[id]:0;const total=sp_.cd||{shadowburn:15,conflag:30,wrack:45,hs:60,sacrifice:60,eat:180,spelllock:24}[id]||1;const icoId=id==='sstoneOn'?'craftSs':id;
+  return `<button data-id="${id}" data-total="${total}" title="${label.replace(/"/g,'')}" class="${extra||''}" ${cd>0&&!(id==='drainlife'&&S.mode==='life')?'disabled':''}><span class="cdfill" style="width:${Math.min(100,cd/total*100)}%"></span>${ico(icoId)}<span><span class="lb">${label}</span><span class="cdt">${cd>0?Math.ceil(cd)+'s':''}</span></span></button>`;}
+let abKey='';
+const ABIL_TIPS={spelllock:['Spell Lock','Your Felhunter silences the target, cancelling whatever it is casting and locking it out for 12s. Only usable while the target is casting.','24s cooldown, shorter with Improved Felhunter'],sstoneOn:['Soulstone','Active. If you die, you come back at half health and skip the corpse run.',''],eat:['Eat and rest','Back off, reset the target and heal to full over 10 seconds. Any click stops it. Fleeing an elite or Infernal puts you on the zone’s top regular mob.','3 min cooldown'],
+ hs:['Healthstone','Heals 40% of your health, +10% per Healthstone rank.','60s cooldown'],craftHs:['Create Healthstone','Craft a Healthstone for 25 Common shards. You can hold one.',''],
+ craftSs:['Create Soulstone','Costs 1 Epic shard. Die with it active and you skip the corpse run.',''],sacrifice:['Sacrifice','Consume one Voidwalker for a shield worth 30% of your health (+10% per Improved Voidwalker rank). Damage hits the shield first.','60s cooldown'],
+ shadowburn:['Shadowburn','Instantly kill a target at 25% health or less.','15s cooldown'],conflag:['Conflagrate','For 8 seconds Shadow Bolts deal triple damage.','30s cooldown'],wrack:['Wrack','15 instant Drain Soul ticks, each rolling for a shard.','45s cooldown']};
+function abilityTip(id){if(ABIL_TIPS[id])return ABIL_TIPS[id];const sp=SPELLS.find(x=>x.id===id);if(sp)return [sp.name,sp.desc,sp.cd?sp.cd+'s cooldown':''];return [id,'',''];}
+function showTip(btn){const [n,d,c]=abilityTip(btn.dataset.id);const t=$('tip');t.innerHTML=`<b>${n}</b>${d}${c?`<span class="muted">${c}</span>`:''}`;t.style.display='block';const r=btn.getBoundingClientRect();const w=t.offsetWidth,h=t.offsetHeight;let x=r.left+r.width/2-w/2,y=r.top-h-8;if(x<6)x=6;if(x+w>window.innerWidth-6)x=window.innerWidth-6-w;if(y<6)y=r.bottom+8;t.style.left=x+'px';t.style.top=y+'px';}
+function hideTip(){$('tip').style.display='none';}
+$('abilities').addEventListener('pointerover',e=>{const b=e.target.closest('button');if(b&&e.pointerType!=='touch')showTip(b);});
+$('abilities').addEventListener('pointerout',e=>{const b=e.target.closest('button');if(b)hideTip();});
+let tipHold=null;$('abilities').addEventListener('pointerdown',e=>{if(e.pointerType==='touch'){const b=e.target.closest('button');if(b){clearTimeout(tipHold);tipHold=setTimeout(()=>showTip(b),450);}}},true);
+$('abilities').addEventListener('pointerup',()=>{clearTimeout(tipHold);setTimeout(hideTip,1500);});
+// fixed action bar: each ability has a home slot and a hotkey, so nothing shifts around as you learn things
+const SLOT_ORDER=['drainlife','cow','coe','coa','lifetap','fear','coil','hs','sacrifice','spelllock','craftSs','shadowburn','conflag','wrack'];
+const SLOT_KEYS=['1','2','3','4','5','6','7','8','9','0','-','=','[',']'];
+function slotAbility(id){
+  switch(id){
+    case 'drainlife':return S.spells.drainlife?{id,lbl:S.mode==='life'?`Stop (${Math.ceil(S.lifeT||0)}s)`:'Drain Life',on:S.mode==='life'}:null;
+    case 'cow':return S.spells.cow?{id,lbl:'Curse of Weakness',on:S.curse==='cow'}:null;
+    case 'coe':return S.spells.coe?{id,lbl:'Curse of the Elements',on:S.curse==='coe'}:null;
+    case 'coa':return S.spells.coa?{id,lbl:S.coaT>0?`Agony ${Math.ceil(S.coaT)}s`:'Bane of Agony (5% hp)',on:S.coaT>0}:null;
+    case 'lifetap':return S.spells.lifetap?{id,lbl:`Life Tap (+${lifeTapShards()})`}:null;
+    case 'fear':return S.spells.fear?{id,lbl:'Fear'}:null;
+    case 'coil':return S.spells.coil?{id,lbl:'Death Coil'}:null;
+    case 'hs':return S.spells.hstone?(S.hs>=1?{id:'hs',lbl:'Healthstone (ready)'}:{id:'craftHs',lbl:'Create Healthstone (25)',craft:true}):null;
+    case 'sacrifice':return S.demons.vw>0?{id,lbl:`Sacrifice (${S.demons.vw})`}:null;
+    case 'spelllock':return S.demons.felh>0?{id,lbl:S.cast?'Spell Lock!':'Spell Lock',on:!!S.cast}:null;
+    case 'craftSs':return S.spells.sstone?(S.sstone?{id:'sstoneOn',lbl:'Soulstone active',on:true,dis:true}:{id:'craftSs',lbl:'Create Soulstone (1 Epic)',craft:true}):null;
+    case 'shadowburn':return tal('shadowburn')?{id,lbl:'Shadowburn'}:null;
+    case 'conflag':return tal('conflag')?{id,lbl:'Conflagrate'}:null;
+    case 'wrack':return tal('wrack')?{id,lbl:'Wrack'}:null;
+  }return null;}
+function renderAbilities(){
+  const cells=SLOT_ORDER.map((sid,i)=>{const a=slotAbility(sid);if(!a)return `<div class="empty"><span class="key">${SLOT_KEYS[i]}</span></div>`;return cdBtn(a.id,a.lbl,(a.on?'on ':'')+(a.craft?'craft':'')).replace('<span class="cdfill"',`<span class="key">${SLOT_KEYS[i]}</span><span class="cdfill"`);});
+  cells.push(cdBtn('eat',S.eatT>0?`Eating ${Math.ceil(S.eatT)}s`:'Eat and rest',(S.eatT>0?'on ':'')+'eat').replace('<span class="cdfill"','<span class="key">E</span><span class="cdfill"'));
+  const key=cells.map(c=>c.slice(0,c.indexOf('<span class="cdfill"')>0?c.indexOf('<span class="cdfill"'):c.length).replace(' disabled','')).join('|');
+  if(key!==abKey){abKey=key;$('abilities').innerHTML=cells.join('');return;}
+  const labels={};cells.forEach(c=>{const m1=c.match(/data-id="([^"]+)"/);const m2=c.match(/<span class="lb">([^<]*)<\/span>/);if(m1&&m2)labels[m1[1]]=m2[1];});
+  [...$('abilities').querySelectorAll('button')].forEach(b=>{const id=b.dataset.id;const lb=b.querySelector('.lb');if(lb&&labels[id]!==undefined&&lb.textContent!==labels[id]){lb.textContent=labels[id];b.title=labels[id];}const cd=S.cds[id]>0?S.cds[id]:0;const total=+b.dataset.total;const noRes=(id==='craftHs'&&S.shards[0]<25)||(id==='craftSs'&&S.shards[3]<1)||(id==='hs'&&S.hs<1)||id==='sstoneOn'||(id==='spelllock'&&!S.cast);b.disabled=(cd>0&&!(id==='drainlife'&&S.mode==='life'))||noRes;b.querySelector('.cdfill').style.width=Math.min(100,cd/total*100)+'%';b.querySelector('.cdt').textContent=cd>0?Math.ceil(cd)+'s':'';});
+}
+function render(){
+  frame++;
+  if(frame%2)return; // 30 updates/s is plenty for the UI; the sim still runs every frame
+  setText('hdr',`Lv ${S.lvl} Warlock · ${ZONES[S.zone].name}`);setText('goldtxt',S.account.gold.toFixed(2)+'g');
+  const rr=ratePerRarity();const m0=curMob();
+  {const mr=mobRarity(m0);setHTML('shards',S.shards.map((n,i)=>`<div class="gem-slot ${i===0?'main':''} ${i===mr&&rr[i]>0?'active':''}" title="${RAR[i]} soul shards${rr[i]*60>=.05?' · +'+fmt(Math.round(rr[i]*600)/10)+'/min':''}"><span class="gem r${i}"></span><span class="n">${fmt(n)}</span><span class="r">${RAR[i]}</span></div>`).join(''));}
+
+  const need=xpNeed(S.lvl);$('xpbar').style.width=(S.lvl>=60?100:S.xp/need*100)+'%';$('xplbl').textContent=S.lvl>=60?'Level 60':`XP ${fmt(S.xp)} / ${fmt(need)}`;
+  if(frame%60===0&&S.mob!==4&&(render.lockShown!==Math.ceil(bossLock(S.zone)/60))){render.lockShown=Math.ceil(bossLock(S.zone)/60);buildPickers();}
+  const m=curMob();const cls=lvlDiff(m);setLand();
+  tpanel.className='panel'+(m.elite?' elite':'')+(m.ev?' infernal':'')+(noShards(m)&&!m.ev?' grey':'')+(tpanel.classList.contains('pulse')?' pulse':'');
+  {const rr=mobRarity(m);const rc=['','#1eff00','#4aa3ff','#a335ee','#ff8000'][rr];$('mname').innerHTML=`<span style="${rc?'color:'+rc:''}">${m.n}</span> <span class="lv-${cls}" style="font-size:16px">Lv ${m.l}${m.elite?' ★ Elite':''}${rr===1&&!m.ev?' · Uncommon':rr===2?' · Rare':''}</span>`;}
+  setText('mdesc',`hits you for ${fmt(Math.round(mobDps(m)*dmgTakenMult()*10)/10)}/s · ${mobDescLine(m)}${{red:' · Will kill you',orange:' · Dangerous',yellow:'',green:' · Easy, 60% shards',grey:' · Too far below you: no XP, no shards'}[cls]}${m.l>S.lvl?' · +'+(m.l-S.lvl)+' levels':''}`);
+  {const mc=$('mobcast');if(S.cast){mc.style.display='';$('mobcastbar').style.width=Math.min(100,S.cast.t/S.cast.dur*100)+'%';setText('mobcastlbl',S.cast.name+' — interrupt it!');}else mc.style.display='none';}
+  $('soulbar').style.width=(S.soul/S.soulMax*100)+'%';setText('soullbl',`Health ${S.soul} / ${S.soulMax} · each drain tick takes 1`);
+  $('boltbar').style.width=Math.min(100,(S.bolt||0)*100)+'%';setText('boltlbl',`Shadow Bolt · ${clicksPerCast()} clicks · ${boltPower().toFixed(2)} dmg`);
+  $('drainrow').style.display=S.spells.drainsoul?'':'none';$('castbar').className='cast'+(S.mode==='life'?' life':'');$('castbar').style.width=(S.mode==='life'?Math.min(100,(6-(S.lifeT||0))/6*100):Math.min(100,((S.chanN||0)+Math.min(1,S.prog))/5*100))+'%';
+  setText('castlbl',S.corpse>0?'Dead':S.eatT>0?'Eating':(S.mode==='life'?'Drain Life — no shards while this runs':'Drain Soul'));
+  setHTML('auras',(S.spells.corr?'<span class="dot sh">Corruption</span>':'')+(S.spells.immo?'<span class="dot fi">Immolate</span>':'')+(S.curse==='cow'?'<span class="dot cu">Weakness</span>':'')+(S.curse==='coe'?'<span class="dot cu">Elements</span>':'')+(S.coaT>0?`<span class="dot cu">Agony ${Math.ceil(S.coaT)}s</span>`:'')+(S.fear>0?`<span class="dot">Feared ${Math.ceil(S.fear)}s</span>`:'')+(S.enrageT>0?`<span class="dot fi">Enraged ${Math.ceil(S.enrageT)}s</span>`:''));
+  setHTML('pauras',(S.spells.darmor?'<span class="dot sh">Demon Armor</span>':'')+(S.sstone?'<span class="dot gd">Soulstone</span>':'')+(S.shield>0?`<span class="dot" style="border-color:#7fb0ff">Shield ${Math.ceil(S.shield)}</span>`:'')+(S.mode==='life'?`<span class="dot cu">Drain Life ${Math.ceil(S.lifeT||0)}s</span>`:'')+(S.eatT>0?`<span class="dot gd">Eating ${Math.ceil(S.eatT)}s</span>`:'')+(S.conflagT>0?`<span class="dot fi">Conflagrate ${Math.ceil(S.conflagT)}s</span>`:''));
+  setText('pname',`You · Lv ${S.lvl}`);setText('pstate',S.corpse>0?'dead':S.eatT>0?'resting':S.mode==='life'?'draining life':'in combat');document.getElementById('pframe').classList.toggle('dead',S.corpse>0);
+  const evKey=S.event?(S.fighting==='ev'?'f':'a'):'';if(evKey!==(render.evKey||'')){render.evKey=evKey;$('event').innerHTML=evKey==='a'?`<div class="event" style="flex-direction:column;align-items:stretch"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>🔥 An Infernal is here. 10 shards, Epic chance, 15% of a level, hits hard. <b id="evt"></b></span><button data-a="face">Face it</button></div><div class="evbar"><div id="evfill"></div></div></div>`:(evKey==='f'?`<div class="event" style="flex-direction:column;align-items:stretch"><div style="display:flex;justify-content:space-between;align-items:center"><span>Infernal: <b id="evt"></b> left</span><button data-a="run">Run</button></div><div class="evbar"><div id="evfill"></div></div></div>`:'');}
+  if(S.event&&$('evt')){$('evt').textContent=Math.ceil(S.event.t)+'s';const ef=$('evfill');if(ef)ef.style.width=(S.event.t/45*100)+'%';}
+  renderLoot();renderSuggest();
+  const mh=maxHp();$('hpbar').style.width=Math.max(0,S.hp/mh*100)+'%';setText('hplbl',`${Math.ceil(Math.max(0,S.hp))} / ${mh}${S.shield>0?' · shield '+Math.ceil(S.shield):''}`);
+  setHTML('corpse',S.corpse>0?`<div class="corpse">Corpse run — ${Math.ceil(S.corpse)}s. Click the landscape to run faster.</div>`:'');
+  renderAbilities();
+  setText('s_you',youTps().toFixed(2)+' ticks/s');setText('s_click',clicksPerCast()+' clicks → '+boltPower().toFixed(2)+' dmg');setText('s_pet',petTps().toFixed(2)+' ticks/s');setText('s_dot',corrTps().toFixed(2)+' ticks/s');
+  setText('s_chance',Math.round(shardChance()*100)+'%');setText('s_crit',Math.round(critChance()*100)+'%');setText('s_res',Math.round(resistChance()*100)+'%'+(gearStat('hit')/100>=hitCap()?' (hit capped)':''));setText('s_mit',Math.round(dmgTakenMult()*100)+'%');setText('s_souls',String(S.souls));
+  [...$('hudBR').children].forEach(b=>b.classList.toggle('on',b.dataset.win===winOpen));
+  {const tb=$('hudBR').querySelector('[data-win="talents"]');const av=talPtsAvail();const key='t'+av;if(tb.dataset.k!==key){tb.dataset.k=key;let bd=tb.querySelector('.badge');if(av>0){if(!bd){bd=document.createElement('span');bd.className='badge';tb.appendChild(bd);}bd.textContent=av;tb.classList.add('glow');}else{if(bd)bd.remove();tb.classList.remove('glow');}}}
+  renderTrainerHead();
+  if(winOpen&&(tabDirty||(frame%60===0&&!(tab==='help'&&document.activeElement&&document.activeElement.id==='importbox')))){renderTab();tabDirty=false;}
+}
+// respec cost climbs with use (1 Rare, 5 Rares, 1 Epic, 5 Epics) and drops one step every 4 hours
+const RESPEC_COSTS=[{2:1},{2:5},{3:1},{3:5},{3:5}];
+function respecTierNow(){const t=S.respecTier||0;const decay=Math.floor((Date.now()-(S.respecAt||0))/(4*3600*1000));return Math.max(0,Math.min(4,t-decay));}
+function respecCost(){return RESPEC_COSTS[respecTierNow()];}
+function respecCostText(){const c=respecCost();return Object.keys(c).map(k=>c[k]+' '+RAR[k]).join(' + ');}
+function trainables(){let n=0,afford=0;SPELLS.forEach(sp=>{if(sp.id==='darmor'||sp.id==='drainsoul'||S.spells[sp.id])return;if(S.lvl>=sp.lvl){n++;if(canAfford(spellCost(sp)))afford++;}});
+  RANKS.forEach(r=>{const cur=rank(r.id);if(cur>=r.max)return;if(r.req&&!S.spells[r.req])return;const need=r.lvls?r.lvls[cur]:(r.lvl||0);if(S.lvl>=need){n++;if(canAfford(r.cost(cur)))afford++;}});return [n,afford];}
+let trainerKey='';
+function renderTrainerHead(){const [n,a]=trainables();const key=n+':'+a;if(key===trainerKey)return;trainerKey=key;const b=$('trainerbadge');b.style.display=n?'grid':'none';b.textContent=n;
+  $('trainerhead').classList.toggle('ready',a>0);setHTML('trainerlbl',n?`Trainer<br><span class="${a?'t1':'muted'}">${a?a+' you can afford':n+' to learn, not affordable yet'}</span>`:'Trainer<br><span class="muted">nothing new</span>');}
+function renderTab(){
+  let h='';
+  const row=(n,d,cost,btn,cls)=>`<div class="row ${cls||''}"><div><div class="n">${n}</div><div class="d">${d}</div></div><div style="display:flex;align-items:center;gap:8px"><div class="cost">${cost}</div>${btn}</div></div>`;
+  if(tab==='demons'){
+    h+=`<div class="muted" style="padding:4px;font-size:12px">Each demon attacks your target, all the time, even while you are dead or away: one point of damage per tick. Demons grow with you: +5% per level. Their hits do not pull shards until Demonic Pact. Total: ${petTps().toFixed(2)} ticks/s.</div>`;
+    DEMONS.forEach(d=>{const c=demonCost(d);const lk=S.lvl<d.lvl;h+=row(`${d.name} <span class="muted">×${S.demons[d.id]}</span>`,`${d.desc} ${(d.tps*(1+.05*(S.lvl-1))).toFixed(2)} ticks/s each at your level.${lk?' Requires level '+d.lvl+'.':''}`,costStr(c),`<button data-a="demon" data-id="${d.id}" ${!lk&&canAfford(c)?'':'disabled'}>Summon</button>`,lk?'locked':(S.demons[d.id]>0?'owned':''));});
+  }else if(tab==='gear'){
+    const DP={head:[115,8],chest:[18,80],legs:[18,160],hands:[212,110],wand:[212,200],trinket:[212,22]};const AB={head:'Head',chest:'Chest',legs:'Legs',hands:'Hands',wand:'Wand',trinket:'Trinket'};
+    let doll=`<div class="doll"><svg class="fig" viewBox="0 0 140 290" xmlns="http://www.w3.org/2000/svg"><path d="M70 18c-14 0-22 12-22 26v10h44V44c0-14-8-26-22-26z" fill="#3a2a5a"/><ellipse cx="70" cy="42" rx="11" ry="13" fill="#d9b89a"/><path d="M52 54h36l10 40-4 120-20 10H60l-20-10-4-120z" fill="#4a2a7a" stroke="#2b1750" stroke-width="2"/><path d="M40 100l-14 60 10 6 16-56zM100 100l14 60-10 6-16-56z" fill="#4a2a7a" stroke="#2b1750" stroke-width="2"/><circle cx="26" cy="166" r="6" fill="#d9b89a"/><circle cx="114" cy="166" r="6" fill="#d9b89a"/><path d="M62 224h16l4 50H58z" fill="#2b1750"/><path d="M118 60v150" stroke="#6a4a2a" stroke-width="4"/><circle cx="118" cy="56" r="7" fill="#9b5cff"/></svg>`;
+    SLOTS.forEach(([sl,nm])=>{const it=S.gear[sl];const s=selItem&&selItem.where==='gear'&&selItem.slot===sl;doll+=`<div class="slot ${it?'q'+it.q:''} ${s?'sel':''}" style="left:${DP[sl][0]}px;top:${DP[sl][1]}px" data-a="selSlot" data-id="${sl}" title="${it?it.name:''}">${it?`<span class="t${it.q}" style="font-size:10px;padding:2px">${it.name.split(' ').slice(0,2).join(' ')}</span>`:`<span class="lb">${AB[sl]}</span>`}</div>`;});
+    doll+='</div>';h+=doll;
+    let det='<span class="muted">Select a slot or a bag item.</span>';
+    if(selItem&&selItem.where==='gear'&&S.gear[selItem.slot]){const it=S.gear[selItem.slot];det=`<span>${itemHtml(it)}</span><span style="display:flex;gap:6px"><button data-a="unequip" data-id="${selItem.slot}">Unequip</button><button data-a="sellEq" data-id="${selItem.slot}">Sell ${sellPrice(it)}g</button></span>`;}
+    if(selItem&&selItem.where==='bag'){const it=S.bag.find(x=>x.uid===selItem.uid);if(it)det=it.junk?`<span><span class="t0">${it.name}</span> ×${it.count} <span class="muted">junk · ${it.price}g each</span></span><button data-a="sellBag" data-id="${it.uid}">Sell ${sellPrice(it)}g</button>`:`<span>${itemHtml(it)}<br><span class="muted">vs equipped: ${compareHtml(it)}</span></span><span style="display:flex;gap:6px"><button data-a="equipBag" data-id="${it.uid}">Equip</button><button data-a="sellBag" data-id="${it.uid}">Sell ${sellPrice(it)}g</button></span>`;}
+    h+=`<div class="detail">${det}</div>`;
+    // character sheet
+    const hc=Math.round(hitCap()*1000)/10,hg=Math.round(gearStat('hit')*10)/10;const hitNote=hg>=hc?`<span class="t1">capped</span> (${hc}% needed in ${ZONES[S.zone].name}${hg>hc?', '+Math.round((hg-hc)*10)/10+'% wasted':''})`:`${hg}% of ${hc}% needed in ${ZONES[S.zone].name}`;
+    const sheet=[['Level',S.lvl],['Health',maxHp()],['Damage taken',Math.round(dmgTakenMult()*100)+'%'],['Demon Armor regen',S.spells.darmor?(Math.round(armorRegen()*1000)/10)+'% per 2s':'none'],
+      ['Channel speed',youTps().toFixed(2)+' ticks/s'],['Corruption',corrTps().toFixed(2)+' ticks/s'],['Demons',petTps().toFixed(2)+' ticks/s'],['Shadow Bolt',clicksPerCast()+' clicks per cast, '+boltPower().toFixed(2)+' damage'],
+      ['Shard chance per tick',Math.round(shardChance()*100)+'%'],['Critical drain',Math.round(critChance()*100)+'%'],['Hit',hitNote],['Resist chance',Math.round(resistChance()*100)+'%'],['Shards per minute',fmt(shardsPerSec()*60)]];
+    h+='<div class="tier" style="padding:8px 4px 2px">Character</div><div class="row" style="display:block">'+sheet.map(([k,v])=>`<div class="stat"><span>${k}</span><span>${v}</span></div>`).join('')+'</div>';
+    {const c=setCounts(S);const lines=Object.keys(c).map(nm=>`${nm} (${c[nm]}/4): `+Object.keys(SETS[nm].bonusText).map(n=>`<span class="${c[nm]>=+n?'t1':'muted'}">${n}pc ${SETS[nm].bonusText[n]}</span>`).join(' · '));if(lines.length)h+='<div class="tier" style="padding:8px 4px 2px">Set bonuses</div><div class="row"><div class="d">'+lines.join('<br>')+'</div></div>';}
+    h+='<div class="tier" style="padding:8px 4px 2px">Totals from gear</div><div class="row"><div class="d">'+Object.keys(STATS).map(k=>`${STATS[k]} +${Math.round(gearStat(k)*10)/10}%${k==='hit'&&gearStat('hit')/100>=hitCap()?' <span class="t1">(capped)</span>':''} <span class="muted">(${STATDESC[k]})</span>`).join(' · ')+'</div></div>';
+    h+='<div class="muted" style="padding:6px 4px;font-size:12px">Account perks are in the Gold Shop (G).</div>'
+  }else if(tab==='bags'){
+    const AB={head:'Head',chest:'Chest',legs:'Legs',hands:'Hands',wand:'Wand',trinket:'Trinket'};
+    let det='<span class="muted">Select an item.</span>';
+    if(selItem&&selItem.where==='bag'){const it=S.bag.find(x=>x.uid===selItem.uid);if(it)det=it.junk?`<span><span class="t0">${it.name}</span> ×${it.count} <span class="muted">junk · ${it.price}g each</span></span><button data-a="sellBag" data-id="${it.uid}">Sell ${sellPrice(it)}g</button>`:`<span>${itemHtml(it)}<br><span class="muted">vs equipped: ${compareHtml(it)}</span></span><span style="display:flex;gap:6px"><button data-a="equipBag" data-id="${it.uid}">Equip</button><button data-a="sellBag" data-id="${it.uid}">Sell ${sellPrice(it)}g</button></span>`;}
+    h+=`<div class="detail">${det}</div>`;
+    const cap=bagCap();const junkG=Math.round(S.bag.filter(x=>x.junk||x.q===0).reduce((a,x)=>a+sellPrice(x),0)*100)/100;
+    h+=`<div class="tier" style="padding:8px 4px 2px;display:flex;justify-content:space-between;align-items:center"><span>Bags · ${S.bag.length}/${cap} · ${S.account.gold.toFixed(2)}g</span><span style="display:flex;gap:6px"><button data-a="sellJunk" ${junkG>0?'':'disabled'} style="font-size:11px;padding:3px 8px">Sell all grey (${junkG}g)</button>${S.bags<4?`<button data-a="buyBag" ${S.account.gold>=BAGS[S.bags].cost&&S.shards[2]>=(BAGS[S.bags].rare||0)&&S.shards[3]>=(BAGS[S.bags].epic||0)?'':'disabled'} style="font-size:11px;padding:3px 8px">Buy ${BAGS[S.bags].name} +${BAGS[S.bags].slots} (${BAGS[S.bags].cost}g${BAGS[S.bags].rare?' + '+BAGS[S.bags].rare+' Rare':''}${BAGS[S.bags].epic?' + 1 Epic':''})</button>`:''}</span></div>`;
+    h+='<div class="bag">';for(let i=0;i<cap;i++){const it=S.bag[i];if(!it){h+='<div class="bagslot empty"></div>';continue;}const s=selItem&&selItem.where==='bag'&&selItem.uid===it.uid;
+      h+=`<div class="bagslot ${it.junk?'junk':'q'+it.q} ${s?'sel':''}" data-a="selBag" data-id="${it.uid}" title="${it.name}">${it.junk?'⚙':`<span class="t${it.q}">${AB[it.slot].slice(0,2)}</span>`}${it.junk&&it.count>1?`<span class="cnt">${it.count}</span>`:''}</div>`;}
+    h+='</div>';
+    h+='<div class="tier" style="padding:8px 4px 2px">Auto-sell</div>';
+    AUTOSELL.forEach(o=>{const on=!!(S.autosell&&S.autosell[o.q]);const avail=autosellAvail(o.q);const isJ=o.q==='junk';const bagName=BAGS[isJ?0:o.q].name;const need=isJ?(S.bags<1?'Needs the Linen Bag.':''):(S.bags<o.q+1?`Needs the ${bagName}.`:(!fullSet(o.q)?`Needs ${o.name} or better in all six slots.`:''));
+      h+=row(`Auto-sell <span class="t${isJ?0:o.q}">${o.name}</span>${isJ?'':' items'}`,on?((S.autosellOff&&S.autosellOff[o.q])?'Paused. Press On to resume.':(isJ?'On. Junk is sold the moment it drops.':'On. Drops of this quality that would not improve a slot go straight to gold.')):(need||(isJ?'Junk is sold the moment it drops.':'Drops of this quality that would not improve a slot go straight to gold.')),on?'':`<span style="color:var(--gold)">${o.cost}g</span>`,on?`<button data-a="autotoggle" data-id="${o.q}" class="${S.autosellOff&&S.autosellOff[o.q]?'':'on'}">${S.autosellOff&&S.autosellOff[o.q]?'Off':'On'}</button>`:`<button data-a="autosell" data-id="${o.q}" ${avail&&S.account.gold>=o.cost?'':'disabled'}>Buy</button>`,on&&!(S.autosellOff&&S.autosellOff[o.q])?'owned':(avail||on?'':'locked'));});
+  }else if(tab==='ah'){
+    ahRefresh();const mins=Math.max(0,Math.ceil((S.ah.t-Date.now())/60000));
+    h+=`<div class="muted" style="padding:4px;font-size:12px">Other warlocks’ castoffs, around your level. New listings in ${mins} min. You have <span style="color:var(--gold)">${S.account.gold.toFixed(2)}g</span>.</div>`;
+    h+=row('Refresh the listings now','Bribe the auctioneer: a fresh set of six, right away.','<span class="t3">1 Epic</span>',`<button data-a="ahreset" ${S.shards[3]>=1?'':'disabled'}>Refresh</button>`);
+    if(!S.ah.items.length)h+=row('Sold out','Come back when the listings reset, or refresh.','','');
+    S.ah.items.forEach(it=>{const p=ahPrice(it);h+=row(itemHtml(it),`vs equipped ${SLOTS.find(x=>x[0]===it.slot)[1]}: ${compareHtml(it)}`,`<span style="color:var(--gold)">${p}g</span>`,`<button data-a="ahbuy" data-id="${it.uid}" ${S.account.gold>=p?'':'disabled'}>Buy</button>`);});
+  }else if(tab==='council'){
+    if(!rank('council')){const need=S.lvl<40?'Reach level 40, then train Shadow Council at the Trainer.':'Train Shadow Council at the Trainer (60g + 40 Uncommon).';h+=row('Shadow Council','Breaks a shard into 5 of the tier below, for when you have the wrong kind. '+need,'','',' locked');}
+    else{h+='<div class="muted" style="padding:4px;font-size:12px">Break a shard into five of the tier below. There is no way back up; higher tiers only come from the mobs that pay them.</div>';
+      for(let t=4;t>=1;t--)h+=row(`Break <span class="t${t}">${RAR[t]}</span> → 5 <span class="t${t-1}">${RAR[t-1]}</span>`,`You have ${fmt(S.shards[t])} ${RAR[t]}`,`<span class="t${t}">1 ${RAR[t]}</span>`,`<button data-a="tm" data-id="${t}" ${S.shards[t]>=1?'':'disabled'}>Break</button>`);
+      for(let t=4;t>=1;t--)if(S.shards[t]>=10)h+=row(`Break 10 <span class="t${t}">${RAR[t]}</span> → 50 <span class="t${t-1}">${RAR[t-1]}</span>`,'','',`<button data-a="tm10" data-id="${t}">Break 10</button>`);}
+  }else if(tab==='shop'){
+    h+=`<div class="muted" style="padding:4px;font-size:12px">Account perks. Everything here survives the Ritual of Doom. You have <span style="color:var(--gold)">${S.account.gold.toFixed(2)}g</span>.</div>`;
+    SHOP.forEach(p=>{const cur=perk(p.id);const lk=p.req&&!perk(p.req);if(cur>=p.max){h+=row(p.name,p.desc,'','<span class="t1">Owned</span>','owned');return;}const c=p.cost(cur);h+=row(`${p.name}${p.max>1?' <span class="muted">'+cur+'/'+p.max+'</span>':''}`,p.desc+(lk?' Requires '+SHOP.find(x=>x.id===p.req).name+'.':''),`${c}g`,`<button data-a="shop" data-id="${p.id}" ${!lk&&S.account.gold>=c?'':'disabled'}>Buy</button>`,lk?'locked':'');});
+  }else if(tab==='map'){
+    h+='<div class="muted" style="padding:4px;font-size:12px">Pick a zone and a target. Zones open when you drain the previous zone’s elite.</div>';
+    ZONES.forEach((z,zi)=>{const locked=zi>0&&!S.cleared[zi-1];h+=`<div class="tier" style="padding:8px 4px 2px">${z.name} (${z.band[0]}–${z.band[1]})${locked?' · locked':''}</div>`;if(locked)return;
+      z.mobs.forEach((mm,mi)=>{const m={n:mm.n,l:mm.l,hpm:1,dm:1,shards:1};const cls=lvlDiff(m);const cur=S.zone===zi&&S.mob===mi&&S.fighting!=='ev';h+=row(`${mm.n} <span class="lv-${cls}">Lv ${mm.l}</span>`,`${cls}${noShards(m)?' · no XP, no shards':''}`,'',`<button data-a="go" data-z="${zi}" data-m="${mi}" ${cur?'disabled':''}>${cur?'Current':'Go'}</button>`,cur?'owned':'');});
+      const el={n:z.elite.n,l:z.elite.l,elite:true,hpm:10,dm:3,shards:5};const lk=bossLock(zi);const cur=S.zone===zi&&S.mob===4;h+=row(`★ ${z.elite.n} <span class="lv-${lvlDiff(el)}">Lv ${z.elite.l}</span> elite`,lk>0?`dead, back in ${Math.ceil(lk/60)} min`:(z.elite.n==='Ragnaros'?'2 hour lockout after a kill':'20 minute lockout after a kill'),`<span class="t2">Rare source</span>`,`<button data-a="go" data-z="${zi}" data-m="4" ${cur||lk>0?'disabled':''}>${cur?'Current':'Go'}</button>`,cur?'owned':(lk>0?'locked':''));});
+  }else if(tab==='help'){
+    h+=`<div style="padding:6px;font-size:13px;line-height:1.55">
+    <p><b>The drain.</b> You channel Drain Soul on your target. The purple cast bar fills up, and when it fills, that is one tick. Each tick takes 1 off the target’s health and has a chance (shown in the stats) to give you a shard. Until you train Drain Soul at level 10 you have no channel at all and shards come only from kills; after that it ticks on its own and each of your ticks can drain a shard. When the target’s health hits 0 it dies, pays out its death shards, gives XP, maybe drops gear, and the next one steps up.</p>
+    <p><b>Clicking.</b> Every click in the landscape (or the space bar) is part of a Shadow Bolt cast: three clicks make one bolt, two with the Bane talent. Each bolt takes health off the target. Bolts never give shards directly; they kill faster, and kills pay. Shadow Bolt ranks, Improved Shadow Bolt and Shadow power gear make each bolt hit harder.</p>
+    <p><b>Demons.</b> Each demon you summon attacks the same target, all the time, including while you are dead or have the page closed. Their ticks take 1 health just like yours, so they are your kill speed, and kills pay death shards. They do not roll for shards on their ticks until the Demonic Pact milestone in Demonology, which makes them part of the drain.</p>
+    <p><b>Corruption and Immolate.</b> Corruption is a damage tick every 3 seconds; it never rolls for shards. Immolate gives a chance of an extra shard when the target dies.</p>
+    <p><b>Resists.</b> Some ticks are resisted and do nothing. The chance goes up each zone and down with Hit on gear and the Suppression talent.</p>
+    <p><b>Critical drains.</b> A tick that crits always gives a shard (two with the Ruin talent). Crit comes from the Devastation talent and gear.</p>
+    <p><b>Eat and rest.</b> The button above the target panel. You back off, the target resets to full health and nothing hits it while you sit, and you heal to full over 10 seconds. Fleeing an elite or an Infernal puts you back on the zone’s top regular mob. Clicking stops eating early. 3 minute cooldown.</p>
+    <p><b>Damage and dying.</b> The target hits you the whole time. Demon Armor regenerates a little, Sacrifice burns a Voidwalker for a big shield, Healthstones and Drain Life heal. If you die you keep everything; your channel is just down for the corpse run, and clicking the landscape runs it off faster.</p>
+    <p><b>Enemy abilities.</b> Casters wind up a big bolt and brutes an enrage on an orange bar under their health. Fear interrupts regular mobs, Death Coil interrupts anything, and a Felhunter gives you Spell Lock, a dedicated interrupt. Bosses have a signature ability and are immune to Fear. Casters and brutes pay 25% more shards and XP. If you are away and low, your warlock sits to eat on her own when the meal is ready.</p>
+    <p><b>Levels and colour.</b> Mobs are coloured by level: grey mobs give nothing at all, green are easy, yellow fair, orange dangerous, red will kill you. Higher mobs have more health, hit harder, and roll better shard rarities. The green banner tells you when something harder is within reach.</p>
+    <p><b>Shards.</b> The mob decides the shard. Ordinary mobs give Common. About 8% of spawns are uncommon (green name, tougher) and give Uncommon shards; about 1.5% are rare (blue name, much tougher) and give Rare shards, with better loot and a guaranteed drop. Zone bosses pay one Epic, a few Rares (more in later zones) and a pile of Commons and Uncommons; Ragnaros adds a Legendary. Infernals give Uncommon with an Epic chance that grows by zone. Epic gear is named set pieces (Dreadmist, then Felheart from 45) with 2 and 4 piece bonuses. Shadow Council at 40 lets you break a shard into 5 of the tier below when you have the wrong kind. Common buys demons, Uncommon goes into spell ranks, Rare and Epic gate the big purchases. A respec costs 1 Rare the first time, then 5 Rares, then 1 Epic, then 5 Epics; the price drops a step for every 4 hours since your last respec. Training itself costs gold, which comes from selling junk and gear.</p>
+    <p><b>Gold.</b> From selling junk and gear. It survives the Ritual of Doom and pays for training, bags, account perks, and the Auction House (A), which lists six pieces of gear around your level and restocks every 30 minutes.</p>
+    <p><b>Transfer.</b> Move progress between this page and the in-game addon. Export copies a code; in game use /ds import. To bring progress here, run /ds export in game and paste the code below.</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><button data-a="export">Export code</button><span id="exportmsg" class="muted"></span></div>
+    <div style="display:flex;gap:6px;margin-top:6px"><input id="importbox" placeholder="Paste a DS1. code" style="flex:1;font:inherit;color:var(--text);background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:6px"><button data-a="import">Import</button></div>
+    <div id="importmsg" class="muted" style="margin-top:4px"></div>
+    <p><b>Hotkeys.</b> B bags, C character, P spellbook, T talents, D demons, A auction house, G gold shop, S shadow council, Y achievements, R ritual, M map, N trainer, H help, Esc closes. Space casts Shadow Bolt; 1–9, 0, −, =, [ cast the action bar; E eats.</p>
+    <p><button data-a="wipe" style="font-size:12px">Wipe save</button> <span class="muted">Legacy and gold go too.</span></p>
+    </div>`;
+  }else if(tab==='trainer'){
+    h+=`<div class="muted" style="padding:4px;font-size:12px">Training costs gold (sell junk and gear). Ranks also take Uncommon shards. You have ${goldStr(S.account.gold)}. Greyed rows are above your level.</div>`;
+    // build one list of entries: new spells and next ranks, each with the level it needs
+    const entries=[];
+    SPELLS.forEach(s=>{if(s.id==='darmor'||s.id==='drainsoul')return;if(!S.spells[s.id]){const c=spellCost(s);entries.push({lvl:s.lvl,html:row(`${s.name} <span class="muted">Lv ${s.lvl}</span>`,s.desc,costStr(c),`<button data-a="spell" data-id="${s.id}" ${S.lvl>=s.lvl&&canAfford(c)?'':'disabled'}>Train</button>`,S.lvl<s.lvl?'locked':'')});}});
+    RANKS.forEach(r=>{const cur=rank(r.id);if(cur>=r.max)return;if(r.req&&!S.spells[r.req])return;const need=r.lvls?r.lvls[cur]:(r.lvl||0);const c=r.cost(cur);
+      entries.push({lvl:need,html:row(`${r.name} <span class="muted">rank ${cur+2} · Lv ${need}</span>`,r.desc,costStr(c),`<button data-a="rank" data-id="${r.id}" ${S.lvl>=need&&canAfford(c)?'':'disabled'}>Train</button>`,S.lvl<need?'locked':'')});});
+    entries.sort((a,b)=>a.lvl-b.lvl);
+    let last=null;entries.forEach(e=>{const band=e.lvl<=S.lvl?'available':'Level '+e.lvl;if(band!==last){last=band;h+=`<div class="tier" style="padding:8px 4px 2px">${band==='available'?'Available now':band}</div>`;}h+=e.html;});
+  }else if(tab==='spellbook'){
+    const rk=id=>{const r=RANKS.find(x=>x.id===id);return r?` <span class="muted">rank ${rank(id)+1}${rank(id)>=r.max?' (max)':''}</span>`:'';};
+    h+=row('Shadow Bolt'+rk('bolt'),'Your click. Several clicks make one cast; each cast hits the target. Damage only.','','','owned');
+    if(S.spells.drainsoul)h+=row('Drain Soul'+rk('drain'),'Always channeling on your target. Each tick takes 1 health and may yield a shard.','','','owned');
+    SPELLS.filter(s=>S.spells[s.id]&&s.id!=='drainsoul').forEach(s=>h+=row(s.name+rk(s.id),s.desc,'','','owned'));
+    if(rank('council'))h+='<div class="muted" style="padding:6px 4px;font-size:12px">Breaking shards down is in the Shadow Council window (S).</div>';
+  }else if(tab==='ranks_old'){
+    h+='<div class="muted" style="padding:4px;font-size:12px">Higher ranks of spells you already know. Priced mostly in Uncommon shards. Ranks for a spell appear once you have learned it at the Trainer.</div>';
+    RANKS.forEach(r=>{const cur=rank(r.id);const avail=(!r.req||S.spells[r.req])&&(!r.lvl||S.lvl>=r.lvl);if(!avail&&!cur)return;
+      if(cur>=r.max){h+=row(`${r.name} <span class="muted">rank ${cur+1} (max)</span>`,r.desc,'','<span class="t1">Maxed</span>','owned');return;}
+      const c=r.cost(cur);h+=row(`${r.name} <span class="muted">rank ${cur+1} → ${cur+2}</span>`,r.desc,costStr(c),`<button data-a="rank" data-id="${r.id}" ${canAfford(c)?'':'disabled'}>Train</button>`,cur>0?'owned':'');});
+
+  }else if(tab==='talents'){
+    const av=talPtsAvail();
+    h+=`<div class="row"><div><div class="n">${av} point${av===1?'':'s'} available</div><div class="d">One per level from 10. Tiers unlock at 5, 10, 16, 21 and 25 points in a tree. Milestones in gold.</div></div><button data-a="respec" ${talPtsUsed()&&canAfford(respecCost())?'':'disabled'}>Respec (${respecCostText()})</button></div>`;
+    h+='<div class="treecols">'+TREES.map((tn,ti)=>{let t=`<div class="tree"><h3><span>${tn}</span><span class="muted">${treePts(ti)} pts</span></h3>`;let lastTier=-1;
+      TALENTS.filter(x=>x.tree===ti).forEach(x=>{if(x.tier!==lastTier){lastTier=x.tier;t+=`<div class="tier">${x.tier} points</div>`;}const r=tal(x.id);const ok=av>0&&r<x.max&&treePts(ti)>=x.tier;
+        t+=`<div class="tal ${r>=x.max?'max':''} ${x.ms?'milestone':''}"><div><div class="n">${x.name} <span class="muted">${r}/${x.max}</span></div><div class="d">${x.desc}</div></div><button data-a="tal" data-id="${x.id}" ${ok?'':'disabled'}>+</button></div>`;});
+      return t+'</div>';}).join('')+'</div>';
+  }else if(tab==='ach'){
+    h+=`<div class="muted" style="padding:4px">${achCount()}/${ACH.length} · +${achCount()}% drain speed (Fel Corruption)</div>`;
+    ACH.forEach(a=>h+=row(a.name,S.ach[a.id]||!['a12','a14','a18'].includes(a.id)?a.desc:'???','',S.ach[a.id]?'<span class="t1">✓</span>':'',S.ach[a.id]?'owned':''));
+  }else if(tab==='ritual'){
+    h+=`<div style="padding:6px"><p>Drain Ragnaros, then perform the Ritual of Doom. This warlock is consumed. A new one takes up the grimoire with Legacy points to spend here. Achievements persist.</p>
+    <div class="stat"><span>Ragnaros</span><span>${S.flags.rag?'drained':'alive'}</span></div><div class="stat"><span>Legacy points</span><span>${S.legacy.points}</span></div>
+    <div style="margin:10px 0"><button data-a="prestige" ${S.flags.rag?'':'disabled'} style="width:100%;padding:12px;background:linear-gradient(180deg,#4a2a7a,#2b1750)">${S.flags.rag?'Perform the Ritual of Doom (+3 Legacy)':'Ragnaros still lives'}</button></div></div>`;
+    LEGACY.forEach(p=>h+=row(`${p.name} <span class="muted">${leg(p.id)}/${p.max}</span>`,p.desc,`${p.cost} Legacy`,`<button data-a="legacy" data-id="${p.id}" ${S.legacy.points>=p.cost&&leg(p.id)<p.max?'':'disabled'}>Take</button>`,leg(p.id)>0?'owned':''));
+  }
+  setHTML('tab',h);
+}
+
+// ---------- transfer codes (shared with the addon; this numbering is canonical) ----------
+function exportCode(){const c=Object.assign({},S);c.cds={};c.event=null;c.fighting=null;c.corpse=0;c.lootQ=[];c.cleared=[0,1,2,3,4,5].map(i=>!!S.cleared[i]);c.seen=[0,1,2,3,4].map(i=>!!S.seen[i]);c.source='web';
+  return 'DS1.'+btoa(unescape(encodeURIComponent(JSON.stringify(c))));}
+function importCode(code){code=(code||'').replace(/\s/g,'');if(code.slice(0,4)!=='DS1.')return 'Not a Drain Soul code.';let d;
+  try{d=JSON.parse(decodeURIComponent(escape(atob(code.slice(4)))));}catch(e){return 'Could not read that code.';}
+  if(!d||typeof d.lvl!=='number')return 'Could not read that code.';
+  const f=freshState();for(const k in d){if(k!=='source')f[k]=d[k];}
+  const arr=(x,n,def)=>{const o=[];for(let i=0;i<n;i++)o[i]=Array.isArray(x)?(x[i]??def):(x&&x[i]!==undefined?x[i]:def);return o;};
+  f.shards=arr(d.shards,5,0).map(Number);f.seen=arr(d.seen,5,false).map(Boolean);f.cleared=arr(d.cleared,6,false).map(Boolean);
+  if(!Array.isArray(f.bag))f.bag=Object.values(f.bag||{});f.lootQ=[];f.gear=f.gear&&!Array.isArray(f.gear)?f.gear:{};
+  for(const k of ['tal','ranks','spells','ach','flags','demons','bossDead'])if(!f[k]||typeof f[k]!=='object'||Array.isArray(f[k]))f[k]={};
+  if(!f.legacy||typeof f.legacy!=='object')f.legacy={points:0,perks:{}};if(!f.legacy.perks)f.legacy.perks={};
+  if(!f.account||typeof f.account!=='object')f.account={gold:0,perks:{}};if(!f.account.perks)f.account.perks={};f.account.gold=Number(f.account.gold)||0;
+  DEMONS.forEach(dm=>f.demons[dm.id]=Number(f.demons[dm.id])||0);
+  f.zone=Math.max(0,Math.min(5,Number(d.zone)||0));f.mob=Math.max(0,Math.min(4,Number(d.mob)||0));
+  f.cds={};f.event=null;f.fighting=null;f.corpse=0;f.mode='drain';f.spells.darmor=true;if(f.lvl>=10)f.spells.drainsoul=true;f.last=Date.now();
+  S=f;buildPickers();spawn();tabDirty=true;save();log('Progress imported.','good');return null;}
+// ---------- save/load ----------
+function save(){try{S.last=Date.now();localStorage.setItem('drainsoul3',JSON.stringify(S));}catch(e){}}
+function load(){
+  try{const raw=localStorage.getItem('drainsoul3');if(!raw)return;const d=JSON.parse(raw);S=Object.assign(freshState(),d);S.corpse=0;S.event=null;S.fighting=null;S.mode='drain';S.lifeT=0;S.hp=Math.max(1,Math.min(maxHp(),S.hp));
+    Object.values(S.gear).forEach(it=>{if(it&&it.stats&&it.q<3)it.name=itemName(it);});S.bag.forEach(it=>{if(!it.junk&&it.stats&&it.q<3)it.name=itemName(it);});S.spells.darmor=true;if(S.lvl>=10&&S.spells.drainsoul===undefined)S.spells.drainsoul=true;
+    const gap=Math.min(12*3600,(Date.now()-(S.last||Date.now()))/1000);
+    if(gap>60&&!noShards(curMob())){const m=curMob();const tps=youTps()+corrTps()+petTps();const ticks=tps*gap*(1-resistChance());const need=soulNeed(m);const souls=Math.floor(ticks/need);
+      const chance=shardChance()*drainTps()/Math.max(tps,1e-9);
+      let sh=Math.floor(ticks*chance)+souls*deathShards(m);const startLvl=S.lvl;
+      for(let i=0;i<Math.min(souls,5000);i++)gainXp(xpFor(m));if(souls>5000)gainXp(xpFor(m)*(souls-5000));
+      S.souls+=souls;const tickSh=Math.floor(ticks*chance),deathSh=souls*deathShards(m);for(let i=0;i<Math.min(tickSh,20000);i++){const r=rollRarity(m,'tick');S.shards[r]++;S.life++;S.seen[r]=true;}for(let i=0;i<Math.min(deathSh,20000);i++){const r=rollRarity(m,'death');S.shards[r]++;S.life++;S.seen[r]=true;}if(sh>40000){S.shards[0]+=sh-40000;S.life+=sh-40000;}
+      const junkN=Math.floor(souls*.35);for(let i=0;i<Math.min(junkN,400);i++){if(!addToBag({junk:true,name:JUNK[S.zone][i%4],ilvl:m.l,q:0,count:1,price:junkPrice(m.l,false)}))break;}
+      if(souls>0)log(`While you were away you drained ${fmt(souls)} souls for ${fmt(sh)} shards${S.lvl>startLvl?' and reached level '+S.lvl:''}.`,'good');}
+  }catch(e){S=freshState();}
+}
+// ---------- target suggestions ----------
+function suggestion(){
+  if(S.fighting==='ev'||S.corpse>0)return null;
+  const z=ZONES[S.zone];
+  if(S.mob<4){for(let i=3;i>S.mob;i--){if(z.mobs[i].l<=S.lvl+1)return {zone:S.zone,mob:i,n:z.mobs[i].n,l:z.mobs[i].l,why:'is a fair fight at your level'};}
+    if(!S.cleared[S.zone]&&z.elite.l<=S.lvl+1&&bossLock(S.zone)<=0)return {zone:S.zone,mob:4,n:z.elite.n,l:z.elite.l,why:'is within reach. Drain the elite to open the next zone'};}
+  if(S.cleared[S.zone]&&ZONES[S.zone+1]&&(S.mob===4||z.mobs[3].l<S.lvl-2)){const nz=ZONES[S.zone+1];if(nz.mobs[0].l<=S.lvl+1)return {zone:S.zone+1,mob:0,n:nz.mobs[0].n,l:nz.mobs[0].l,why:'in '+nz.name+' is waiting'};}
+  return null;
+}
+$('loot').addEventListener('pointerdown',e=>{const b=e.target.closest('button');if(!b)return;e.preventDefault();const uid=+b.dataset.uid;
+  if(b.dataset.a==='equip')equipFromBag(uid);else if(b.dataset.a==='sell')sellFromBag(uid);else if(b.dataset.a==='later')S.lastDrop=null;
+  lootKey=null;tabDirty=true;});
+let lootKey='',lootShownAt=0;
+function renderLoot(){if(S.lastDrop&&lootShownAt&&Date.now()-lootShownAt>15000){S.lastDrop=null;}
+  const it=S.lastDrop?S.bag.find(x=>x.uid===S.lastDrop):null;const full=S.bag.length>=bagCap();const key=(it?it.uid:'')+':'+(full?'F':'');if(key===lootKey)return;lootKey=key;lootShownAt=it?Date.now():0;
+  let h='';
+  if(it)h+=`<div class="event" style="background:#1a1a3a;border-color:${['#bdbdbd','#1eff00','#4aa3ff','#a335ee','#ff8000'][it.q]}"><span>🎁 Loot: ${itemHtml(it)}<br><span class="muted cmp" style="font-size:12px">vs equipped ${SLOTS.find(s=>s[0]===it.slot)[1]}: ${compareHtml(it)}</span></span><span style="display:flex;gap:6px"><button data-a="equip" data-uid="${it.uid}">Equip</button><button data-a="sell" data-uid="${it.uid}">Sell ${sellPrice(it)}g</button><button data-a="later" data-uid="${it.uid}">Keep in bag</button></span></div>`;
+  if(full)h+=`<div class="event" style="background:#3a1515;border-color:#ff6b6b"><span>🎒 Your bags are full. New loot is being left behind. Sell junk on the Gear tab.</span></div>`;
+  setHTML('loot',h);}
+let sugKey='',sugShownAt=0;
+function renderSuggest(){
+  const m=curMob();
+  if(S.fighting!=='ev'&&noShards(m)&&!(S.flags.greyWarned===S.zone+':'+S.mob)){S.flags.greyWarned=S.zone+':'+S.mob;log(`${m.n} is grey to you now: no XP, no shards. Move on.`,'bad');}
+  const s=suggestion();const key=s?`${s.zone}:${s.mob}:${S.lvl}`:'';
+  if(s&&S.dismissed===key){if(sugKey){sugKey='';$('suggest').innerHTML='';}return;}
+  if(s&&key===sugKey&&sugShownAt&&Date.now()-sugShownAt>15000){S.dismissed=key;return;}
+  if(key===sugKey)return;sugKey=key;sugShownAt=s?Date.now():0;
+  $('suggest').innerHTML=s?`<div class="event" style="background:#1f3317;border-color:var(--fel)"><span>⚔️ You are level ${S.lvl}. ${s.n} (Lv ${s.l}) ${s.why}. Harder souls pay more XP and better shards.</span><span style="display:flex;gap:6px"><button data-a="go" data-z="${s.zone}" data-m="${s.mob}">Face it</button><button data-a="no" data-key="${key}">Later</button></span></div>`:'';
+}
+$('suggest').addEventListener('pointerdown',e=>{const b=e.target.closest('button');if(!b)return;e.preventDefault();
+  if(b.dataset.a==='go'){S.zone=+b.dataset.z;S.mob=+b.dataset.m;S.fighting=null;buildPickers();spawn();}
+  else if(b.dataset.a==='no'){S.dismissed=b.dataset.key;}});
+
+load();buildPickers();spawn();
+log('Welcome, warlock. Click the target to cast Shadow Bolt: three clicks per cast, each cast hits the target. Kills pay shards. At level 10 you learn Drain Soul and your channel starts pulling shards on its own.');
+setInterval(save,5000);window.addEventListener('beforeunload',save);
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
