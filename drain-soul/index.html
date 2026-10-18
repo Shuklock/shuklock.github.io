@@ -331,7 +331,7 @@ const DEMONS=[
 const SPELLS=[
  {id:'drainsoul',name:'Drain Soul',lvl:10,cost:0,kind:'passive',desc:'Learned at level 10. Your channel ticks on its own (one tick every 1.5s), and each of your ticks has a chance to drain a shard. Before this, shards only come from kills.'},
  {id:'corr',name:'Corruption',lvl:4,cost:0.2,kind:'aura',desc:'A DoT on the target: one bonus damage tick every 3s, always on. Damage only; it never rolls for shards.'},
- {id:'immo',name:'Immolate',lvl:2,cost:0.1,kind:'aura',desc:'Burns the soul loose: 25% chance of an extra shard when a soul completes.'},
+ {id:'immo',name:'Immolate',lvl:2,cost:0.1,kind:'aura',desc:'A fire damage-over-time on the target: one tick every 4s, always on, a little weaker than Corruption. Burns the soul loose too: 25% chance of an extra shard when a soul completes. Damage ticks never roll for shards.'},
  {id:'cow',name:'Curse of Weakness',lvl:4,cost:0.2,kind:'curse',desc:'Target deals 30% less damage. One curse at a time.'},
  {id:'lifetap',name:'Life Tap',lvl:6,cost:0.4,kind:'active',cd:2,desc:'Burn 20% health for common shards worth about 4 seconds of your total drain income. 2s cooldown. Your health is a currency; the mob decides how much you can afford to spend.'},
  {id:'fear',name:'Fear',lvl:8,cost:0.8,kind:'active',cd:30,desc:'Target stops attacking for 6s and any cast it was winding up is interrupted. Bosses and Infernals are immune.'},
@@ -476,7 +476,7 @@ const RANKS=[
  {id:'drain',name:'Drain Soul',max:3,req:'drainsoul',lvls:[24,38,52],desc:'Your channel ticks 6% faster per rank.',cost:r=>({g:trainGold(24+14*r)*2,1:4*Math.pow(2,r),2:r>=2?2:0})},
  {id:'bolt',name:'Shadow Bolt',max:8,lvls:[6,12,20,28,36,44,52,60],desc:'+12% Shadow Bolt damage per rank.',cost:r=>({g:trainGold([6,12,20,28,36,44,52,60][r]),1:Math.round(2*Math.pow(1.5,r)),2:r>=5?2:0})},
  {id:'corr',name:'Corruption',max:5,req:'corr',lvls:[14,24,34,44,54],desc:'Corruption ticks 12% faster per rank.',cost:r=>({g:trainGold(14+10*r),1:3*Math.pow(2,r),2:r>=4?2:0})},
- {id:'immo',name:'Immolate',max:6,req:'immo',lvls:[10,20,30,40,50,60],desc:'Immolate’s extra-shard chance +8% per rank.',cost:r=>({g:trainGold(10+10*r),1:Math.round(3*Math.pow(1.6,r)),2:r>=5?2:0})},
+ {id:'immo',name:'Immolate',max:6,req:'immo',lvls:[10,20,30,40,50,60],desc:'Immolate ticks 8% faster and its extra-shard chance is +8% higher, per rank.',cost:r=>({g:trainGold(10+10*r),1:Math.round(3*Math.pow(1.6,r)),2:r>=5?2:0})},
  {id:'darmor',name:'Demon Armor',max:4,req:'darmor',lvls:[20,30,40,50],desc:'Regenerates a further +0.25% health per 2 seconds, per rank.',cost:r=>({g:trainGold(20+10*r),1:3*Math.pow(2,r)})},
  {id:'hstone',name:'Healthstone',max:4,req:'hstone',lvls:[22,34,46,58],desc:'Healthstones heal +10% per rank.',cost:r=>({g:trainGold(22+12*r),1:3*Math.pow(2,r)})},
  {id:'lifetap',name:'Life Tap',max:5,req:'lifetap',lvls:[16,26,36,46,56],desc:'+15% shards per tap, per rank.',cost:r=>({g:trainGold(16+10*r),1:3*Math.pow(2,r),2:r>=4?2:0})},
@@ -556,6 +556,7 @@ const clickPull=boltPower;
 function petTps(){let t=0;const u=1+.05*tal('unholy');
   DEMONS.forEach(d=>{let m=u;if(d.id==='imp')m*=1+.15*tal('impimp');if(d.id==='vw')m*=1+.15*tal('impvw');if(d.id==='succ')m*=1+.15*tal('impsayaad');if(d.id==='felh')m*=1+.15*tal('impfelh');t+=S.demons[d.id]*d.tps*m;});
   return t*globalHaste()*(1+.05*(S.lvl-1));}
+function immoTps(){if(!S.spells.immo)return 0;return .25*(1+.08*rank('immo'))*(1+gearStat('haste')/100)*globalHaste();}
 function corrTps(){if(!S.spells.corr)return 0;return (1/3)*(1+.1*tal('impcorr'))*(1+.12*rank('corr'))*(1+gearStat('haste')/100)*globalHaste();}
 function auraCount(){return (S.spells.corr?1:0)+(S.spells.immo?1:0)+(S.curse?1:0)+(S.coaT>0?1:0);}
 function shardChance(){if(!S.spells.drainsoul)return 0;let c=.1+.05*tal('impdrains')+Math.min(.1,S.demons.felh*.01)+.05*leg('hunter')+.04*tal('soulsiphon')*auraCount()+gearStat('affinity')/100;return Math.min(.95,c);}
@@ -609,11 +610,11 @@ function goldStr(g){return g>=1?(Math.round(g*100)/100)+'g':Math.round(g*100)+'s
 function costStr(c){return Object.keys(c).filter(k=>c[k]>0).map(k=>k==='g'?`<span style="color:var(--gold)">${goldStr(c[k])}</span>`:`<span class="t${k}">${fmt(c[k])} ${RAR[k]}</span>`).join(' + ')||'free';}
 function spellCost(s){const c={};if(s.cost>0)c.g=s.cost;return Object.assign(c,s.extra||{});}
 function drainTps(){return youTps()+(tal('dempact')?petTps():0);}
-function shardsPerSec(){if(S.mode==='life')return 0;const tps=drainTps();const need=soulNeed(curMob());return tps*(1-resistChance())*shardChance()+(youTps()+corrTps()+petTps())/need*deathShards(curMob());}
+function shardsPerSec(){if(S.mode==='life')return 0;const tps=drainTps();const need=soulNeed(curMob());return tps*(1-resistChance())*shardChance()+(youTps()+corrTps()+immoTps()+petTps())/need*deathShards(curMob());}
 
 function ratePerRarity(){const m=curMob();if(noShards(m)||S.mode==='life')return [0,0,0,0,0];
-  const tps=drainTps();const tickRate=tps*(1-resistChance())*shardChance();const deathRate=(youTps()+corrTps()+petTps())/soulNeed(m)*deathShards(m);
-  const out=[0,0,0,0,0];if(m.elite){const kps=(youTps()+corrTps()+petTps())/soulNeed(m);const rares=1+Math.floor(S.zone/2)+.5;out[1]=tickRate+deathRate*.4;out[0]=deathRate*.6;out[2]=kps*rares;out[3]=kps;if(m.n==='Ragnaros')out[4]=kps;return out;}out[mobRarity(m)]=tickRate+deathRate;return out;}
+  const tps=drainTps();const tickRate=tps*(1-resistChance())*shardChance();const deathRate=(youTps()+corrTps()+immoTps()+petTps())/soulNeed(m)*deathShards(m);
+  const out=[0,0,0,0,0];if(m.elite){const kps=(youTps()+corrTps()+immoTps()+petTps())/soulNeed(m);const rares=1+Math.floor(S.zone/2)+.5;out[1]=tickRate+deathRate*.4;out[0]=deathRate*.6;out[2]=kps*rares;out[3]=kps;if(m.n==='Ragnaros')out[4]=kps;return out;}out[mobRarity(m)]=tickRate+deathRate;return out;}
 // ---------- log & fx ----------
 const logEl=document.getElementById('log');const logs=[];
 function log(t,cls){logs.unshift(`<div class="${cls||''}">${t}</div>`);if(logs.length>40)logs.length=40;logEl.innerHTML=logs.join('');}
@@ -778,7 +779,7 @@ function tick(source){
   if(tal('siphonlife')&&(source==='you'||source==='dot'||source==='burst'))S.hp=Math.min(maxHp(),S.hp+maxHp()*.01);
   if(S.mode==='life'){}
   else if(noShards(curMob())){}
-  else if(source==='dot'||source==='bolt'){}
+  else if(source==='dot'||source==='bolt'||source==='immo'){}
   else if(source==='pet'&&!tal('dempact')){}
   else if(shardChance()<=0){}
   else{
@@ -878,6 +879,7 @@ function loopBody(dt){
     if(S.mode!=='life'){S.prog+=youTps()*dt;while(S.prog>=1&&S.soul>0){S.prog-=1;S.chanN=((S.chanN||0)+1)%5;tick('you');}}
     if(S.spells.darmor){S.armorT=(S.armorT||0)+dt;if(S.armorT>=2){S.armorT-=2;const h=maxHp()*armorRegen();if(S.hp<maxHp()){S.hp=Math.min(maxHp(),S.hp+h);fly('+'+Math.round(h),'#6fcf3a',null,null,true,'heal');}}}
     if(S.spells.corr){S.corrT+=corrTps()*dt;while(S.corrT>=1&&S.soul>0){S.corrT-=1;tick('dot');}}
+    if(S.spells.immo){S.immoT=(S.immoT||0)+immoTps()*dt;while(S.immoT>=1&&S.soul>0){S.immoT-=1;tick('immo');}}
     if(S.coaT>0){S.coaT-=dt;S.coaTick=(S.coaTick||0)+dt;if(S.coaTick>=2){S.coaTick-=2;const elapsed=24-S.coaT;const ramp=(elapsed<8?1:elapsed<16?2:3)*(1+.15*rank('coa'))*(1+.04*tal('emberstorm'));S.coaAcc=(S.coaAcc||0)+ramp;while(S.coaAcc>=1&&S.soul>0){S.coaAcc-=1;tick('dot');}}if(S.coaT<=0)log('Bane of Agony faded.');}
     if(S.enrageT>0)S.enrageT-=dt;
     if(S.soul>0&&S.fear<=0){const ab=mobAbility(m);
@@ -1016,7 +1018,7 @@ function auraTip(k){
   const pct=x=>Math.round(x*1000)/10;
   switch(k){
     case 'corr':return ['Corruption',`A damage-over-time on the target: one bonus tick every ${(1/Math.max(.01,corrTps())).toFixed(1)}s, always on. Damage only; it never rolls for shards.`,'Ranks, Improved Corruption and haste gear make it tick faster.'];
-    case 'immo':return ['Immolate',`Burns the soul loose: ${Math.round((.25+.1*tal('impimmo')+.08*rank('immo')+.04*tal('emberstorm'))*100)}% chance of an extra shard when a soul completes.`,'Ranks and talents raise the chance.'];
+    case 'immo':return ['Immolate',`A fire damage-over-time: one tick every ${(1/Math.max(.01,immoTps())).toFixed(1)}s, always on. Damage only; the ticks never roll for shards. It also burns the soul loose: ${Math.round((.25+.1*tal('impimmo')+.08*rank('immo')+.04*tal('emberstorm'))*100)}% chance of an extra shard when a soul completes.`,'Ranks make it tick faster; ranks and talents raise the shard chance.'];
     case 'cow':return ['Curse of Weakness','The target deals 30% less damage to you. One curse at a time.','Click it on the action bar again to drop it.'];
     case 'coe':return ['Curse of the Elements',`Each of your drain, bolt, Corruption and Agony ticks has a ${Math.round((.1+.05*rank('coe'))*100)}% chance to deal an extra point of damage. One curse at a time.`,'Click it on the action bar again to drop it.'];
     case 'coa':return ['Bane of Agony',`Ramping damage: a tick every 2s for 1, then 2, then 3 health. While it runs, 10% of a regular mob’s death shards come up one rarity, and the next mob to spawn is twice as likely to be uncommon or rare. No effect on bosses.`,`${Math.ceil(S.coaT)}s left`];
@@ -1130,7 +1132,7 @@ function renderTab(){
     // character sheet
     const hc=Math.round(hitCap()*1000)/10,hg=Math.round(gearStat('hit')*10)/10;const hitNote=hg>=hc?`<span class="t1">capped</span> (${hc}% needed in ${ZONES[S.zone].name}${hg>hc?', '+Math.round((hg-hc)*10)/10+'% wasted':''})`:`${hg}% of ${hc}% needed in ${ZONES[S.zone].name}`;
     const sheet=[['Level',S.lvl],['Health',maxHp()],['Damage taken',Math.round(dmgTakenMult()*100)+'%'],['Demon Armor regen',S.spells.darmor?(Math.round(armorRegen()*1000)/10)+'% per 2s':'none'],
-      ['Channel speed',youTps().toFixed(2)+' ticks/s'],['Corruption',corrTps().toFixed(2)+' ticks/s'],['Demons',petTps().toFixed(2)+' ticks/s'],['Shadow Bolt',clicksPerCast()+' clicks per cast, '+boltPower().toFixed(2)+' damage'],
+      ['Channel speed',youTps().toFixed(2)+' ticks/s'],['Corruption',corrTps().toFixed(2)+' ticks/s'],['Immolate',immoTps().toFixed(2)+' ticks/s'],['Demons',petTps().toFixed(2)+' ticks/s'],['Shadow Bolt',clicksPerCast()+' clicks per cast, '+boltPower().toFixed(2)+' damage'],
       ['Shard chance per tick',Math.round(shardChance()*100)+'%'],['Critical drain',Math.round(critChance()*100)+'%'],['Hit',hitNote],['Resist chance',Math.round(resistChance()*100)+'%'],['Shards per minute',fmt(shardsPerSec()*60)]];
     h+='<div class="tier" style="padding:8px 4px 2px">Character</div><div class="row" style="display:block">'+sheet.map(([k,v])=>`<div class="stat"><span>${k}</span><span>${v}</span></div>`).join('')+'</div>';
     {const c=setCounts(S);const lines=Object.keys(c).map(nm=>`${nm} (${c[nm]}/4): `+Object.keys(SETS[nm].bonusText).map(n=>`<span class="${c[nm]>=+n?'t1':'muted'}">${n}pc ${SETS[nm].bonusText[n]}</span>`).join(' · '));if(lines.length)h+='<div class="tier" style="padding:8px 4px 2px">Set bonuses</div><div class="row"><div class="d">'+lines.join('<br>')+'</div></div>';}
@@ -1173,7 +1175,7 @@ function renderTab(){
     <p><b>The drain.</b> You channel Drain Soul on your target. The purple cast bar fills up, and when it fills, that is one tick. Each tick takes 1 off the target’s health and has a chance (shown in the stats) to give you a shard. Until you train Drain Soul at level 10 you have no channel at all and shards come only from kills; after that it ticks on its own and each of your ticks can drain a shard. When the target’s health hits 0 it dies, pays out its death shards, gives XP, maybe drops gear, and the next one steps up.</p>
     <p><b>Clicking.</b> Every click in the landscape (or the space bar) is part of a Shadow Bolt cast: three clicks make one bolt, two with the Bane talent. Each bolt takes health off the target. Bolts never give shards directly; they kill faster, and kills pay. Shadow Bolt ranks, Improved Shadow Bolt and Shadow power gear make each bolt hit harder.</p>
     <p><b>Demons.</b> Each demon you summon attacks the same target, all the time, including while you are dead or have the page closed. Their ticks take 1 health just like yours, so they are your kill speed, and kills pay death shards. They do not roll for shards on their ticks until the Demonic Pact milestone in Demonology, which makes them part of the drain.</p>
-    <p><b>Corruption and Immolate.</b> Corruption is a damage tick every 3 seconds; it never rolls for shards. Immolate gives a chance of an extra shard when the target dies.</p>
+    <p><b>Corruption and Immolate.</b> Both are damage ticks that never roll for shards. Corruption ticks every 3 seconds, Immolate every 4, so Immolate is the one that carries you before Corruption at level 4. Immolate also gives a chance of an extra shard when the target dies.</p>
     <p><b>Resists.</b> Some ticks are resisted and do nothing. The chance goes up each zone and down with Hit on gear and the Suppression talent.</p>
     <p><b>Critical drains.</b> A tick that crits always gives a shard (two with the Ruin talent). Crit comes from the Devastation talent and gear.</p>
     <p><b>Eat and rest.</b> The button above the target panel. You back off, the target resets to full health and nothing hits it while you sit, and you heal to full over 10 seconds. Fleeing an elite or an Infernal puts you back on the zone’s top regular mob. Clicking stops eating early. 3 minute cooldown.</p>
@@ -1252,7 +1254,7 @@ function load(){
   try{const raw=localStorage.getItem('drainsoul3');if(!raw)return;const d=JSON.parse(raw);S=Object.assign(freshState(),d);S.corpse=0;S.event=null;S.fighting=null;S.mode='drain';S.lifeT=0;S.hp=Math.max(1,Math.min(maxHp(),S.hp));
     Object.values(S.gear).forEach(it=>{if(it&&it.stats&&it.q<3)it.name=itemName(it);});S.bag.forEach(it=>{if(!it.junk&&it.stats&&it.q<3)it.name=itemName(it);});S.spells.darmor=true;if(S.lvl>=10&&S.spells.drainsoul===undefined)S.spells.drainsoul=true;
     const gap=Math.min(12*3600,(Date.now()-(S.last||Date.now()))/1000);
-    if(gap>60&&!noShards(curMob())){const m=curMob();const tps=youTps()+corrTps()+petTps();const ticks=tps*gap*(1-resistChance());const need=soulNeed(m);const souls=Math.floor(ticks/need);
+    if(gap>60&&!noShards(curMob())){const m=curMob();const tps=youTps()+corrTps()+immoTps()+petTps();const ticks=tps*gap*(1-resistChance());const need=soulNeed(m);const souls=Math.floor(ticks/need);
       const chance=shardChance()*drainTps()/Math.max(tps,1e-9);
       let sh=Math.floor(ticks*chance)+souls*deathShards(m);const startLvl=S.lvl;
       for(let i=0;i<Math.min(souls,5000);i++)gainXp(xpFor(m));if(souls>5000)gainXp(xpFor(m)*(souls-5000));
