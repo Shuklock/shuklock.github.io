@@ -120,6 +120,9 @@ h1,h2,h3,.gem-slot .n,.lvlline,#pname,#mname,.bar .lbl,#wintitle,.zonename{font-
 .menu button.on{border-color:var(--fel)}
 .menu button .badge{position:absolute;top:-6px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#c43b3b;color:#fff;font-size:11px;display:grid;place-items:center;padding:0 5px;font-weight:700}
 .menu button.glow{border-color:var(--gold);box-shadow:0 0 10px rgba(232,185,74,.5)}
+.menu button .star{position:absolute;top:-7px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--gold);color:#1a1026;font-size:12px;line-height:1;display:grid;place-items:center;font-weight:700;pointer-events:none}
+.menu button.ready{border-color:var(--gold);animation:readyPulse 1.4s ease-in-out infinite}
+@keyframes readyPulse{0%,100%{box-shadow:0 0 5px rgba(232,185,74,.3)}50%{box-shadow:0 0 16px rgba(232,185,74,.95)}}
 #tip{position:fixed;z-index:7;max-width:280px;background:rgba(10,8,16,.96);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;pointer-events:none;display:none;box-shadow:0 6px 20px rgba(0,0,0,.6)}
 #tip b{display:block;font-size:13px;margin-bottom:2px}
 #tip .muted{display:block;margin-top:3px}
@@ -1094,6 +1097,7 @@ function render(){
   setText('s_you',youTps().toFixed(2)+' ticks/s');setText('s_click',clicksPerCast()+' clicks → '+boltPower().toFixed(2)+' dmg');setText('s_pet',petTps().toFixed(2)+' ticks/s');setText('s_dot',corrTps().toFixed(2)+' ticks/s');
   setText('s_chance',Math.round(shardChance()*100)+'%');setText('s_crit',Math.round(critChance()*100)+'%');setText('s_res',Math.round(resistChance()*100)+'%'+(gearStat('hit')/100>=hitCap()?' (hit capped)':''));setText('s_mit',Math.round(dmgTakenMult()*100)+'%');setText('s_souls',String(S.souls));
   [...$('hudBR').children].forEach(b=>b.classList.toggle('on',b.dataset.win===winOpen));
+  {const db=$('hudBR').querySelector('[data-win="demons"]');const can=DEMONS.some(d=>S.lvl>=d.lvl&&canAfford(demonCost(d)));const dk='d'+can;if(db.dataset.k!==dk){db.dataset.k=dk;let st=db.querySelector('.star');if(can){if(!st){st=document.createElement('span');st.className='star';st.textContent='★';db.appendChild(st);}db.classList.add('ready');}else{if(st)st.remove();db.classList.remove('ready');}}}
   {const tb=$('hudBR').querySelector('[data-win="talents"]');const av=talPtsAvail();const key='t'+av;if(tb.dataset.k!==key){tb.dataset.k=key;let bd=tb.querySelector('.badge');if(av>0){if(!bd){bd=document.createElement('span');bd.className='badge';tb.appendChild(bd);}bd.textContent=av;tb.classList.add('glow');}else{if(bd)bd.remove();tb.classList.remove('glow');}}}
   renderTrainerHead();
   if(winOpen&&(tabDirty||(frame%60===0&&!(tab==='help'&&document.activeElement&&document.activeElement.id==='importbox')))){renderTab();tabDirty=false;}
