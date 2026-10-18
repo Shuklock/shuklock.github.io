@@ -544,6 +544,7 @@ function offer(){if(rank('council')&&S.shards[0]>=OFFER_COST){S.shards[0]-=OFFER
 const LEGACY=[
  {id:'veteran',name:'Veteran',max:1,cost:2,desc:'New warlocks start at level 10.'},
  {id:'rested',name:'Rested',max:3,cost:1,desc:'+20% XP per rank.'},
+ {id:'oldhand',name:'Old Hand',max:2,cost:1,desc:'+25% XP per rank from level 20 on. You have walked this road before.'},
  {id:'hunter',name:'Soul Hunter',max:3,cost:1,desc:'+5% shard chance per tick, per rank.'},
  {id:'handme',name:'Hand-me-downs',max:1,cost:1,desc:'Start with 5 Imps.'},
  {id:'inherit',name:'Inheritance',max:2,cost:2,desc:'Keep 10% of your common shards per rank through the ritual.'},
@@ -631,7 +632,8 @@ function dmgTakenMult(){
 function shieldMax(){return maxHp()*(.3+.1*tal('impvw'));}
 function takeDamage(d){if(S.shield>0){const a=Math.min(S.shield,d);S.shield-=a;d-=a;}S.hp-=d;}
 function demonCost(d){const c={0:Math.floor(d.cost*Math.pow(1.15,S.demons[d.id])*(tal('feldom')?.85:1)*(1-.06*tal('msumm')))};if(d.extra)Object.assign(c,d.extra);return c;}
-function xpNeed(l){return Math.floor(150*Math.pow(1.27,l-1));}
+function xpStretch(l){return 1+3*Math.min(1,Math.max(0,(l-20)/20));}
+function xpNeed(l){return Math.floor(150*Math.pow(1.27,l-1)*xpStretch(l));}
 function curMob(){
   if(S.event&&S.fighting==='ev')return {n:'Infernal',l:S.lvl+2,hpm:5,dm:2,shards:10,ev:true,w:[20,30,28,15,7]};
   const z=ZONES[S.zone];if(S.mob===4)return Object.assign({elite:true,hpm:10,dm:3,shards:5},z.elite);const rr=S.mobRar||0;return Object.assign({hpm:[1,1.5,2.5][rr],dm:[1,1.25,1.5][rr],shards:1,rar:rr},z.mobs[S.mob]);}
@@ -639,7 +641,7 @@ function soulNeed(m){const d=Math.max(0,m.l-S.lvl);return Math.max(3,Math.round(
 function mobDps(m){const d=m.l-S.lvl;const diff=d>=0?Math.pow(1.3,d):Math.max(.5,Math.pow(1.15,d));return ((50+18*m.l)/40)*m.dm*diff*(CASTERS[m.n]?.8:1)*(S.enrageT>0?2:1);}
 function greyLevel(l){return l<=5?0:l<40?l-5-Math.floor(l/10):l<60?l-5-Math.floor(l/5):l-9;}
 function lvlDiff(m){const d=m.l-S.lvl;if(m.l<=greyLevel(S.lvl))return 'grey';return d>=5?'red':d>=3?'orange':d>=-2?'yellow':'green';}
-function xpFor(m){const f={red:1.5,orange:1.25,yellow:1,green:.6,grey:0}[lvlDiff(m)];if(m.ev)return xpNeed(S.lvl)*.15;return 12*Math.pow(1.15,m.l-1)*f*(m.elite?6:1)*dangerPay(m)*(1+.2*leg('rested'));}
+function xpFor(m){const f={red:1.5,orange:1.25,yellow:1,green:.6,grey:0}[lvlDiff(m)];if(m.ev)return xpNeed(S.lvl)*.15;return 12*Math.pow(1.15,m.l-1)*f*(m.elite?6:1)*dangerPay(m)*(1+.2*leg('rested'))*(S.lvl>=20?1+.25*leg('oldhand'):1);}
 function deathShards(m){if(noShards(m))return 0;const f={red:1.5,orange:1.25,yellow:1,green:.6,grey:0}[lvlDiff(m)];return Math.max(1,Math.round((1+Math.floor(m.l/10))*m.shards*f*dangerPay(m)))+tal('soulharvest');}
 // Rarity sources. Ticks on anything roll from the zone's trash table (Common/Uncommon only).
 // Death shards roll from the source table: trash = zone table; elites = Rare source, Epics from Duskwood on; Infernals = Epic source scaling with level; Ragnaros = raid boss, Legendary chance.
