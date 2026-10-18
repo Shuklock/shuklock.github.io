@@ -151,6 +151,7 @@ h1,h2,h3,.gem-slot .n,.lvlline,#pname,#mname,.bar .lbl,#wintitle,.zonename{font-
 /* windows */
 #win{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(620px,calc(100vw - 20px));max-height:min(78vh,760px) !important;display:none;flex-direction:column;z-index:5;background:rgba(14,11,20,.96);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.7)}
 #win.open{display:flex}
+@media (min-width:901px){#win.wide{width:min(1080px,calc(100vw - 20px));max-height:min(92vh,900px) !important}}
 #win .titlebar{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
 #win .titlebar h3{font-size:15px}
 .winbody{display:flex;min-height:0;flex:1}
@@ -960,7 +961,7 @@ const WIN_TITLES={demons:'Demons',gear:'Character',bags:'Bags',trainer:'Trainer'
 const WIN_KEYS={KeyD:'demons',KeyC:'gear',KeyB:'bags',KeyP:'spellbook',KeyT:'talents',KeyY:'ach',KeyR:'ritual',KeyH:'help',KeyM:'map',KeyN:'trainer',KeyA:'ah',KeyS:'council',KeyG:'shop'};
 let winOpen=null;
 const WIN_ORDER=['gear','bags','talents','spellbook','demons','ah','shop','council','ach','ritual','help'];
-function openWin(name){if(winOpen===name){closeWin();return;}winOpen=name;tab=name;tabDirty=true;$('wintitle').textContent=WIN_TITLES[name]||name;$('win').classList.add('open');$('tab').scrollTop=0;
+function openWin(name){if(winOpen===name){closeWin();return;}winOpen=name;tab=name;tabDirty=true;$('wintitle').textContent=WIN_TITLES[name]||name;$('win').classList.add('open');$('win').classList.toggle('wide',name==='talents');$('tab').scrollTop=0;
   $('wintabs').innerHTML=WIN_ORDER.map(w=>`<button data-win="${w}" class="${w===name?'on':''}">${WIN_TITLES[w]}</button>`).join('');$('wintabs').style.display=WIN_ORDER.includes(name)?'':'none';}
 $('wintabs').addEventListener('pointerdown',e=>{const b=e.target.closest('button');if(!b)return;e.preventDefault();if(b.dataset.win!==winOpen)openWin(b.dataset.win);});
 $('morebtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();$('hudBR').classList.toggle('more');});
