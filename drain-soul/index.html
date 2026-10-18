@@ -91,6 +91,7 @@ h1,h2,h3,.gem-slot .n,.lvlline,#pname,#mname,.bar .lbl,#wintitle,.zonename{font-
 .unit .bar{margin:3px 0}.unit .bar.tall{height:18px}
 .unit .auras{justify-content:center;min-height:0;margin-top:3px}
 .unit .auras:empty{display:none}
+.unit .dot{pointer-events:auto;cursor:help}
 .unit .mdesc{font-size:10.5px;line-height:1.3;text-align:center;margin-top:3px;text-shadow:0 1px 2px #000}
 .unit .corpse{font-size:11px;margin:4px 0 0}
 .auras{display:flex;gap:6px;flex-wrap:wrap;min-height:20px;margin-top:4px}
@@ -127,8 +128,8 @@ h1,h2,h3,.gem-slot .n,.lvlline,#pname,#mname,.bar .lbl,#wintitle,.zonename{font-
 #notice small{display:block;font-size:13px;color:var(--text);margin-top:6px}
 #hudBL{left:10px;top:calc(10px + env(safe-area-inset-top,0px));width:min(300px,calc((100vw - var(--topw))/2 - 20px))}
 #pframe.dead .bar .hp{background:linear-gradient(90deg,#3a1515,#5a2a2a)}
-.log{font-size:11px;color:var(--muted);max-height:48px;overflow:hidden;cursor:pointer;padding:4px 8px;background:rgba(10,8,16,.5);border-radius:8px}
-.log.open{max-height:220px;overflow:auto;background:rgba(10,8,16,.85)}
+.log{font-size:11px;color:var(--muted);max-height:112px;overflow:hidden;cursor:pointer;padding:4px 8px;background:rgba(10,8,16,.5);border-radius:8px}
+.log.open{max-height:340px;overflow:auto;background:rgba(10,8,16,.85)}
 .log div.good{color:var(--fel)}.log div.bad{color:#ff6b6b}.log div.loot{color:var(--c3)}.log div.lvl{color:var(--gold)}
 #banners{display:flex;flex-direction:column;gap:6px}
 #banners .event button{white-space:nowrap}
@@ -627,7 +628,7 @@ function fly(text,color,x,y,small,kind){
   const w=cv.clientWidth||600,h=cv.clientHeight||400;const tp=tpanel.getBoundingClientRect();const pf=document.getElementById('pframe').getBoundingClientRect();
   const f={text,color:color||'#fff',t:0,dur:small?1.6:2.4,size:small?13:18,rise:120};
   if(x!=null&&y!=null){f.x=x;f.y=y;}
-  else if(kind==='shard'){const mp=actorPos.mob||{x:w*.6,y:h*.5,size:80};f.x=mp.x-40+Math.random()*80;f.y=mp.y-mp.size*.9;f.tx=60+Math.random()*40;f.ty=110;f.dur=1.8;f.rise=0;}
+  else if(kind==='shard'){const mp=actorPos.mob||{x:w*.6,y:h*.5,size:80};f.x=mp.x-40+Math.random()*80;f.y=mp.y-mp.size*.9;const ge=document.getElementById('shards').children[Math.max(0,RCOL.indexOf(color))];if(ge){const gr=ge.getBoundingClientRect();f.tx=Math.max(6,gr.left+gr.width/2-text.length*4.5);f.ty=gr.top+gr.height/2;}else{f.tx=w/2-40;f.ty=70;}f.dur=1.8;f.rise=0;}
   else if(kind==='heal'){const lp=actorPos.lock||{x:w*.35,y:h*.5,size:60};f.x=lp.x-50+Math.random()*60;f.y=lp.y-lp.size*1.5;f.rise=70;}
   else{const mp=actorPos.mob||{x:w*.6,y:h*.5,size:80};f.x=mp.x-70+Math.random()*100;f.y=mp.y-mp.size*(.8+Math.random()*.6);}
   floaters.push(f);}
@@ -1000,12 +1001,40 @@ const ABIL_TIPS={spelllock:['Spell Lock','Your Felhunter silences the target, ca
  craftSs:['Create Soulstone','Costs 1 Epic shard. Die with it active and you skip the corpse run.',''],sacrifice:['Sacrifice','Consume one Voidwalker for a shield worth 30% of your health (+10% per Improved Voidwalker rank). Damage hits the shield first.','60s cooldown'],
  shadowburn:['Shadowburn','Instantly kill a target at 25% health or less.','15s cooldown'],conflag:['Conflagrate','For 8 seconds Shadow Bolts deal triple damage.','30s cooldown'],wrack:['Wrack','15 instant Drain Soul ticks, each rolling for a shard.','45s cooldown']};
 function abilityTip(id){if(ABIL_TIPS[id])return ABIL_TIPS[id];const sp=SPELLS.find(x=>x.id===id);if(sp)return [sp.name,sp.desc,sp.cd?sp.cd+'s cooldown':''];return [id,'',''];}
-function showTip(btn){const [n,d,c]=abilityTip(btn.dataset.id);const t=$('tip');t.innerHTML=`<b>${n}</b>${d}${c?`<span class="muted">${c}</span>`:''}`;t.style.display='block';const r=btn.getBoundingClientRect();const w=t.offsetWidth,h=t.offsetHeight;let x=r.left+r.width/2-w/2,y=r.top-h-8;if(x<6)x=6;if(x+w>window.innerWidth-6)x=window.innerWidth-6-w;if(y<6)y=r.bottom+8;t.style.left=x+'px';t.style.top=y+'px';}
+function showTip(btn){const [n,d,c]=abilityTip(btn.dataset.id);tipAt(btn,n,d,c);}
+function tipAt(btn,n,d,c,below){const t=$('tip');t.innerHTML=`<b>${n}</b>${d}${c?`<span class="muted">${c}</span>`:''}`;t.style.display='block';const r=btn.getBoundingClientRect();const w=t.offsetWidth,h=t.offsetHeight;let x=r.left+r.width/2-w/2,y=below?r.bottom+8:r.top-h-8;if(x<6)x=6;if(x+w>window.innerWidth-6)x=window.innerWidth-6-w;if(below){if(y+h>window.innerHeight-6)y=r.top-h-8;}else if(y<6)y=r.bottom+8;t.style.left=x+'px';t.style.top=y+'px';}
 function hideTip(){$('tip').style.display='none';}
 $('abilities').addEventListener('pointerover',e=>{const b=e.target.closest('button');if(b&&e.pointerType!=='touch')showTip(b);});
 $('abilities').addEventListener('pointerout',e=>{const b=e.target.closest('button');if(b)hideTip();});
 let tipHold=null;$('abilities').addEventListener('pointerdown',e=>{if(e.pointerType==='touch'){const b=e.target.closest('button');if(b){clearTimeout(tipHold);tipHold=setTimeout(()=>showTip(b),450);}}},true);
 $('abilities').addEventListener('pointerup',()=>{clearTimeout(tipHold);setTimeout(hideTip,1500);});
+// hover (or press and hold on touch) a status pill to see what it is doing, with your current numbers
+function auraTip(k){
+  const pct=x=>Math.round(x*1000)/10;
+  switch(k){
+    case 'corr':return ['Corruption',`A damage-over-time on the target: one bonus tick every ${(1/Math.max(.01,corrTps())).toFixed(1)}s, always on. Damage only; it never rolls for shards.`,'Ranks, Improved Corruption and haste gear make it tick faster.'];
+    case 'immo':return ['Immolate',`Burns the soul loose: ${Math.round((.25+.1*tal('impimmo')+.08*rank('immo')+.04*tal('emberstorm'))*100)}% chance of an extra shard when a soul completes.`,'Ranks and talents raise the chance.'];
+    case 'cow':return ['Curse of Weakness','The target deals 30% less damage to you. One curse at a time.','Click it on the action bar again to drop it.'];
+    case 'coe':return ['Curse of the Elements',`Each of your drain, bolt, Corruption and Agony ticks has a ${Math.round((.1+.05*rank('coe'))*100)}% chance to deal an extra point of damage. One curse at a time.`,'Click it on the action bar again to drop it.'];
+    case 'coa':return ['Bane of Agony',`Ramping damage: a tick every 2s for 1, then 2, then 3 health. While it runs, 10% of a regular mob’s death shards come up one rarity, and the next mob to spawn is twice as likely to be uncommon or rare. No effect on bosses.`,`${Math.ceil(S.coaT)}s left`];
+    case 'fear':return ['Feared','The target has stopped attacking and any cast it was winding up was interrupted.',`${Math.ceil(S.fear)}s left`];
+    case 'enrage':return ['Enraged','The target hits twice as hard. Interrupt the wind-up next time with Fear, Death Coil or Spell Lock.',`${Math.ceil(S.enrageT)}s left`];
+    case 'darmor':return ['Demon Armor',`Always on. Regenerates ${pct(armorRegen())}% of your health every 2 seconds and cuts all damage you take by 10%.`,'Higher ranks at the trainer.'];
+    case 'sstone':return ['Soulstone','If you die you come straight back at half health and skip the corpse run. Used up when it saves you.',''];
+    case 'shield':return ['Sacrifice shield',`Absorbs damage before your health does. ${Math.ceil(S.shield)} left.`,'From sacrificing a Voidwalker.'];
+    case 'dlife':return ['Drain Life',`Heals you while it channels, about ${Math.round((.4+.05*rank('drainlife'))*100)}% of your health over the full 6 seconds. No shards from anything until it ends.`,`${Math.ceil(S.lifeT||0)}s left. Press its action bar button to stop early.`];
+    case 'eat':return ['Eating','You are resting back to full health. The target is reset and nothing hits it while you sit. Any click stops it.',`${Math.ceil(S.eatT)}s left`];
+    case 'conflag':return ['Conflagrate','Your Shadow Bolts deal triple damage.',`${Math.ceil(S.conflagT)}s left`];
+  }return [k,'',''];}
+let tipAura=null,auraHold=null;
+const auraEl=k=>document.querySelector('.unit .dot[data-tip="'+k+'"]');
+function showAuraTip(k){const el=auraEl(k);if(!el)return false;const [n,d,c]=auraTip(k);tipAt(el,n,d,c,true);tipAura=k;return true;}
+document.addEventListener('pointermove',e=>{if(e.pointerType==='touch')return;const el=e.target.closest&&e.target.closest('.unit .dot[data-tip]');if(el){if(tipAura!==el.dataset.tip)showAuraTip(el.dataset.tip);}else if(tipAura){hideTip();tipAura=null;}});
+// the pills sit over the play area, so a press on one still counts as a click on the landscape
+document.addEventListener('pointerdown',e=>{const d=e.target.closest&&e.target.closest('.unit .dot[data-tip]');if(!d)return;e.preventDefault();pullAt(e);pull();
+  if(e.pointerType==='touch'){clearTimeout(auraHold);const k=d.dataset.tip;auraHold=setTimeout(()=>showAuraTip(k),450);}},true);
+document.addEventListener('pointerup',e=>{if(e.pointerType!=='touch'||!tipAura&&!auraHold)return;clearTimeout(auraHold);setTimeout(()=>{hideTip();tipAura=null;},1800);});
+
 // fixed action bar: each ability has a home slot and a hotkey, so nothing shifts around as you learn things
 const SLOT_ORDER=['drainlife','cow','coe','coa','lifetap','fear','coil','hs','sacrifice','spelllock','craftSs','shadowburn','conflag','wrack'];
 const SLOT_KEYS=['1','2','3','4','5','6','7','8','9','0','-','=','[',']'];
@@ -1052,11 +1081,12 @@ function render(){
   $('boltbar').style.width=Math.min(100,(S.bolt||0)*100)+'%';setText('boltlbl',`Shadow Bolt · ${clicksPerCast()} clicks · ${boltPower().toFixed(2)} dmg`);
   $('drainrow').style.display=S.spells.drainsoul?'':'none';$('castbar').className='cast'+(S.mode==='life'?' life':'');$('castbar').style.width=(S.mode==='life'?Math.min(100,(6-(S.lifeT||0))/6*100):Math.min(100,((S.chanN||0)+Math.min(1,S.prog))/5*100))+'%';
   setText('castlbl',S.corpse>0?'Dead':S.eatT>0?'Eating':(S.mode==='life'?'Drain Life — no shards while this runs':'Drain Soul'));
-  setHTML('auras',(S.spells.corr?'<span class="dot sh">Corruption</span>':'')+(S.spells.immo?'<span class="dot fi">Immolate</span>':'')+(S.curse==='cow'?'<span class="dot cu">Weakness</span>':'')+(S.curse==='coe'?'<span class="dot cu">Elements</span>':'')+(S.coaT>0?`<span class="dot cu">Agony ${Math.ceil(S.coaT)}s</span>`:'')+(S.fear>0?`<span class="dot">Feared ${Math.ceil(S.fear)}s</span>`:'')+(S.enrageT>0?`<span class="dot fi">Enraged ${Math.ceil(S.enrageT)}s</span>`:''));
-  setHTML('pauras',(S.spells.darmor?'<span class="dot sh">Demon Armor</span>':'')+(S.sstone?'<span class="dot gd">Soulstone</span>':'')+(S.shield>0?`<span class="dot" style="border-color:#7fb0ff">Shield ${Math.ceil(S.shield)}</span>`:'')+(S.mode==='life'?`<span class="dot cu">Drain Life ${Math.ceil(S.lifeT||0)}s</span>`:'')+(S.eatT>0?`<span class="dot gd">Eating ${Math.ceil(S.eatT)}s</span>`:'')+(S.conflagT>0?`<span class="dot fi">Conflagrate ${Math.ceil(S.conflagT)}s</span>`:''));
+  setHTML('auras',(S.spells.corr?'<span class="dot sh" data-tip="corr">Corruption</span>':'')+(S.spells.immo?'<span class="dot fi" data-tip="immo">Immolate</span>':'')+(S.curse==='cow'?'<span class="dot cu" data-tip="cow">Weakness</span>':'')+(S.curse==='coe'?'<span class="dot cu" data-tip="coe">Elements</span>':'')+(S.coaT>0?`<span class="dot cu" data-tip="coa">Agony ${Math.ceil(S.coaT)}s</span>`:'')+(S.fear>0?`<span class="dot" data-tip="fear">Feared ${Math.ceil(S.fear)}s</span>`:'')+(S.enrageT>0?`<span class="dot fi" data-tip="enrage">Enraged ${Math.ceil(S.enrageT)}s</span>`:''));
+  setHTML('pauras',(S.spells.darmor?'<span class="dot sh" data-tip="darmor">Demon Armor</span>':'')+(S.sstone?'<span class="dot gd" data-tip="sstone">Soulstone</span>':'')+(S.shield>0?`<span class="dot" data-tip="shield" style="border-color:#7fb0ff">Shield ${Math.ceil(S.shield)}</span>`:'')+(S.mode==='life'?`<span class="dot cu" data-tip="dlife">Drain Life ${Math.ceil(S.lifeT||0)}s</span>`:'')+(S.eatT>0?`<span class="dot gd" data-tip="eat">Eating ${Math.ceil(S.eatT)}s</span>`:'')+(S.conflagT>0?`<span class="dot fi" data-tip="conflag">Conflagrate ${Math.ceil(S.conflagT)}s</span>`:''));
   setText('pname',`You · Lv ${S.lvl}`);setText('pstate',S.corpse>0?'dead':S.eatT>0?'resting':S.mode==='life'?'draining life':'in combat');document.getElementById('pframe').classList.toggle('dead',S.corpse>0);
   const evKey=S.event?(S.fighting==='ev'?'f':'a'):'';if(evKey!==(render.evKey||'')){render.evKey=evKey;$('event').innerHTML=evKey==='a'?`<div class="event" style="flex-direction:column;align-items:stretch"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>🔥 An Infernal is here. 10 shards, Epic chance, 15% of a level, hits hard. <b id="evt"></b></span><button data-a="face">Face it</button></div><div class="evbar"><div id="evfill"></div></div></div>`:(evKey==='f'?`<div class="event" style="flex-direction:column;align-items:stretch"><div style="display:flex;justify-content:space-between;align-items:center"><span>Infernal: <b id="evt"></b> left</span><button data-a="run">Run</button></div><div class="evbar"><div id="evfill"></div></div></div>`:'');}
   if(S.event&&$('evt')){$('evt').textContent=Math.ceil(S.event.t)+'s';const ef=$('evfill');if(ef)ef.style.width=(S.event.t/45*100)+'%';}
+  if(tipAura){if(!auraEl(tipAura)){hideTip();tipAura=null;}else if(frame%10===0)showAuraTip(tipAura);}
   renderLoot();renderSuggest();
   const mh=maxHp();$('hpbar').style.width=Math.max(0,S.hp/mh*100)+'%';setText('hplbl',`${Math.ceil(Math.max(0,S.hp))} / ${mh}${S.shield>0?' · shield '+Math.ceil(S.shield):''}`);
   setHTML('corpse',S.corpse>0?`<div class="corpse">Corpse run — ${Math.ceil(S.corpse)}s. Click the landscape to run faster.</div>`:'');
