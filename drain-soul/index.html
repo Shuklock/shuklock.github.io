@@ -470,7 +470,7 @@ function ahRefresh(force){const now=Date.now();if(!force&&S.ah&&S.ah.items&&S.ah
     const slot=SLOTS[Math.floor(Math.random()*SLOTS.length)][0];const it=makeItem(ilvl,q,slot);it.uid='ah'+Date.now()+'_'+i;items.push(it);}
   S.ah={t:now+AH_PERIOD,items};}
 function ahBuy(uid){ahRefresh();const i=S.ah.items.findIndex(x=>x.uid===uid);if(i<0)return;const it=S.ah.items[i];const p=ahPrice(it);if(S.account.gold<p){log('Not enough gold.');return;}
-  const copy=Object.assign({},it,{stats:Object.assign({},it.stats)});delete copy.uid;if(!addToBag(copy)){log('Your bags are full.');return;}S.account.gold=Math.round((S.account.gold-p)*100)/100;S.ah.items.splice(i,1);S.lastDrop=copy.uid;log(`Bought ${it.name} for ${p}g.`,'good');}
+  const copy=Object.assign({},it,{stats:Object.assign({},it.stats),bought:true});delete copy.uid;if(!addToBag(copy)){log('Your bags are full.');return;}S.account.gold=Math.round((S.account.gold-p)*100)/100;S.ah.items.splice(i,1);S.lastDrop=copy.uid;log(`Bought ${it.name} for ${p}g.`,'good');}
 function dropLoot(m){dropJunk(m);if(noShards(m))return;const chance=m.elite||m.ev||m.rar===2?1:lootBand(m.l).rate;if(Math.random()>=chance)return;
   const band=lootBand(Math.min(60,m.l+10*(m.rar||0)));
   const w=m.n==='Ragnaros'?[0,0,20,70,10]:(m.elite||m.ev?band.boss:band.w);let r=Math.random()*100,q=0;for(let i=0;i<5;i++){r-=w[i];if(r<0){q=i;break;}}
@@ -498,11 +498,11 @@ const TREASURE=['Weathered Spellbook','Fine Pearl','Old Boot (full of silver)','
 function bagCap(){return 16+BAGS.slice(0,S.bags||0).reduce((a,b)=>a+b.slots,0);}
 function junkPrice(ilvl,t){return Math.round(.01*Math.pow(ilvl,1.5)*(t?10:1)*100)/100;}
 // sweep the bag with the active auto-sell rules (on purchase, on toggle, and after loot lands)
-function autosellSweep(){if(!S.autosell)return;let g=0,n=0;const off=S.autosellOff||{};S.bag=S.bag.filter(it=>{let sell=false;if(it.junk)sell=!!S.autosell.junk&&!off.junk;else sell=!!S.autosell[it.q]&&!off[it.q]&&S.gear[it.slot]&&S.gear[it.slot].q>=it.q;if(sell){g+=sellPrice(it);n++;if(S.lastDrop===it.uid)S.lastDrop=null;return false;}return true;});
+function autosellSweep(){if(!S.autosell)return;let g=0,n=0;const off=S.autosellOff||{};S.bag=S.bag.filter(it=>{let sell=false;if(it.junk)sell=!!S.autosell.junk&&!off.junk;else sell=!it.bought&&!!S.autosell[it.q]&&!off[it.q]&&S.gear[it.slot]&&S.gear[it.slot].q>=it.q;if(sell){g+=sellPrice(it);n++;if(S.lastDrop===it.uid)S.lastDrop=null;return false;}return true;});
   if(n){g=Math.round(g*100)/100;S.account.gold=Math.round((S.account.gold+g)*100)/100;log(`Auto-sold ${n} item${n>1?'s':''} from your bags for ${g}g.`,'good');}}
 function addToBag(it){
   if(it.junk&&S.autosell&&S.autosell.junk&&!(S.autosellOff&&S.autosellOff.junk)){const g=it.price*it.count;S.account.gold=Math.round((S.account.gold+g)*100)/100;return true;}
-  if(!it.junk&&S.autosell&&S.autosell[it.q]&&!(S.autosellOff&&S.autosellOff[it.q])&&S.gear[it.slot]&&S.gear[it.slot].q>=it.q){const g=sellPrice(it);S.account.gold=Math.round((S.account.gold+g)*100)/100;fly(`auto-sold ${it.name} ${g}g`,'#e8b94a',null,null,true);return false;}
+  if(!it.junk&&!it.bought&&S.autosell&&S.autosell[it.q]&&!(S.autosellOff&&S.autosellOff[it.q])&&S.gear[it.slot]&&S.gear[it.slot].q>=it.q){const g=sellPrice(it);S.account.gold=Math.round((S.account.gold+g)*100)/100;fly(`auto-sold ${it.name} ${g}g`,'#e8b94a',null,null,true);return false;}
   if(it.junk){const st=S.bag.find(x=>x.junk&&x.name===it.name&&x.count<20);if(st){st.count++;return true;}}
   if(S.bag.length>=bagCap()){fly('bag full, loot lost','#ff6b6b');S.flags.bagFullLost=(S.flags.bagFullLost||0)+1;return false;}
   it.uid=++S.uid;S.bag.push(it);return true;}
