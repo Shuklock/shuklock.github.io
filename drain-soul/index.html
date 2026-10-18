@@ -1035,8 +1035,11 @@ $('tab').addEventListener('pointerdown',e=>{const b=e.target.closest('button,[da
 // two-press confirmation (the page cannot open browser dialogs)
 const armed={};function arm(key,label,el){const now=Date.now();if(armed[key]&&now-armed[key]<5000){delete armed[key];return true;}armed[key]=now;if(el){const t=el.textContent;el.textContent=label||'Press again to confirm';setTimeout(()=>{if(el.isConnected&&armed[key])el.textContent=t;delete armed[key];tabDirty=true;},5000);}return false;}
 $('reset').addEventListener('pointerdown',e=>{e.preventDefault();if(!arm('reset','Press again to wipe everything',e.currentTarget))return;try{localStorage.removeItem('drainsoul3');}catch(e2){}S=freshState();buildPickers();spawn();tabDirty=true;log('Fresh warlock.');});
+function clearedCount(){let n=0;for(let i=0;i<ZONES.length;i++)if(S.cleared[i])n++;return n;}
+// Legacy points a Ritual gives right now: 1 after two zone bosses, 2 after four, 3 once Ragnaros is down
+function ritualPoints(){if(S.flags.rag)return 3;const n=clearedCount();return n>=4?2:n>=2?1:0;}
 function doPrestige(btn){
-  if(!S.flags.rag)return;const pts=3;
+  const pts=ritualPoints();if(pts<1)return;
   if(!arm('prestige','Press again to perform the Ritual. This warlock is consumed.',btn))return;
   const keep={ach:S.ach,prestiges:S.prestiges+1,legacy:{points:S.legacy.points+pts,perks:S.legacy.perks},account:S.account,carry:Math.floor(S.shards[0]*.1*(leg('inherit')+perk('bank')))};
   S=freshState(keep);buildPickers();spawn();log(`The ritual is complete. A new warlock takes up the grimoire with ${S.legacy.points} Legacy points to spend.`,'lvl');
@@ -1294,9 +1297,9 @@ function renderTab(){
     h+=`<div class="muted" style="padding:4px">${achCount()}/${ACH.length} · +${achCount()}% drain speed (Fel Corruption)</div>`;
     ACH.forEach(a=>h+=row(a.name,S.ach[a.id]||!['a12','a14','a18'].includes(a.id)?a.desc:'???','',S.ach[a.id]?'<span class="t1">✓</span>':'',S.ach[a.id]?'owned':''));
   }else if(tab==='ritual'){
-    h+=`<div style="padding:6px"><p>Drain Ragnaros, then perform the Ritual of Doom. This warlock is consumed. A new one takes up the grimoire with Legacy points to spend here. Achievements persist.</p>
+    h+=`<div style="padding:6px"><p>Drain two zone bosses, then you can perform the Ritual of Doom: 1 Legacy point after two bosses, 2 after four, 3 after Ragnaros. This warlock is consumed. A new one takes up the grimoire with Legacy points to spend here. Achievements persist.</p>
     <div class="stat"><span>Ragnaros</span><span>${S.flags.rag?'drained':'alive'}</span></div><div class="stat"><span>Legacy points</span><span>${S.legacy.points}</span></div>
-    <div style="margin:10px 0"><button data-a="prestige" ${S.flags.rag?'':'disabled'} style="width:100%;padding:12px;background:linear-gradient(180deg,#4a2a7a,#2b1750)">${S.flags.rag?'Perform the Ritual of Doom (+3 Legacy)':'Ragnaros still lives'}</button></div></div>`;
+    <div style="margin:10px 0"><button data-a="prestige" ${ritualPoints()?'':'disabled'} style="width:100%;padding:12px;background:linear-gradient(180deg,#4a2a7a,#2b1750)">${ritualPoints()?`Perform the Ritual of Doom (+${ritualPoints()} Legacy)`:'Drain two zone bosses first'}</button></div></div>`;
     LEGACY.forEach(p=>h+=row(`${p.name} <span class="muted">${leg(p.id)}/${p.max}</span>`,p.desc,`${p.cost} Legacy`,`<button data-a="legacy" data-id="${p.id}" ${S.legacy.points>=p.cost&&leg(p.id)<p.max?'':'disabled'}>Take</button>`,leg(p.id)>0?'owned':''));
   }
   setHTML('tab',h);
