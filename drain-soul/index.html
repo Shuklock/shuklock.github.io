@@ -346,7 +346,7 @@ const SPELLS=[
  {id:'immo',name:'Immolate',lvl:2,cost:0.1,kind:'aura',desc:'A fire damage-over-time on the target: one tick every 4s, always on, a little weaker than Corruption. Burns the soul loose too: 25% chance of an extra shard when a soul completes. Damage ticks never roll for shards.'},
  {id:'cow',name:'Curse of Weakness',lvl:4,cost:0.2,kind:'curse',desc:'Target deals 30% less damage. One curse at a time.'},
  {id:'lifetap',name:'Life Tap',lvl:6,cost:0.4,kind:'active',cd:2,desc:'Burn 20% health for common shards worth about 4 seconds of your total drain income. 2s cooldown. Your health is a currency; the mob decides how much you can afford to spend.'},
- {id:'fear',name:'Fear',lvl:8,cost:0.8,kind:'active',cd:30,desc:'Target stops attacking for 6s and any cast it was winding up is interrupted. Bosses and Infernals are immune.'},
+ {id:'fear',name:'Fear',lvl:8,cost:0.8,kind:'active',cd:30,desc:'Target stops attacking for 6s and any cast it was winding up is interrupted.'},
  {id:'coa',name:'Bane of Agony',lvl:8,cost:0.8,kind:'active',cd:30,desc:'Costs 5% of your health. 24s of ramping damage: a tick every 2s of 1, then 2, then 3 health, 24 in all. Carries across kills. While it runs, 10% of a regular mob’s death shards come up one rarity, and the next mob to spawn is twice as likely to be uncommon or rare. No effect on bosses. 30s cooldown.'},
  {id:'hstone',name:'Create Healthstone',lvl:10,cost:1.5,kind:'craft',desc:'Craft a Healthstone for 25 shards. You can hold one. Heals 40%, 60s cooldown. The bar shows Create when you have none and Healthstone when you do.'},
  {id:'drainlife',name:'Drain Life',lvl:14,cost:3,kind:'active',cd:30,desc:'Channel Drain Life for 6 seconds, healing 40% of your health over the channel. No shards from anything while it runs, including kills. Press it again to stop early and get back on Drain Soul before the kill.'},
@@ -540,7 +540,7 @@ function freshState(keep){
   DEMONS.forEach(d=>s.demons[d.id]=0);
   if(s.account.perks.books){s.spells.corr=true;s.spells.immo=true;s.spells.cow=true;}
   if(s.account.perks.handme2)s.gear.chest={slot:'chest',name:'Woolen Robe of Shadow Wrath',ilvl:15,q:1,stats:{power:6,stam:5}};
-  if(lp.perks.veteran)s.lvl=10;
+  if(lp.perks.veteran){s.lvl=10;s.spells.drainsoul=true;}
   if(lp.perks.handme)s.demons.imp=5;
   if(keep&&keep.carry)s.shards[0]=keep.carry;
   s.hp=maxHpOf(s);
@@ -778,7 +778,7 @@ let landKey='';
 // ---------- the drain ----------
 function bossLock(z){const t=(S.bossDead||{})[z]||0;return Math.max(0,t-Date.now()/1000);}
 function spawn(){S.cast=null;S.castCd=6+Math.random()*6;S.enrageT=0;const base=curMob();if(!base.elite&&!base.ev){S.mobRar=rollMobRarity(base);if(S.mobRar===2){log(`A rare ${base.n} appears! Blue shards and better loot, if you can take it.`,'loot');fly('Rare!','#4aa3ff');}else if(S.mobRar===1)fly('Uncommon','#1eff00',null,null,true);}else S.mobRar=0;
-  const m=curMob();S.soulMax=soulNeed(m);S.soul=S.soulMax;S.prog=0;S.chanN=0;S.bolt=0;
+  const m=curMob();S.soulMax=soulNeed(m);S.soul=S.soulMax;S.bolt=0;
   if(S.havoc>0){S.soul=Math.max(1,S.soul-S.havoc);S.havoc=0;}}
 function giveShard(r,tag){S.shards[r]++;S.life++;S.seen[r]=true;if(r>=2||tag==='★')fly('+1 '+RAR[r]+(tag?' '+tag:''),RCOL[r],null,null,false,'shard');else pendingShards[r]++;
   if(r>=2)log(`<span class="t${r}">${RAR[r]}</span> shard from ${curMob().n}${tag?' '+tag:''}.`,'loot');}
@@ -862,7 +862,7 @@ function cast(id){
   if(id==='coe'){S.curse=S.curse==='coe'?null:'coe';return;}
   if(id==='coa'){if(S.hp<=maxHp()*.15){log('Not enough health to cast.');return;}S.hp-=maxHp()*.05;S.coaT=24;S.coaTick=0;S.coaAcc=0;S.coaBoost=true;S.cds.coa=30;fly('Bane of Agony','#1eff00');return;}
   if(id==='lifetap'){if(S.hp<=maxHp()*.25){log('Not enough health to tap.');return;}S.hp-=maxHp()*.2;const n=lifeTapShards();S.shards[0]+=n;S.life+=n;fly('+'+n+' Common (Life Tap)',RCOL[0],null,null,false,'shard');S.cds.lifetap=2;return;}
-  if(id==='fear'){const m=curMob();if(m.elite||m.ev){fly('Immune to Fear','#ff6b6b',null,null,true,'dmg');return;}interrupt('fear');S.fear=6+rank('fear');S.cds.fear=30;fly('feared','#e8e04a');return;}
+  if(id==='fear'){interrupt('fear');S.fear=6+rank('fear');S.cds.fear=30;fly('feared','#e8e04a');return;}
   if(id==='spelllock'){if(S.demons.felh<1||!S.cast)return;interrupt('spelllock');S.cds.spelllock=Math.max(12,24-3*tal('impfelh'));return;}
   if(id==='coil'){S.hp=Math.min(maxHp(),S.hp+maxHp()*(.3+.05*rank('coil')));interrupt('coil');const m=curMob();if(!m.elite&&!m.ev)S.fear=Math.max(S.fear,3);S.cds.coil=120;return;}
   if(id==='hs'){if(S.hs<1)return;S.hs--;S.hp=Math.min(maxHp(),S.hp+maxHp()*(.4+.1*rank('hstone')));S.cds.hs=60;return;}
@@ -1195,7 +1195,7 @@ function renderTab(){
     <p><b>Critical drains.</b> A tick that crits always gives a shard (two with the Ruin talent). Crit comes from the Devastation talent and gear.</p>
     <p><b>Eat and rest.</b> The button above the target panel. You back off, the target resets to full health and nothing hits it while you sit, and you heal to full over 10 seconds. Fleeing an elite or an Infernal puts you back on the zone’s top regular mob. Clicking stops eating early. 3 minute cooldown.</p>
     <p><b>Damage and dying.</b> The target hits you the whole time. Demon Armor regenerates a little, Sacrifice burns a Voidwalker for a big shield, Healthstones and Drain Life heal. If you die you keep everything; your channel is just down for the corpse run, and clicking the landscape runs it off faster.</p>
-    <p><b>Enemy abilities.</b> Casters wind up a big bolt and brutes an enrage on an orange bar under their health. Fear interrupts regular mobs, Death Coil interrupts anything, and a Felhunter gives you Spell Lock, a dedicated interrupt. Bosses have a signature ability and are immune to Fear. Casters and brutes pay 25% more shards and XP. If you are away and low, your warlock sits to eat on her own when the meal is ready.</p>
+    <p><b>Enemy abilities.</b> Casters wind up a big bolt and brutes an enrage on an orange bar under their health. Fear interrupts any enemy, Death Coil interrupts anything, and a Felhunter gives you Spell Lock, a dedicated interrupt. Bosses have a signature ability. Casters and brutes pay 25% more shards and XP. If you are away and low, your warlock sits to eat on her own when the meal is ready.</p>
     <p><b>Levels and colour.</b> Mobs are coloured by level: grey mobs give nothing at all, green are easy, yellow fair, orange dangerous, red will kill you. Higher mobs have more health, hit harder, and roll better shard rarities. The green banner tells you when something harder is within reach.</p>
     <p><b>Shards.</b> The mob decides the shard. Ordinary mobs give Common. About 8% of spawns are uncommon (green name, tougher) and give Uncommon shards; about 1.5% are rare (blue name, much tougher) and give Rare shards, with better loot and a guaranteed drop. Zone bosses pay one Epic, a few Rares (more in later zones) and a pile of Commons and Uncommons; Ragnaros adds a Legendary. Infernals give Uncommon with an Epic chance that grows by zone. Epic gear is named set pieces (Dreadmist, then Felheart from 45) with 2 and 4 piece bonuses. Shadow Council at 40 lets you break a shard into 5 of the tier below when you have the wrong kind. Common buys demons, Uncommon goes into spell ranks, Rare and Epic gate the big purchases. A respec costs 1 Rare the first time, then 5 Rares, then 1 Epic, then 5 Epics; the price drops a step for every 4 hours since your last respec. Training itself costs gold, which comes from selling junk and gear.</p>
     <p><b>Gold.</b> From selling junk and gear. It survives the Ritual of Doom and pays for training, bags, account perks, and the Auction House (A), which lists six pieces of gear around your level and restocks every 30 minutes.</p>
