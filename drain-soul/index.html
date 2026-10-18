@@ -171,6 +171,7 @@ h1,h2,h3,.gem-slot .n,.lvlline,#pname,#mname,.bar .lbl,#wintitle,.zonename{font-
 .row button{white-space:nowrap}
 .row button.on{border-color:var(--fel);background:#1f3317}
 .tier{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:6px 0 0}
+.mapz.click{cursor:pointer;user-select:none;border-radius:6px}.mapz.click:hover{background:rgba(255,255,255,.05)}.mapz .caret{display:inline-block;width:12px;color:var(--muted,#9d92b3)}
 .stat{display:flex;justify-content:space-between;font-size:12px;padding:1px 0}
 .doll{position:relative;width:280px;height:320px;margin:0 auto;background:radial-gradient(ellipse at center,#2a1a3f,#15111f 75%);border:1px solid var(--line);border-radius:10px}
 .doll svg.fig{position:absolute;left:70px;top:20px;width:140px;height:290px}
@@ -968,7 +969,8 @@ const WIN_TITLES={demons:'Demons',gear:'Character',bags:'Bags',trainer:'Trainer'
 const WIN_KEYS={KeyD:'demons',KeyC:'gear',KeyB:'bags',KeyP:'spellbook',KeyT:'talents',KeyY:'ach',KeyR:'ritual',KeyH:'help',KeyM:'map',KeyN:'trainer',KeyA:'ah',KeyS:'council',KeyG:'shop'};
 let winOpen=null;
 const WIN_ORDER=['gear','bags','talents','spellbook','demons','ah','shop','council','ach','ritual','help'];
-function openWin(name){if(winOpen===name){closeWin();return;}winOpen=name;tab=name;tabDirty=true;$('wintitle').textContent=WIN_TITLES[name]||name;$('win').classList.add('open');$('win').classList.toggle('wide',name==='talents');$('tab').scrollTop=0;
+let mapOpen=new Set();
+function openWin(name){if(winOpen===name){closeWin();return;}winOpen=name;if(name==='map')mapOpen=new Set([S.zone]);tab=name;tabDirty=true;$('wintitle').textContent=WIN_TITLES[name]||name;$('win').classList.add('open');$('win').classList.toggle('wide',name==='talents');$('tab').scrollTop=0;
   $('wintabs').innerHTML=WIN_ORDER.map(w=>`<button data-win="${w}" class="${w===name?'on':''}">${WIN_TITLES[w]}</button>`).join('');$('wintabs').style.display=WIN_ORDER.includes(name)?'':'none';}
 $('wintabs').addEventListener('pointerdown',e=>{const b=e.target.closest('button');if(!b)return;e.preventDefault();if(b.dataset.win!==winOpen)openWin(b.dataset.win);});
 $('morebtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();$('hudBR').classList.toggle('more');});
@@ -1017,6 +1019,7 @@ $('tab').addEventListener('pointerdown',e=>{const b=e.target.closest('button,[da
   else if(a==='ahreset'){if(S.shards[3]>=1){S.shards[3]-=1;ahRefresh(true);log('The auctioneer finds some new stock.','good');}}
   else if(a==='autotoggle'){S.autosellOff=S.autosellOff||{};S.autosellOff[id]=!S.autosellOff[id];autosellSweep();}
   else if(a==='autosell'){const q=id==='junk'?'junk':+id;const o=AUTOSELL.find(x=>String(x.q)===String(q));if(autosellAvail(q)&&!S.autosell[q]&&S.account.gold>=o.cost){S.account.gold=Math.round((S.account.gold-o.cost)*100)/100;S.autosell[q]=true;log(`Auto-sell for ${o.name} items is on.`,'good');autosellSweep();}}
+  else if(a==='mapz'){const z=+b.dataset.z;if(mapOpen.has(z))mapOpen.delete(z);else mapOpen.add(z);}
   else if(a==='go'){S.zone=+b.dataset.z;S.mob=+b.dataset.m;S.fighting=null;buildPickers();spawn();closeWin();}
   else if(a==='tutorial'){const t=coachTut();t.intro=false;t.levelup=false;closeWin();coachSet=null;coachStart('intro');}
   else if(a==='wipe'){if(!arm('reset','Press again to wipe everything',b))return;try{localStorage.removeItem('drainsoul3');}catch(e2){}S=freshState();buildPickers();spawn();log('Fresh warlock.');}
@@ -1242,7 +1245,7 @@ function renderTab(){
     SHOP.forEach(p=>{const cur=perk(p.id);const lk=p.req&&!perk(p.req);if(cur>=p.max){h+=row(p.name,p.desc,'','<span class="t1">Owned</span>','owned');return;}const c=p.cost(cur);h+=row(`${p.name}${p.max>1?' <span class="muted">'+cur+'/'+p.max+'</span>':''}`,p.desc+(lk?' Requires '+SHOP.find(x=>x.id===p.req).name+'.':''),`${c}g`,`<button data-a="shop" data-id="${p.id}" ${!lk&&S.account.gold>=c?'':'disabled'}>Buy</button>`,lk?'locked':'');});
   }else if(tab==='map'){
     h+='<div class="muted" style="padding:4px;font-size:12px">Pick a zone and a target. Zones open when you drain the previous zone’s elite.</div>';
-    ZONES.forEach((z,zi)=>{const locked=zi>0&&!S.cleared[zi-1];h+=`<div class="tier" style="padding:8px 4px 2px">${z.name} (${z.band[0]}–${z.band[1]})${locked?' · locked':''}</div>`;if(locked)return;
+    ZONES.forEach((z,zi)=>{const locked=zi>0&&!S.cleared[zi-1];const op=!locked&&mapOpen.has(zi);h+=`<div class="tier mapz${locked?'':' click'}" ${locked?'':`data-a="mapz" data-z="${zi}"`} style="padding:8px 4px 2px">${locked?'':`<span class="caret">${op?'▾':'▸'}</span> `}${z.name} (${z.band[0]}–${z.band[1]})${locked?' · locked':''}${zi===S.zone?' · <span class="t1">you are here</span>':''}${S.cleared[zi]?' · cleared':''}</div>`;if(!op)return;
       z.mobs.forEach((mm,mi)=>{const m={n:mm.n,l:mm.l,hpm:1,dm:1,shards:1};const cls=lvlDiff(m);const cur=S.zone===zi&&S.mob===mi&&S.fighting!=='ev';h+=row(`${mm.n} <span class="lv-${cls}">Lv ${mm.l}</span>`,`${cls}${noShards(m)?' · no XP, no shards':''}`,'',`<button data-a="go" data-z="${zi}" data-m="${mi}" ${cur?'disabled':''}>${cur?'Current':'Go'}</button>`,cur?'owned':'');});
       const el={n:z.elite.n,l:z.elite.l,elite:true,hpm:10,dm:3,shards:5};const lk=bossLock(zi);const cur=S.zone===zi&&S.mob===4;h+=row(`★ ${z.elite.n} <span class="lv-${lvlDiff(el)}">Lv ${z.elite.l}</span> elite`,lk>0?`dead, back in ${Math.ceil(lk/60)} min`:(z.elite.n==='Ragnaros'?'2 hour lockout after a kill':'20 minute lockout after a kill'),`<span class="t2">Rare source</span>`,`<button data-a="go" data-z="${zi}" data-m="4" ${cur||lk>0?'disabled':''}>${cur?'Current':'Go'}</button>`,cur?'owned':(lk>0?'locked':''));});
   }else if(tab==='help'){
