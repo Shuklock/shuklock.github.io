@@ -116,7 +116,7 @@ h1,h2,h3,.gem-slot .n,.lvlline,#pname,#mname,.bar .lbl,#wintitle,.zonename{font-
 .abilities .eat{margin-left:6px;border-color:#6a5a3a}
 .abilities button:disabled{opacity:.5}
 .corpse{background:#3a1515;border:1px solid #8a2a2a;padding:6px;border-radius:8px;text-align:center;margin:4px 0}
-#brand{position:fixed;left:14px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:2;display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none;user-select:none}#brand img{width:96px;height:96px;filter:drop-shadow(0 3px 8px rgba(0,0,0,.7))}#brand span{font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#f1e6c8;text-shadow:0 1px 2px #000;background:rgba(12,9,20,.82);border:1px solid rgba(201,166,255,.25);border-radius:999px;padding:3px 10px 3px 12px;margin-top:-6px}@media (max-width:1199px){#brand img{width:72px;height:72px}#brand span{display:none}}@media (max-width:999px){#brand{display:none}}
+#brand{position:fixed;left:14px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:2;display:flex;flex-direction:column;align-items:center;gap:2px;user-select:none;text-decoration:none;cursor:pointer}#brand:hover img{filter:drop-shadow(0 0 10px rgba(201,166,255,.65)) drop-shadow(0 3px 8px rgba(0,0,0,.7))}#brand:hover,#brand:focus-visible{z-index:30}#brand .brandtip{position:absolute;left:0;bottom:calc(100% + 8px);width:220px;font-style:normal;font-size:12px;line-height:1.45;color:#ddd;background:rgba(12,9,20,.95);border:1px solid rgba(201,166,255,.35);border-radius:8px;padding:8px 10px;box-shadow:0 6px 20px rgba(0,0,0,.6);opacity:0;transform:translateY(4px);transition:opacity .12s,transform .12s;pointer-events:none}#brand .brandtip b{display:block;color:#f1e6c8;margin-bottom:2px}#brand:hover .brandtip,#brand:focus-visible .brandtip{opacity:1;transform:none}#brand img{width:96px;height:96px;filter:drop-shadow(0 3px 8px rgba(0,0,0,.7))}#brand span{font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#f1e6c8;text-shadow:0 1px 2px #000;background:rgba(12,9,20,.82);border:1px solid rgba(201,166,255,.25);border-radius:999px;padding:3px 10px 3px 12px;margin-top:-6px}@media (max-width:1199px){#brand img{width:72px;height:72px}#brand span{display:none}}@media (max-width:999px){#brand{display:none}}
 #hudBR{right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:4px}
 .menu button{width:46px;height:46px;padding:0;display:grid;place-items:center;font-size:18px;position:relative;background:rgba(10,8,16,.85)}
 .menu button small{position:absolute;bottom:2px;right:4px;font-size:9px;color:var(--muted)}
@@ -300,7 +300,7 @@ body{touch-action:manipulation;overscroll-behavior:none;-webkit-tap-highlight-co
   <div class="mdesc muted" id="mdesc"></div>
 </div>
 
-<div id="brand" aria-label="Shardlock Idle"><img src="logo.png" alt="" width="96" height="96"><span>Shardlock Idle</span></div>
+<a id="brand" href="https://www.curseforge.com/wow/addons/shardlock-idle" target="_blank" rel="noopener" aria-label="Shardlock Idle on CurseForge"><img src="logo.png" alt="" width="96" height="96"><span>Shardlock Idle</span><em class="brandtip"><b>Also a WoW Forever addon</b>Play Shardlock Idle inside the game. Click to open it on CurseForge.</em></a>
 <div class="hud menu" id="hudBR">
   <button data-win="demons" title="Demons (D)">😈<small>D</small></button>
   <button data-win="gear" title="Character (C)">🧙<small>C</small></button>
