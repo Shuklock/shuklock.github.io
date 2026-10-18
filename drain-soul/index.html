@@ -1110,7 +1110,7 @@ document.addEventListener('pointerdown',e=>{const d=e.target.closest&&e.target.c
 document.addEventListener('pointerup',e=>{if(e.pointerType!=='touch'||!tipAura&&!auraHold)return;clearTimeout(auraHold);setTimeout(()=>{hideTip();tipAura=null;},1800);});
 
 // fixed action bar: each ability has a home slot and a hotkey, so nothing shifts around as you learn things
-const SLOT_ORDER=['drainlife','cow','coe','coa','lifetap','fear','coil','hs','sacrifice','spelllock','craftSs','shadowburn','conflag','wrack','coex'];
+const SLOT_ORDER=['cow','coe','coex','coa','drainlife','shadowburn','conflag','wrack','coil','hs','sacrifice','spelllock','craftSs','fear','lifetap'];
 const SLOT_KEYS=['1','2','3','4','5','6','7','8','9','0','-','=','[',']','\\'];
 function slotAbility(id){
   switch(id){
