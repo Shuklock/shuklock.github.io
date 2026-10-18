@@ -977,7 +977,13 @@ const memo={};function setHTML(id,h){if(memo[id]===h)return;memo[id]=h;$(id).inn
 function setText(id,t){if(memo['t'+id]===t)return;memo['t'+id]=t;$(id).textContent=t;}
 let tab='demons',tabDirty=true,frame=0,selItem=null;
 const TABS=[['demons','Demons'],['gear','Gear'],['trainer','Trainer'],['spellbook','Spellbook'],['talents','Talents'],['ach','Achievements'],['ritual','Ritual of Doom'],['help','How it works']];
-const WIN_TITLES={demons:'Demons',gear:'Character',bags:'Bags',trainer:'Trainer',spellbook:'Spellbook',talents:'Talents',ach:'Achievements',ritual:'Ritual of Doom',help:'How it works',map:'Map',ah:'Auction House',council:'Shadow Council',shop:'Gold Shop'};
+const PATCHES=[{"v": "0.3.0", "date": "October 18, 2026", "notes": [["Slower leveling past 20", "Levels after 20 need more XP, about 3x the play time by level 40 and up. This leaves room for dungeons later."], ["New legacy perk: Old Hand", "+25% XP per rank from level 20 on. 2 ranks, 1 point each."], ["New: Make Camp", "Buy the Camping Kit in the Gold Shop (200g). Rest by a campfire for 20 seconds to become Well Rested: +50% XP for 30 minutes. 2 hour cooldown."], ["Ritual of Doom, earlier", "1 legacy point after two zone bosses, 2 after four. Each early tier pays once. Ragnaros always pays 3."], ["Sacrifice keeps your Voidwalker", "Sacrifice no longer uses one up. Instead your Voidwalkers stop attacking for its 60 second cooldown."], ["Healthstones", "Create Healthstone now costs 3 Uncommon shards."], ["Improved Health Funnel", "Now a flat 0.04% of max health per second per rank while you have a demon. It no longer scales with how many kinds you own."], ["Infernals", "An Infernal you are fighting no longer burns out. It stays until one of you falls."], ["Character sheet", "Each stat shows its total, the base and what gear adds, grouped into Damage, Shards and Survival."], ["Item tooltips", "Show the item you picked with your equipped item under it."], ["Auction House", "Items you buy are never auto-sold."], ["Action bar and menus", "Curses first, then damage, then defensives, then Fear and Life Tap. Menus reordered, and the map only opens your current zone."]]}];
+const vnum=v=>{const m=String(v||'0').split('.').map(x=>+x||0);return (m[0]||0)*1e6+(m[1]||0)*1e3+(m[2]||0);};
+let patchSince=null;
+function checkPatchNotes(hadSave){const cur=PATCHES[0]&&PATCHES[0].v;if(!cur)return;let seen=null;try{seen=localStorage.getItem('shardlock_patch');}catch(e){}
+  if(seen===null){if(!hadSave){try{localStorage.setItem('shardlock_patch',cur);}catch(e){}return;}seen='0.2.0';}
+  if(vnum(cur)>vnum(seen)){patchSince=seen;try{localStorage.setItem('shardlock_patch',cur);}catch(e){}openWin('patch');}}
+const WIN_TITLES={patch:'Patch notes',demons:'Demons',gear:'Character',bags:'Bags',trainer:'Trainer',spellbook:'Spellbook',talents:'Talents',ach:'Achievements',ritual:'Ritual of Doom',help:'How it works',map:'Map',ah:'Auction House',council:'Shadow Council',shop:'Gold Shop'};
 const WIN_KEYS={KeyD:'demons',KeyC:'gear',KeyB:'bags',KeyP:'spellbook',KeyT:'talents',KeyY:'ach',KeyR:'ritual',KeyH:'help',KeyM:'map',KeyN:'trainer',KeyA:'ah',KeyS:'council',KeyG:'shop'};
 let winOpen=null;
 const WIN_ORDER=['demons','gear','bags','talents','ah','council','shop','ritual','ach','spellbook','help'];
@@ -1033,6 +1039,8 @@ $('tab').addEventListener('pointerdown',e=>{const b=e.target.closest('button,[da
   else if(a==='autosell'){const q=id==='junk'?'junk':+id;const o=AUTOSELL.find(x=>String(x.q)===String(q));if(autosellAvail(q)&&!S.autosell[q]&&S.account.gold>=o.cost){S.account.gold=Math.round((S.account.gold-o.cost)*100)/100;S.autosell[q]=true;log(`Auto-sell for ${o.name} items is on.`,'good');autosellSweep();}}
   else if(a==='mapz'){const z=+b.dataset.z;if(mapOpen.has(z))mapOpen.delete(z);else mapOpen.add(z);}
   else if(a==='go'){S.zone=+b.dataset.z;S.mob=+b.dataset.m;S.fighting=null;buildPickers();spawn();closeWin();}
+  else if(a==='patchok'){closeWin();return;}
+  else if(a==='patchnotes'){patchSince=null;openWin('patch');return;}
   else if(a==='tutorial'){const t=coachTut();t.intro=false;t.levelup=false;closeWin();coachSet=null;coachStart('intro');}
   else if(a==='wipe'){if(!arm('reset','Press again to wipe everything',b))return;try{localStorage.removeItem('drainsoul3');}catch(e2){}S=freshState();buildPickers();spawn();log('Fresh warlock.');}
   else if(a==='export'){const code=exportCode();const box=document.createElement('textarea');box.value=code;document.body.appendChild(box);box.select();let copied=false;try{copied=document.execCommand('copy');}catch(e2){}box.remove();if(navigator.clipboard)navigator.clipboard.writeText(code).catch(()=>{});const m=$('exportmsg');if(m)m.textContent=copied?'Copied to clipboard ('+code.length+' chars).':'Could not copy; code is in the import box.';const ib=$('importbox');if(ib&&!copied)ib.value=code;return;}
@@ -1265,9 +1273,13 @@ function renderTab(){
     ZONES.forEach((z,zi)=>{const locked=zi>0&&!S.cleared[zi-1];const op=!locked&&mapOpen.has(zi);h+=`<div class="tier mapz${locked?'':' click'}" ${locked?'':`data-a="mapz" data-z="${zi}"`} style="padding:8px 4px 2px">${locked?'':`<span class="caret">${op?'▾':'▸'}</span> `}${z.name} (${z.band[0]}–${z.band[1]})${locked?' · locked':''}${zi===S.zone?' · <span class="t1">you are here</span>':''}${S.cleared[zi]?' · cleared':''}</div>`;if(!op)return;
       z.mobs.forEach((mm,mi)=>{const m={n:mm.n,l:mm.l,hpm:1,dm:1,shards:1};const cls=lvlDiff(m);const cur=S.zone===zi&&S.mob===mi&&S.fighting!=='ev';h+=row(`${mm.n} <span class="lv-${cls}">Lv ${mm.l}</span>`,`${cls}${noShards(m)?' · no XP, no shards':''}`,'',`<button data-a="go" data-z="${zi}" data-m="${mi}" ${cur?'disabled':''}>${cur?'Current':'Go'}</button>`,cur?'owned':'');});
       const el={n:z.elite.n,l:z.elite.l,elite:true,hpm:10,dm:3,shards:5};const lk=bossLock(zi);const cur=S.zone===zi&&S.mob===4;h+=row(`★ ${z.elite.n} <span class="lv-${lvlDiff(el)}">Lv ${z.elite.l}</span> elite`,lk>0?`dead, back in ${Math.ceil(lk/60)} min`:(z.elite.n==='Ragnaros'?'2 hour lockout after a kill':'20 minute lockout after a kill'),`<span class="t2">Rare source</span>`,`<button data-a="go" data-z="${zi}" data-m="4" ${cur||lk>0?'disabled':''}>${cur?'Current':'Go'}</button>`,cur?'owned':(lk>0?'locked':''));});
+  }else if(tab==='patch'){
+    h+=`<div class="muted" style="padding:4px;font-size:12px">${patchSince?'Shardlock Idle has been updated since you last played.':'What changed in recent versions of Shardlock Idle.'}</div>`;
+    PATCHES.forEach((p,i)=>{if(patchSince&&i>0&&vnum(p.v)<=vnum(patchSince))return;h+=`<div class="tier" style="padding:8px 4px 2px">Version ${p.v} · ${p.date}</div>`+p.notes.map(([t,d])=>row(t,d,'','')).join('');});
+    h+=`<div style="padding:10px 4px"><button data-a="patchok">Got it</button></div>`;
   }else if(tab==='help'){
     h+=`<div style="padding:6px;font-size:13px;line-height:1.55">
-    <p><button data-a="tutorial">Replay the tutorial</button></p>
+    <p><button data-a="tutorial">Replay the tutorial</button> <button data-a="patchnotes">Patch notes</button></p>
     <p><b>The drain.</b> You channel Drain Soul on your target. The purple cast bar fills up, and when it fills, that is one tick. Each tick takes 1 off the target’s health and has a chance (shown in the stats) to give you a shard. Until you train Drain Soul at level 10 you have no channel at all and shards come only from kills; after that it ticks on its own and each of your ticks can drain a shard. When the target’s health hits 0 it dies, pays out its death shards, gives XP, maybe drops gear, and the next one steps up.</p>
     <p><b>Clicking.</b> Every click in the landscape (or the space bar) is part of a Shadow Bolt cast: three clicks make one bolt, two with the Bane talent. Each bolt takes health off the target. Bolts never give shards directly; they kill faster, and kills pay. Shadow Bolt ranks, Improved Shadow Bolt and Shadow power gear make each bolt hit harder.</p>
     <p><b>Demons.</b> Each demon you summon attacks the same target, all the time, including while you are dead or have the page closed. Their ticks take 1 health just like yours, so they are your kill speed, and kills pay death shards. They do not roll for shards on their ticks until the Demonic Pact milestone in Demonology, which makes them part of the drain.</p>
@@ -1429,7 +1441,8 @@ $('coach').addEventListener('pointerdown',e=>{
 });
 function coachMaybeIntro(){const t=coachTut();if(S.lvl>=3){t.intro=true;t.levelup=true;}if(!t.intro&&S.lvl===1)setTimeout(()=>coachStart('intro'),700);}
 
-load();buildPickers();spawn();coachMaybeIntro();
+const hadSave=(()=>{try{return !!localStorage.getItem('drainsoul3');}catch(e){return false;}})();
+load();buildPickers();spawn();coachMaybeIntro();checkPatchNotes(hadSave);
 log('Welcome, warlock. Click the target to cast Shadow Bolt: three clicks per cast, each cast hits the target. Kills pay shards. At level 10 you learn Drain Soul and your channel starts pulling shards on its own.');
 setInterval(save,5000);window.addEventListener('beforeunload',save);
 requestAnimationFrame(loop);
