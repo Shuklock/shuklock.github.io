@@ -361,7 +361,7 @@ const SPELLS=[
  {id:'coa',name:'Bane of Agony',lvl:8,cost:0.8,kind:'active',cd:30,desc:'Costs 5% of your health. 24s of ramping damage: a tick every 2s of 1, then 2, then 3 health, 24 in all. Carries across kills. While it runs, 10% of a regular mob’s death shards come up one rarity, and the next mob to spawn is twice as likely to be uncommon or rare. The damage hits bosses too; the shard bonus does not apply to them. 30s cooldown.'},
  {id:'hstone',name:'Healthstone',lvl:10,cost:1.5,kind:'active',desc:'Use it from the action bar to heal 40% of your health for 3 Uncommon shards, then it is on a 60s cooldown. Nothing to create.'},
  {id:'drainlife',name:'Drain Life',lvl:14,cost:3,kind:'active',cd:30,desc:'Channel Drain Life for 6 seconds, healing 40% of your health over the channel. No shards from anything while it runs, including kills. Press it again to stop early and get back on Drain Soul before the kill.'},
- {id:'sstone',name:'Create Soulstone',lvl:18,cost:6,extra:{3:1},kind:'craft',desc:'Craft a Soulstone (1 Epic). Die with it active and you skip the corpse run.'},
+ {id:'sstone',name:'Create Soulstone',lvl:18,cost:6,extra:{3:1},kind:'craft',desc:'Craft a Soulstone (1 Epic). Die with it active and you skip the corpse run. Once it saves you, you cannot make another for an hour.'},
  {id:'darmor',name:'Demon Armor',lvl:1,cost:0,kind:'passive',desc:'Known from the start. Always on: regenerate 1% of your health every 2 seconds, and take 10% less damage. Slows the bleed; it does not stop it. Higher ranks at the trainer.'},
  {id:'coil',name:'Death Coil',lvl:30,cost:25,extra:{2:1},kind:'active',cd:120,desc:'Heal 30%, interrupt the target’s cast, and make a regular mob cower for 3s. Works on bosses.'},
  {id:'coe',name:'Curse of the Elements',lvl:32,cost:12,kind:'curse',desc:'Your spells hit harder: each of your drain, bolt, Corruption and Agony ticks has a 10% chance (+5% per rank) to deal an extra point of damage. One curse at a time.'},
@@ -636,6 +636,7 @@ function dmgTakenMult(){
   if(S.curse==='cow')m*=1-.3*(tal('ampc')?1.5:1);
   if(S.curse==='coex')m*=1-.15*(tal('ampc')?1.5:1);
   return m;}
+const SSTONE_CD=3600; // a Soulstone that saves you cannot be made again for an hour
 const SHIELD_DUR=20; // seconds the Sacrifice shield lasts (the cooldown is longer)
 function shieldMax(){return maxHp()*(.3+.1*tal('impvw'));}
 function takeDamage(d){if(S.shield>0){const a=Math.min(S.shield,d);S.shield-=a;d-=a;}S.hp-=d;}
@@ -910,7 +911,7 @@ function gainXp(x){if(S.lvl>=60)return;S.xp+=x;while(S.lvl<60&&S.xp>=xpNeed(S.lv
   if(S.lvl>=60)S.xp=0;}
 function die(){
   const m=curMob();if(S.mode==='life'){S.mode='drain';S.lifeT=0;S.cds.drainlife=30;}
-  if(S.sstone){S.sstone=false;S.hp=maxHp()*.5;S.fear=4;fly('Soulstone','#c77dff',null,null,false,'heal');fly('+'+fmt(Math.floor(S.hp)),'#6fcf3a',null,null,false,'heal');log('You died. The Soulstone pulled you back.','good');return;}
+  if(S.sstone){S.sstone=false;S.cds.craftSs=SSTONE_CD;S.hp=maxHp()*.5;S.fear=4;fly('Soulstone','#c77dff',null,null,false,'heal');fly('+'+fmt(Math.floor(S.hp)),'#6fcf3a',null,null,false,'heal');log('You died. The Soulstone pulled you back.','good');return;}
   S.deaths++;S.hp=0;if(m.n==='Kobold Miner')S.flags.koboldDeath=true;
   S.corpseTotal=Math.round(Math.min(90,30+10*(S.deaths-1))*(perk('epicmount')?.25:perk('riding')?.5:1));S.corpse=S.corpseTotal;const wasEv=!!m.ev;S.event=null;S.fighting=null;if(wasEv)spawn();
   log(`You died to ${m.n}. Your channel is down for ${S.corpseTotal}s; your demons keep draining.`,'bad');
@@ -1005,7 +1006,7 @@ const memo={};function setHTML(id,h){if(memo[id]===h)return;memo[id]=h;$(id).inn
 function setText(id,t){if(memo['t'+id]===t)return;memo['t'+id]=t;$(id).textContent=t;}
 let tab='demons',tabDirty=true,frame=0,selItem=null;
 const TABS=[['demons','Demons'],['gear','Gear'],['trainer','Trainer'],['spellbook','Spellbook'],['talents','Talents'],['ach','Achievements'],['ritual','Ritual of Doom'],['help','How it works']];
-const PATCHES=[{"v": "0.3.0", "date": "October 18, 2026", "notes": [["Slower leveling past 20", "Levels after 20 need more XP, about 3x the play time by level 40 and up. This leaves room for dungeons later."], ["New legacy perk: Old Hand", "+25% XP per rank from level 20 on. 2 ranks, 1 point each."], ["New: Make Camp", "Buy the Camping Kit in the Gold Shop (200g). Rest by a campfire for 20 seconds to become Well Rested: +50% XP for 30 minutes. 2 hour cooldown."], ["Ritual of Doom, earlier", "1 legacy point after two zone bosses, 2 after four. Each early tier pays once. Ragnaros always pays 3."], ["Sacrifice keeps your Voidwalker", "Sacrifice no longer uses one up. Instead your Voidwalkers stop attacking for its 60 second cooldown."], ["Sacrifice shield lasts 20 seconds", "The shield fades after 20 seconds if it has not been used up. The cooldown stays 60 seconds."], ["Demon limits on older saves", "If you had more of a demon than its limit, the extras are released and the Common shards they cost are refunded."], ["Healthstones", "Healthstone is just used from the action bar for 3 Uncommon shards and goes on a 60 second cooldown. There is nothing to create first."], ["Improved Health Funnel", "Now a flat 0.04% of max health per second per rank while you have a demon. It no longer scales with how many kinds you own."], ["Infernals", "An Infernal you are fighting no longer burns out. It stays until one of you falls."], ["Character sheet", "Each stat shows its total, the base and what gear adds, grouped into Damage, Shards and Survival."], ["Item tooltips", "Show the item you picked with your equipped item under it."], ["Auction House", "Items you buy are never auto-sold."], ["Action bar and menus", "Curses first, then damage, then defensives, then Fear and Life Tap. Menus reordered, and the map only opens your current zone."]]}];
+const PATCHES=[{"v": "0.3.0", "date": "October 18, 2026", "notes": [["Slower leveling past 20", "Levels after 20 need more XP, about 3x the play time by level 40 and up. This leaves room for dungeons later."], ["New legacy perk: Old Hand", "+25% XP per rank from level 20 on. 2 ranks, 1 point each."], ["New: Make Camp", "Buy the Camping Kit in the Gold Shop (200g). Rest by a campfire for 20 seconds to become Well Rested: +50% XP for 30 minutes. 2 hour cooldown."], ["Ritual of Doom, earlier", "1 legacy point after two zone bosses, 2 after four. Each early tier pays once. Ragnaros always pays 3."], ["Sacrifice keeps your Voidwalker", "Sacrifice no longer uses one up. Instead your Voidwalkers stop attacking for its 60 second cooldown."], ["Sacrifice shield lasts 20 seconds", "The shield fades after 20 seconds if it has not been used up. The cooldown stays 60 seconds."], ["Soulstone cooldown", "Once a Soulstone has pulled you back from death, you cannot make another for one hour."], ["Demon limits on older saves", "If you had more of a demon than its limit, the extras are released and the Common shards they cost are refunded."], ["Healthstones", "Healthstone is just used from the action bar for 3 Uncommon shards and goes on a 60 second cooldown. There is nothing to create first."], ["Improved Health Funnel", "Now a flat 0.04% of max health per second per rank while you have a demon. It no longer scales with how many kinds you own."], ["Infernals", "An Infernal you are fighting no longer burns out. It stays until one of you falls."], ["Character sheet", "Each stat shows its total, the base and what gear adds, grouped into Damage, Shards and Survival."], ["Item tooltips", "Show the item you picked with your equipped item under it."], ["Auction House", "Items you buy are never auto-sold."], ["Action bar and menus", "Curses first, then damage, then defensives, then Fear and Life Tap. Menus reordered, and the map only opens your current zone."]]}];
 const vnum=v=>{const m=String(v||'0').split('.').map(x=>+x||0);return (m[0]||0)*1e6+(m[1]||0)*1e3+(m[2]||0);};
 let patchSince=null;
 function checkPatchNotes(hadSave){const cur=PATCHES[0]&&PATCHES[0].v;if(!cur)return;let seen=null;try{seen=localStorage.getItem('shardlock_patch');}catch(e){}
@@ -1049,7 +1050,7 @@ $('abilities').addEventListener('pointerdown',e=>{const b=e.target.closest('butt
 $('tab').addEventListener('pointerdown',e=>{const b=e.target.closest('button,[data-a]');if(!b||b.disabled)return;e.preventDefault();const a=b.dataset.a,id=b.dataset.id;
   if(a==='demon'){const d=DEMONS.find(x=>x.id===id);const c=demonCost(d);if(S.lvl>=d.lvl&&S.demons[id]<d.max&&canAfford(c)){pay(c);S.demons[id]++;}}
   else if(a==='spell'){const s=SPELLS.find(x=>x.id===id);const c=spellCost(s);if(S.lvl>=s.lvl&&canAfford(c)&&!S.spells[id]){pay(c);S.spells[id]=true;log(`Learned ${s.name}.`);}}
-  else if(a==='craftSs'){if(S.spells.sstone&&!S.sstone&&S.shards[3]>=1){S.shards[3]--;S.sstone=true;log('Soulstone active.','good');}}
+  else if(a==='craftSs'){if(S.spells.sstone&&!S.sstone&&!(S.cds.craftSs>0)&&S.shards[3]>=1){S.shards[3]--;S.sstone=true;log('Soulstone active.','good');}}
   else if(a==='rank'){const r=RANKS.find(x=>x.id===id);const cur=rank(id);const c=r.cost(cur);const lvOk=!(r.lvls&&S.lvl<r.lvls[cur])&&(!r.lvl||S.lvl>=r.lvl);if(cur<r.max&&(!r.req||S.spells[r.req])&&lvOk&&canAfford(c)){pay(c);S.ranks[id]=cur+1;log(`${r.name} rank ${cur+2}.`);}}
   else if(a==='emp'){buyEmp(id);}
   else if(a==='offer'){offer();}
@@ -1117,12 +1118,12 @@ const ICON={
  wrack:'<svg viewBox="0 0 24 24" fill="none" stroke="#ffd24a" stroke-width="2"><path d="M4 20L20 4M4 4l16 16M12 2v20M2 12h20"/></svg>',
 };
 const ico=id=>`<span class="ico">${ICON[id]||'<svg viewBox="0 0 24 24" fill="none" stroke="#9b5cff" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg>'}</span>`;
-function cdBtn(id,label,extra){const sp_=SPELLS.find(s=>s.id===id)||{};const cd=S.cds[id]>0?S.cds[id]:0;const total=sp_.cd||{shadowburn:15,conflag:30,wrack:45,hs:60,sacrifice:60,eat:180,spelllock:24,camp:7200}[id]||1;const icoId=id==='sstoneOn'?'craftSs':id;
+function cdBtn(id,label,extra){const sp_=SPELLS.find(s=>s.id===id)||{};const cd=S.cds[id]>0?S.cds[id]:0;const total=sp_.cd||{craftSs:3600,shadowburn:15,conflag:30,wrack:45,hs:60,sacrifice:60,eat:180,spelllock:24,camp:7200}[id]||1;const icoId=id==='sstoneOn'?'craftSs':id;
   return `<button data-id="${id}" data-total="${total}" title="${label.replace(/"/g,'')}" class="${extra||''}" ${cd>0&&!(id==='drainlife'&&S.mode==='life')?'disabled':''}><span class="cdfill" style="width:${Math.min(100,cd/total*100)}%"></span>${ico(icoId)}<span><span class="lb">${label}</span><span class="cdt">${cd>0?(cd>=60?Math.ceil(cd/60)+'m':Math.ceil(cd)+'s'):''}</span></span></button>`;}
 let abKey='';
 const ABIL_TIPS={camp:['Make Camp','Rest by a campfire for 20 seconds. The fight pauses and you heal. Then Well Rested: +50% XP for 30 minutes. Clicking does not break camp.','2 hour cooldown'],spelllock:['Spell Lock','Your Felhunter silences the target, cancelling whatever it is casting and locking it out for 12s. Only usable while the target is casting.','24s cooldown, shorter with Improved Felhunter'],sstoneOn:['Soulstone','Active. If you die, you come back at half health and skip the corpse run.',''],eat:['Eat and rest','Back off, reset the target and heal to full over 10 seconds. Any click stops it. Fleeing an elite or Infernal puts you on the zone’s top regular mob.','3 min cooldown'],
  hs:['Healthstone','Heals 40% of your health, +10% per Healthstone rank.','60s cooldown'],
- craftSs:['Create Soulstone','Costs 1 Epic shard. Die with it active and you skip the corpse run.',''],sacrifice:['Sacrifice','Your Voidwalkers shield you for 30% of your health (+10% per Improved Voidwalker rank). Damage hits the shield first. It lasts 20 seconds. Voidwalkers deal no damage until the cooldown ends.','20s shield, 60s cooldown'],
+ craftSs:['Create Soulstone','Costs 1 Epic shard. Die with it active and you skip the corpse run. Once it saves you, you cannot make another for an hour.','1 hour cooldown after it saves you'],sacrifice:['Sacrifice','Your Voidwalkers shield you for 30% of your health (+10% per Improved Voidwalker rank). Damage hits the shield first. It lasts 20 seconds. Voidwalkers deal no damage until the cooldown ends.','20s shield, 60s cooldown'],
  shadowburn:['Shadowburn','Instantly kill a target at 25% health or less.','15s cooldown'],conflag:['Conflagrate','For 8 seconds Shadow Bolts deal triple damage.','30s cooldown'],coex:['Curse of Exhaustion','The target deals 15% less damage to you and your channel ticks 10% faster against it. One curse at a time.',''],wrack:['Wrack','15 instant Drain Soul ticks, each rolling for a shard.','45s cooldown']};
 function abilityTip(id){
   let t=ABIL_TIPS[id];if(!t){const sp=SPELLS.find(x=>x.id===id);t=sp?[sp.name,sp.desc,sp.cd?sp.cd+'s cooldown':'']:[id,'',''];}
@@ -1186,7 +1187,7 @@ function slotAbility(id){
     case 'hs':return S.spells.hstone?{id:'hs',lbl:'Healthstone (3)'}:null;
     case 'sacrifice':return S.demons.vw>0?{id,lbl:'Sacrifice'}:null;
     case 'spelllock':return S.demons.felh>0?{id,lbl:S.cast?'Spell Lock!':'Spell Lock',on:!!S.cast}:null;
-    case 'craftSs':return S.spells.sstone?(S.sstone?{id:'sstoneOn',lbl:'Soulstone active',on:true,dis:true}:{id:'craftSs',lbl:'Create Soulstone (1 Epic)',craft:true}):null;
+    case 'craftSs':return S.spells.sstone?(S.sstone?{id:'sstoneOn',lbl:'Soulstone active',on:true,dis:true}:{id:'craftSs',lbl:(S.cds.craftSs||0)>0?`Soulstone (${Math.ceil(S.cds.craftSs/60)}m)`:'Create Soulstone (1 Epic)',craft:true}):null;
     case 'shadowburn':return tal('shadowburn')?{id,lbl:'Shadowburn'}:null;
     case 'conflag':return tal('conflag')?{id,lbl:'Conflagrate'}:null;
     case 'wrack':return tal('wrack')?{id,lbl:'Wrack'}:null;
@@ -1398,7 +1399,7 @@ function load(){
   try{const raw=localStorage.getItem('drainsoul3');if(!raw)return;const d=JSON.parse(raw);S=Object.assign(freshState(),d);S.corpse=0;S.event=null;S.fighting=null;S.mode='drain';S.lifeT=0;S.hp=Math.max(1,Math.min(maxHp(),S.hp));
     Object.values(S.gear).forEach(it=>{if(it&&it.stats&&it.q<3)it.name=itemName(it);});S.bag.forEach(it=>{if(!it.junk&&it.stats&&it.q<3)it.name=itemName(it);});S.spells.darmor=true;if(S.lvl>=10&&S.spells.drainsoul===undefined)S.spells.drainsoul=true;clampDemons();
     const gap=Math.min(12*3600,(Date.now()-(S.last||Date.now()))/1000);
-    if(gap>0){if((S.cds.camp||0)>0)S.cds.camp=Math.max(0,S.cds.camp-gap);if((S.restedT||0)>0)S.restedT=Math.max(0,S.restedT-gap);if(S.camping){S.camping=false;S.eatT=0;}}
+    if(gap>0){if((S.cds.camp||0)>0)S.cds.camp=Math.max(0,S.cds.camp-gap);if((S.cds.craftSs||0)>0)S.cds.craftSs=Math.max(0,S.cds.craftSs-gap);if((S.restedT||0)>0)S.restedT=Math.max(0,S.restedT-gap);if(S.camping){S.camping=false;S.eatT=0;}}
     if(gap>60&&!noShards(curMob())){const m=curMob();const tps=youTps()+corrTps()+immoTps()+petTps();const ticks=tps*gap*(1-resistChance());const need=soulNeed(m);const souls=Math.floor(ticks/need);
       const chance=shardChance()*drainTps()/Math.max(tps,1e-9);
       let sh=Math.floor(ticks*chance)+souls*deathShards(m);const startLvl=S.lvl;
