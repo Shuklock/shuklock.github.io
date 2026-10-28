@@ -1,14 +1,15 @@
 # Shardlock Idle art
 
-The sprites are Gemini pixel art. Gemini paints each one on a flat magenta background, working from WoW screenshots and the Felheart warlock reference. `tools/grid.py` then snaps the render to its pixel grid. Black outlines stay on. Anything with no Gemini version yet gets a placeholder from `tools/mk.py`.
+The sprites are Gemini (and now Midjourney) pixel art. Gemini paints each one on a flat magenta background, working from WoW screenshots and the Felheart warlock reference. `tools/grid.py` then snaps the render to its pixel grid. Black outlines stay on. Anything with no Gemini version yet gets a placeholder from `tools/mk.py`.
 
 | sprite | source | ART entry |
 |---|---|---|
 | `warlock.png` | Gemini | `frames:1, scale:.36` |
-| `pet_imp.png` | Gemini | `frames:1, scale:.32` |
-| `pet_vw.png` | Gemini | `frames:1, scale:.45` |
-| `pet_succ.png` | Gemini | `frames:1, scale:.38` |
-| `pet_felh.png`, `pet_inf.png`, `pet_doom.png` | mk.py placeholder | `frames:2, fps:2, scale:1.3–1.5` |
+| `pet_imp.png` | Gemini | `frames:1, scale:.27` |
+| `pet_vw.png` | Gemini | `frames:1, scale:.38` |
+| `pet_succ.png` | Gemini | `frames:1, scale:.32` |
+| `pet_felh.png` | Midjourney | `frames:1, scale:.42` |
+| `pet_inf.png`, `pet_doom.png` | mk.py placeholder | `frames:2, fps:2, scale:1.2–1.3` |
 | `mob_scorpid.png` | mk.py placeholder | none (mob default) |
 
 ## How the engine reads a sprite
