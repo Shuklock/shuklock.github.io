@@ -394,12 +394,12 @@ const ZONES=[
 ];
 // demons: ticks per second contributed to the drain
 const DEMONS=[
- {id:'imp',max:8,name:'Imp',lvl:1,cost:10,tps:.04,desc:'Firebolts. Many imps, many firebolts.'},
- {id:'vw',max:5,name:'Voidwalker',lvl:10,cost:60,tps:.08,desc:'Slow hitter and protector: Sacrifice from the action bar for a shield worth 30% of your health. Voidwalkers stop attacking during the 60s cooldown.'},
- {id:'succ',max:4,name:'Succubus',lvl:20,cost:300,extra:{1:2},tps:.25,desc:'Lash of Pain. Costs 2 Uncommon to bind.'},
- {id:'felh',max:5,name:'Felhunter',lvl:30,cost:1500,extra:{1:5},tps:.7,desc:'Devours. Each one adds +1% shard chance per drain tick (max +10%). Owning one puts Spell Lock on your bar. Costs 5 Uncommon to bind.'},
- {id:'inf',max:2,name:'Infernal',lvl:50,cost:8000,extra:{2:1},tps:2.5,desc:'Immolation aura. Hits everything. Costs a Rare to bind.'},
- {id:'doom',max:1,name:'Doomguard',lvl:60,cost:50000,extra:{3:1},tps:8,desc:'Ritual of Doom. Costs an Epic to bind.'},
+ {id:'imp',max:8,base:4,name:'Imp',lvl:1,cost:10,tps:0.038,desc:'Firebolts. Many imps, many firebolts.'},
+ {id:'vw',max:5,base:2,name:'Voidwalker',lvl:10,cost:60,tps:0.076,desc:'Slow hitter and protector: Sacrifice from the action bar for a shield worth 30% of your health. Voidwalkers stop attacking during the 60s cooldown.'},
+ {id:'succ',max:4,base:2,name:'Succubus',lvl:20,cost:300,extra:{1:2},tps:0.24,desc:'Lash of Pain. Costs 2 Uncommon to bind.'},
+ {id:'felh',max:5,base:2,name:'Felhunter',lvl:30,cost:1500,extra:{1:5},tps:0.67,desc:'Devours. Each one adds +1% shard chance per drain tick (max +10%). Owning one puts Spell Lock on your bar. Costs 5 Uncommon to bind.'},
+ {id:'inf',max:2,base:0,name:'Infernal',lvl:50,cost:8000,extra:{2:1},tps:0.71,desc:'Immolation aura. Hits everything. Costs a Rare to bind.'},
+ {id:'doom',max:1,base:0,name:'Doomguard',lvl:60,cost:50000,extra:{3:1},tps:2.28,desc:'Ritual of Doom. Costs an Epic to bind.'},
 ];
 const SPELLS=[
  {id:'drainsoul',name:'Drain Soul',lvl:10,cost:0,kind:'passive',desc:'Learned at level 10. Your channel ticks on its own (one tick every 1.5s), and each of your ticks has a chance to drain a shard. Before this, shards only come from kills.'},
@@ -416,6 +416,7 @@ const SPELLS=[
  {id:'coil',name:'Death Coil',lvl:30,cost:25,extra:{2:1},kind:'active',cd:120,desc:'Heal 30%, interrupt the target’s cast, and make a regular mob cower for 3s. Works on bosses.'},
  {id:'coe',name:'Curse of the Elements',lvl:32,cost:12,kind:'curse',desc:'Your spells hit harder: each of your drain, bolt, Corruption and Agony ticks has a 10% chance (+5% per rank) to deal an extra point of damage. One curse at a time.'},
  {id:'autohs',name:'Improved Healthstone',lvl:36,cost:45,extra:{2:2},kind:'passive',desc:'Healthstones are used automatically below 30% health.'},
+ {id:'felattune',name:'Fel Attunement',lvl:60,cost:150,extra:{3:2},kind:'passive',desc:'Your own spells draw far more from Spell power: each point adds 2.8% soul to your ticks and casts instead of 1%. Demons are not affected.'},
 ];
 const TALENTS=[
  {id:'ilt',tree:0,tier:0,max:2,name:'Improved Life Tap',desc:'Life Tap gives 15% more shards and costs 3% less health, per rank.'},
@@ -453,7 +454,7 @@ const TALENTS=[
  {id:'soullink',tree:1,tier:25,max:1,ms:true,name:'Soul Link',desc:'Milestone: while you have any demon out, 20% of damage you take goes to it instead.'},
  {id:'demknow',tree:1,tier:25,max:3,name:'Demonic Knowledge',desc:'Drain Soul ticks 4% faster per rank for each demon type you own.'},
  {id:'mdemo',tree:1,tier:25,max:5,name:'Master Demonologist',desc:'Per rank: a Voidwalker takes 2% off the damage you take, a Succubus adds 1.2% shard chance.'},
- {id:'dempact',tree:1,tier:30,max:1,ms:true,req:'soullink',name:'Demonic Pact',desc:'Milestone: your demons join the drain. Their ticks roll for shards at your chance, including while you are away. Needs Soul Link.'},
+ {id:'dempact',tree:1,tier:30,max:1,ms:true,req:'soullink',name:'Demonic Pact',desc:'Milestone: you can bind the full legion: Imps 8, Voidwalkers 5, Succubi 4, Felhunters 5, and Infernals and Doomguards open up. Your demons join the drain too: their ticks roll for shards at your chance, including while you are away. Needs Soul Link.'},
  {id:'dreach',tree:2,tier:0,max:2,name:'Destructive Reach',desc:'Each Shadow Bolt click has a 7% chance per rank to count twice.'},
  {id:'isb',tree:2,tier:0,max:5,name:'Improved Shadow Bolt',desc:'+8% Shadow Bolt damage per rank.'},
  {id:'bane',tree:2,tier:0,max:1,name:'Bane',desc:'Shadow Bolt needs 2 clicks per cast instead of 3, and Drain Soul ticks 5% faster.'},
@@ -522,15 +523,15 @@ function spend(budget,mix,ilvl){const o={};let left=0;for(const k in mix){let v=
   for(const k in o)o[k]=Math.round(o[k]*10)/10;return o;}
 // sets: a piece is 110% of a random item of its quality, plus the bonus
 // bonusT: one entry per dungeon tier. The Mythic 4-piece is an effect, not a number; see SET_FX
-const SET_FX={Gloomweaver:'Bane of Agony never fades: once it reaches full strength it stays there.',Hexbinder:'Two curses at once.',Emberwrought:'Immolate ticks twice as fast.',Pactbound:'+1 to every demon’s limit.'};
+const SET_FX={Gloomweaver:'Bane of Agony never fades: once it reaches full strength it stays there.',Hexbinder:'Two curses at once.',Emberwrought:'Immolate ticks twice as fast.',Pactbound:'+1 to your Imp, Voidwalker, Succubus and Felhunter limits.'};
 // set bonuses that aren't gear stats: what each one says
-const SET_EFX={corrAgony:v=>`Corruption and Bane of Agony deal +${v}%`,dsDot:v=>`Drain Soul ticks ${v}% faster per DoT on the target`,curseUp:v=>`Curses ${v}% stronger`,coePet:v=>`Curse of the Elements works on demon hits (${v}% of its chance)`,immoSpeed:v=>`Immolate ticks ${v}% faster`,petDmg:v=>`Demons deal +${v}%`,petShare:v=>`Demons gain ${v}% of your Spell power and Crit`};
+const SET_EFX={corrAgony:v=>`Corruption and Bane of Agony deal +${v}%`,dsDot:v=>`Drain Soul ticks ${v}% faster per DoT on the target`,curseUp:v=>`Curses ${v}% stronger`,coePet:v=>`Curse of the Elements works on demon hits (${v}% of its chance)`,immoSpeed:v=>`Immolate ticks ${v}% faster`,petDmg:v=>`Demons deal +${v}%`,petShare:v=>`Demons gain ${v}% of your Spell power`};
 function setVal(k){return setBonusStat(S,k);}
 const SETS={
  Gloomweaver:{dungeon:true,q:2,pieces:{head:{name:'Gloomweaver Cowl',mix:{crit:.5,stam:.5}},chest:{name:'Gloomweaver Robe',mix:{stam:.5,power:.5}},legs:{name:'Gloomweaver Leggings',mix:{haste:.5,stam:.5}},hands:{name:'Gloomweaver Gloves',mix:{power:.6,hit:.4}}},bonusT:[{2:{corrAgony:20},4:{dsDot:4}},{2:{corrAgony:30},4:{dsDot:6}},{2:{corrAgony:40},4:{dsDot:8}}]},
  Hexbinder:{dungeon:true,q:2,pieces:{head:{name:'Hexbinder Hood',mix:{crit:.6,stam:.4}},chest:{name:'Hexbinder Vestments',mix:{stam:.4,power:.6}},legs:{name:'Hexbinder Trousers',mix:{haste:.6,stam:.4}},hands:{name:'Hexbinder Wraps',mix:{power:.6,hit:.4}}},bonusT:[{2:{curseUp:25},4:{coePet:50}},{2:{curseUp:40},4:{coePet:75}},{2:{curseUp:55},4:{coePet:100}}]},
  Emberwrought:{dungeon:true,q:2,pieces:{head:{name:'Emberwrought Circlet',mix:{haste:.6,stam:.4}},chest:{name:'Emberwrought Mantle',mix:{power:.6,stam:.4}},legs:{name:'Emberwrought Greaves',mix:{crit:.6,stam:.4}},hands:{name:'Emberwrought Grips',mix:{power:.5,spirit:.5}}},bonusT:[{2:{power:12},4:{immoSpeed:20}},{2:{power:18},4:{immoSpeed:35}},{2:{power:24},4:{immoSpeed:50}}]},
- Pactbound:{dungeon:true,q:2,pieces:{head:{name:'Pactbound Cowl',mix:{crit:.5,stam:.5}},chest:{name:'Pactbound Robe',mix:{power:.6,stam:.4}},legs:{name:'Pactbound Leggings',mix:{haste:.5,stam:.5}},hands:{name:'Pactbound Gloves',mix:{power:.5,crit:.5}}},bonusT:[{2:{petDmg:10},4:{petShare:25}},{2:{petDmg:15},4:{petShare:40}},{2:{petDmg:20},4:{petShare:60}}]},
+ Pactbound:{dungeon:true,q:2,pieces:{head:{name:'Pactbound Cowl',mix:{crit:.5,stam:.5}},chest:{name:'Pactbound Robe',mix:{power:.6,stam:.4}},legs:{name:'Pactbound Leggings',mix:{haste:.5,stam:.5}},hands:{name:'Pactbound Gloves',mix:{power:.5,crit:.5}}},bonusT:[{2:{petDmg:10},4:{petShare:10}},{2:{petDmg:15},4:{petShare:15}},{2:{petDmg:20},4:{petShare:20}}]},
  Dreadmist:{q:3,pieces:{head:{name:'Dreadmist Mask',mix:{spirit:.55,stam:.45}},chest:{name:'Dreadmist Robe',mix:{power:.55,stam:.45}},legs:{name:'Dreadmist Leggings',mix:{haste:.55,stam:.45}},hands:{name:'Dreadmist Wraps',mix:{power:.6,hit:.4}}},bonus:{2:{haste:10},4:{spirit:10}},bonusText:{2:'+10% Haste',4:'+10 Spirit'}},
  Felheart:{q:3,pieces:{head:{name:'Felheart Horns',mix:{crit:.55,stam:.45}},chest:{name:'Felheart Robes',mix:{power:.55,stam:.45}},legs:{name:'Felheart Pants',mix:{haste:.55,stam:.45}},hands:{name:'Felheart Gloves',mix:{power:.6,hit:.4}}},bonus:{2:{spirit:20},4:{spirit:16}},bonusText:{2:'+20 Spirit',4:'+16 Spirit'}},
 };
@@ -658,10 +659,19 @@ RANKS.forEach(rk=>{const f=rk.cost;rk.cost=r=>{const c=f(r);if(c[1]){const l=(rk
 const EMP_MAX=Infinity,EMP_BASE={imp:150,vw:250,succ:400,felh:700,inf:1200,doom:2000},OFFER_COST=800;
 const empLevel=id=>(S.emp&&S.emp[id])||0;
 // endless: Common ×1.55, Uncommon from level 3, Rare from 6 and Epic from 10 all keep climbing; each level is +8% damage for that demon
+// spell empowerment: once a spell is at max trainer rank, shards empower it like a demon, endlessly (same costs and soft cap)
+const SP_EMP=[{id:'drain',name:'Drain Soul',need:'drainsoul'},{id:'corr',name:'Corruption',need:'corr'},{id:'coa',name:'Bane of Agony',need:'coa'},{id:'immo',name:'Immolate',need:'immo'},{id:'bolt',name:'Shadow Bolt',need:null}];
+const SP_EMP_BASE=600;
+const spEmpLevel=id=>(S.spemp&&S.spemp[id])||0;
+function spMult(id){return 1+empBonus(spEmpLevel(id));}
+function spEmpOpen(id){const e=SP_EMP.find(x=>x.id===id);const r=RANKS.find(x=>x.id===id);return !!e&&(!e.need||!!S.spells[e.need])&&(!r||rank(id)>=r.max);}
+function spEmpCost(id){const n=spEmpLevel(id);const c={0:Math.floor(SP_EMP_BASE*Math.pow(1.55,n))};if(n>=3)c[1]=n*2;if(n>=6)c[2]=n-4;if(n>=10)c[3]=Math.floor((n-8)/2);return c;}
+function canSpEmp(id){return spEmpOpen(id)&&canAfford(spEmpCost(id));}
+function buySpEmp(id){if(!canSpEmp(id))return false;pay(spEmpCost(id));S.spemp=S.spemp||{};S.spemp[id]=spEmpLevel(id)+1;const e=SP_EMP.find(x=>x.id===id);log(`${e.name} empowered to level ${S.spemp[id]}.`);return true;}
 // soft cap: +8% per level up to level 20 (+160%), then +4% per level forever
 function empBonus(n){return .08*Math.min(n,20)+.04*Math.max(0,n-20);}
 function empCost(d){const n=empLevel(d.id);const c={0:Math.floor(EMP_BASE[d.id]*Math.pow(1.55,n))};if(n>=3)c[1]=n*2;if(n>=6)c[2]=n-4;if(n>=10)c[3]=Math.floor((n-8)/2);return c;}
-function canEmp(d){return S.demons[d.id]>=demonMax(d)&&empLevel(d.id)<EMP_MAX&&canAfford(empCost(d));}
+function canEmp(d){return demonMax(d)>0&&S.demons[d.id]>=demonMax(d)&&empLevel(d.id)<EMP_MAX&&canAfford(empCost(d));}
 function buyEmp(id){const d=DEMONS.find(x=>x.id===id);if(d&&canEmp(d)){pay(empCost(d));S.emp=S.emp||{};S.emp[id]=empLevel(id)+1;log(`${d.name} empowered to level ${S.emp[id]}.`);return true;}}
 function offer(){if(rank('council')&&S.shards[0]>=OFFER_COST){S.shards[0]-=OFFER_COST;const r=Math.random();const t=r<.03?4:r<.3?3:2;S.shards[t]++;S.life++;S.seen[t]=true;fly('+1 '+RAR[t],RCOL[t],null,null,false,'shard');log(`The Council accepts your offering and gives you a <span class="t${t}">${RAR[t]}</span> shard.`,'loot');}}
 const LEGACY=[
@@ -710,7 +720,7 @@ function freshState(keep){
   const lp=keep?keep.legacy:{points:0,perks:{}};
   const s={lvl:1,xp:0,hp:100,shards:[0,0,0,0,0],life:0,souls:0,clicks:0,deaths:0,corpse:0,corpseTotal:0,
     demons:{},emp:{},spells:{darmor:true},tal:{},ranks:{},zone:0,mob:0,cleared:[],cds:{},curse:null,hs:0,sstone:false,mode:'drain',
-    soul:0,soulMax:1,prog:0,petProg:0,corrT:0,fear:0,conflagT:0,havoc:0,shield:0,eatT:0,lifeT:0,mobRar:0,coaBoost:false,autosell:{},castSpell:'bolt',kz:{best:0,marks:0,bless:0},mythic:{},powAcc:0,autoT:0,lifeTick:0,dg:null,dgPack:[],dgLock:{},dgCleared:{},dgReturn:null,cast:null,castCd:8,enrageT:0,swingT:0,flurryN:0,alt:0,adds:[],mobReturn:null,fearPull:false,lastInput:Date.now(),
+    soul:0,soulMax:1,prog:0,petProg:0,corrT:0,fear:0,conflagT:0,havoc:0,shield:0,eatT:0,lifeT:0,mobRar:0,coaBoost:false,autosell:{},castSpell:'bolt',kz:{best:0,marks:0,bless:0},mythic:{},spemp:{},powAcc:0,autoT:0,lifeTick:0,dg:null,dgPack:[],dgLock:{},dgCleared:{},dgReturn:null,cast:null,castCd:8,enrageT:0,swingT:0,flurryN:0,alt:0,adds:[],mobReturn:null,fearPull:false,lastInput:Date.now(),
     event:null,eventT:180+Math.random()*120,fighting:null,bossDead:{},
     seen:[false,false,false,false,false],flags:{},ach:keep?keep.ach:{},prestiges:keep?keep.prestiges:0,legacy:lp,last:Date.now(),
     gear:{},lootQ:[],bag:[],bags:0,uid:0,lastDrop:null,account:keep&&keep.account?keep.account:{gold:0,perks:{}}};
@@ -736,31 +746,37 @@ const demonTypes=()=>DEMONS.filter(d=>S.demons[d.id]>0).length;
 function maxHpOf(s){return Math.floor((50+18*s.lvl)*(1+.04*(s.tal&&s.tal.embrace||0)+.03*(s.tal&&s.tal.felvit||0))*(1+gearStatOf(s,'stam')/100));}
 const maxHp=()=>maxHpOf(S);
 function globalHaste(){return (1+.1*leg('bloodline'))*(1+achCount()*.01);}
+// talent and demon tuning knobs (today's values); the web profiler (claude/balance-bot/web_profile.py) reads damage through these
+const TN={mal:.04,impcorr:.10,shm:.02,impcoa:.12,isb:.08,fabr:.04,sf:.03,dotDmg:0,pet:1,sp:2.8,big:1};
 function youTps(){ // your channel, ticks per second
   if(!S.spells.drainsoul)return 0;
-  let m=1+.04*tal('malediction')+.05*tal('bane')+.04*tal('demknow')*demonTypes()+.06*rank('drain')+.02*tal('shmast')+(hasCurse('coex')?.1*curseMul():0)+gearStat('haste')/100+setVal('dsDot')/100*((S.spells.corr?1:0)+(S.spells.immo?1:0)+(S.coaT>0?1:0));
+  let m=1+TN.mal*tal('malediction')+.05*tal('bane')+.04*tal('demknow')*demonTypes()+.06*rank('drain')+TN.shm*tal('shmast')+(hasCurse('coex')?.1*curseMul():0)+gearStat('haste')/100+setVal('dsDot')/100*((S.spells.corr?1:0)+(S.spells.immo?1:0)+(S.coaT>0?1:0));
   return (1/1.5)*m*globalHaste();}
 function clicksPerCast(){return Math.max(1,3-tal('bane'));}
-function boltPower(){let p=1*(1+.08*tal('isb'))*(1+.12*rank('bolt'))*(1+gearStat('power')/100);if(S.spells.immo)p*=1+.04*tal('fabr');p*=1+.03*tal('shadowflame')*((S.spells.corr?1:0)+(S.spells.immo?1:0)+(S.coaT>0?1:0));if(S.conflagT>0)p*=3;return p;} // health removed per bolt
+function boltPower(){let p=spMult('bolt')*(1+TN.isb*tal('isb'))*(1+.12*rank('bolt'))*(1+spCoef()*gearStat('power')/100);if(S.spells.immo)p*=1+TN.fabr*tal('fabr');p*=1+TN.sf*tal('shadowflame')*((S.spells.corr?1:0)+(S.spells.immo?1:0)+(S.coaT>0?1:0));if(S.conflagT>0)p*=3;return p;} // health removed per bolt
 const clickPull=boltPower;
-function demonMax(d){return d.max+(setFx('Pactbound')?1:0);}
+// every build can bind the base number; Demonic Pact (Demonology's capstone) lifts it to the full number and opens Infernal and Doomguard.
+// Mythic Pactbound adds one Imp, Voidwalker, Succubus and Felhunter
+function demonMax(d){const n=tal('dempact')?d.max:d.base;return n+(setFx('Pactbound')&&d.id!=='inf'&&d.id!=='doom'?1:0);}
 function petTps(){let t=0;const u=(1+.05*tal('unholy'))*(1+.05*tal('energies'));
-  DEMONS.forEach(d=>{let m=u;if(d.id==='imp')m*=1+.15*tal('impimp');if(d.id==='vw')m*=1+.15*tal('impvw');if(d.id==='succ')m*=1+.15*tal('impsayaad');if(d.id==='felh')m*=1+.15*tal('impfelh');m*=1+empBonus(empLevel(d.id));if(d.id==='vw'&&S.cds.sacrifice>0)m=0;t+=Math.min(S.demons[d.id],demonMax(d))*d.tps*m;});
+  DEMONS.forEach(d=>{let m=u;if(d.id==='imp')m*=1+.15*tal('impimp');if(d.id==='vw')m*=1+.15*tal('impvw');if(d.id==='succ')m*=1+.15*tal('impsayaad');if(d.id==='felh')m*=1+.15*tal('impfelh');m*=1+empBonus(empLevel(d.id));if(d.id==='vw'&&S.cds.sacrifice>0)m=0;t+=Math.min(S.demons[d.id],demonMax(d))*d.tps*m*(d.id==='inf'||d.id==='doom'?TN.big:1);});
   const share=setVal('petShare')/100;
-  return t*globalHaste()*(1+.05*(S.lvl-1))*(1+setVal('petDmg')/100)*(1+share*gearStat('power')/100)*(1+share*critChance()*.5);}
-function immoTps(){if(!S.spells.immo)return 0;return (setFx('Emberwrought')?2:1)*(1+setVal('immoSpeed')/100)*.25*(1+.08*rank('immo'))*(1+.06*tal('aftermath'))*(1+.02*tal('shmast'))*(1+gearStat('haste')/100)*globalHaste();}
+  return TN.pet*t*globalHaste()*(1+.05*(S.lvl-1))*(1+setVal('petDmg')/100)*(1+share*gearStat('power')/100);}
+function immoTps(){if(!S.spells.immo)return 0;return spMult('immo')*(setFx('Emberwrought')?2:1)*(1+setVal('immoSpeed')/100)*.25*(1+.08*rank('immo'))*(1+.06*tal('aftermath'))*(1+TN.shm*tal('shmast'))*(1+gearStat('haste')/100)*globalHaste();}
 // curses: Hexbinder makes them stronger, and its Mythic four-piece holds two at once (the two you cast last)
 function curseMul(){return 1+setVal('curseUp')/100;}
 function hasCurse(id){return S.curse===id||(S.curse2===id&&setFx('Hexbinder'));}
 function toggleCurse(id){if(hasCurse(id)){if(S.curse===id){S.curse=setFx('Hexbinder')?(S.curse2||null):null;}S.curse2=null;return;}if(setFx('Hexbinder')&&S.curse)S.curse2=S.curse;else S.curse2=null;S.curse=id;}
-function corrTps(){if(!S.spells.corr)return 0;return (1/3)*(1+setVal('corrAgony')/100)*(1+.1*tal('impcorr'))*(1+.12*rank('corr'))*(1+.02*tal('shmast'))*(1+gearStat('haste')/100)*globalHaste();}
+function corrTps(){if(!S.spells.corr)return 0;return (1/3)*spMult('corr')*(1+setVal('corrAgony')/100)*(1+TN.impcorr*tal('impcorr'))*(1+.12*rank('corr'))*(1+TN.shm*tal('shmast'))*(1+TN.dotDmg*tal('malediction'))*(1+gearStat('haste')/100)*globalHaste();}
 function auraCount(){return (S.spells.corr?1:0)+(S.spells.immo?1:0)+(S.curse?1:0)+(S.coaT>0?1:0);}
 function shardChance(){if(!S.spells.drainsoul)return 0;let c=.1+.05*tal('impdrains')+Math.min(.1,S.demons.felh*.01)+.05*leg('hunter')+.04*tal('soulsiphon')*auraCount()+(S.demons.succ>0?.012*tal('mdemo'):0)+(demonTypes()>0?.03*tal('brand'):0)+gearStat('spirit')/200;return Math.min(.95,c);}
 // crit soft cap: full value up to 50%, then each point counts for less; it closes in on 100% but never reaches it
 function critRaw(){return .03*tal('fconc')+.02*tal('malevolence')+gearStat('crit')/100;}
 function critChance(){const r=critRaw();return r<=.5?r:.5+.5*(1-Math.exp(-(r-.5)));}
 function armorRegen(){return (.01+.0025*rank('darmor'))*(1+.15*tal('aegis'))*(1+gearStat('spirit')/100);}
-function soulPerTick(){return 1+gearStat('power')/100;}
+// Fel Attunement (trainer, level 60) multiplies what Spell power does for your own spells
+function spCoef(){return S.spells.felattune?TN.sp:1;}
+function soulPerTick(){return 1+spCoef()*gearStat('power')/100;}
 function lifeTickHeal(){return maxHp()*(.4+.05*rank('drainlife'))/6*soulPerTick();}
 function lifeTps(){return (1+gearStat('haste')/100)*globalHaste();}
 function hitPct(){return .02*tal('suppression')+gearStat('hit')/100;}
@@ -1215,7 +1231,7 @@ function tick(source){
   const cm=crit=>!crit?1:(source==='dot'&&tal('pandemic')?2:1.5);
   if(mine&&Math.random()<critChance())crit=true;
   S.soul--;
-  if(mine){S.powAcc=(S.powAcc||0)+soulPerTick()*cm(crit)-1;while(S.powAcc>=1&&S.soul>0){S.powAcc-=1;S.soul--;}}
+  if(mine){S.powAcc=(S.powAcc||0)+soulPerTick()*cm(crit)*(source==='you'?spMult('drain'):1)-1;while(S.powAcc>=1&&S.soul>0){S.powAcc-=1;S.soul--;}}
   if(source==='you')fxDrainTick();
   if(source!=='you')dmgNote(source==='dot'&&S.coaTicking?'coa':source,soulBefore-S.soul,crit);
   if(tal('decimation')&&S.soul>0&&S.soul<S.soulMax*.25&&Math.random()<.12*tal('decimation'))S.soul--;
@@ -1346,7 +1362,7 @@ function loopBody(dt){
     if(S.spells.darmor){S.armorT=(S.armorT||0)+dt;if(S.armorT>=2){S.armorT-=2;const h=maxHp()*armorRegen();if(S.hp<maxHp()){S.hp=Math.min(maxHp(),S.hp+h);fly('+'+Math.round(h),'#6fcf3a',null,null,true,'heal');}}}
     if(S.spells.corr){S.corrT+=corrTps()*dt;while(S.corrT>=1&&S.soul>0){S.corrT-=1;tick('dot');}}
     if(S.spells.immo){S.immoT=(S.immoT||0)+immoTps()*dt;while(S.immoT>=1&&S.soul>0){S.immoT-=1;tick('immo');}}
-    if(S.coaT>0){S.coaT=setFx('Gloomweaver')&&S.coaT<=8?S.coaT:S.coaT-dt;S.coaTick=(S.coaTick||0)+dt;if(S.coaTick>=2){S.coaTick-=2;const elapsed=24-S.coaT;const ramp=(elapsed<8?1:elapsed<16?2:3)*(1+.15*rank('coa'))*(1+.06*tal('agonizing'))*(1+.12*tal('impcoa'))*(1+.02*tal('shmast'))*(1+setVal('corrAgony')/100);S.coaAcc=(S.coaAcc||0)+ramp;while(S.coaAcc>=1&&S.soul>0){S.coaAcc-=1;S.coaTicking=true;tick('dot');S.coaTicking=false;}}if(S.coaT<=0)log('Bane of Agony faded.');}
+    if(S.coaT>0){S.coaT=setFx('Gloomweaver')&&S.coaT<=8?S.coaT:S.coaT-dt;S.coaTick=(S.coaTick||0)+dt;if(S.coaTick>=2){S.coaTick-=2;const elapsed=24-S.coaT;const ramp=(elapsed<8?1:elapsed<16?2:3)*(1+.15*rank('coa'))*(1+.06*tal('agonizing'))*(1+TN.impcoa*tal('impcoa'))*(1+TN.shm*tal('shmast'))*(1+TN.dotDmg*tal('malediction'))*(1+setVal('corrAgony')/100)*spMult('coa');S.coaAcc=(S.coaAcc||0)+ramp;while(S.coaAcc>=1&&S.soul>0){S.coaAcc-=1;S.coaTicking=true;tick('dot');S.coaTicking=false;}}if(S.coaT<=0)log('Bane of Agony faded.');}
     dmgFlush(dt);
     if(S.soul>0){if(S.fear<=0)runAttacker(S,m,dt);
       (S.adds||[]).forEach(a=>{if(S.hp>0)runAttacker(a,addDef(a),dt);});
@@ -1421,6 +1437,7 @@ $('tab').addEventListener('pointerdown',e=>{const b=e.target.closest('button,[da
   else if(a==='craftSs'){if(S.spells.sstone&&!S.sstone&&!(S.cds.craftSs>0)&&S.shards[3]>=1){S.shards[3]--;S.sstone=true;log('Soulstone active.','good');}}
   else if(a==='rank'){const r=RANKS.find(x=>x.id===id);const cur=rank(id);const c=r.cost(cur);const lvOk=!(r.lvls&&S.lvl<r.lvls[cur])&&(!r.lvl||S.lvl>=r.lvl);if(cur<r.max&&(!r.req||S.spells[r.req])&&lvOk&&canAfford(c)){pay(c);S.ranks[id]=cur+1;log(`${r.name} rank ${cur+2}.`);}}
   else if(a==='emp'){buyEmp(id);}
+  else if(a==='spemp'){buySpEmp(id);}
   else if(a==='offer'){offer();}
   else if(a==='tmn'||a==='tmall'){const t=+id;if(rank('council')&&t>=1&&t<=4){const box=$('brk'+t);let n=a==='tmall'?S.shards[t]:Math.floor(+(box&&box.value)||0);n=Math.min(n,S.shards[t]);if(n>0){S.shards[t]-=n;S.shards[t-1]+=n*10;S.seen[t-1]=true;fly(`${fmt(n)} ${RAR[t]} → ${fmt(n*10)} ${RAR[t-1]}`,RCOL[t-1],null,null,false,'shard');}if(box)box.value='';}}
   else if(a==='offern'){const box=$('offern');let n=Math.floor(+(box&&box.value)||0);n=Math.min(n,Math.floor(S.shards[0]/OFFER_COST));for(let i=0;i<n;i++)offer();if(box)box.value='';}
@@ -1695,7 +1712,7 @@ function renderTab(){
   const row=(n,d,cost,btn,cls)=>`<div class="row ${cls||''}"><div><div class="n">${n}</div><div class="d">${d}</div></div><div style="display:flex;align-items:center;gap:8px"><div class="cost">${cost}</div>${btn}</div></div>`;
   if(tab==='demons'){
     h+=`<div class="muted" style="padding:4px;font-size:12px">Each demon attacks your target, all the time, even while you are dead or away: one point of damage per tick. Demons grow with you: +5% per level. Their hits do not pull shards until Demonic Pact. Total: ${petTps().toFixed(2)} ticks/s.</div>`;
-    DEMONS.forEach(d=>{const c=demonCost(d);const lk=S.lvl<d.lvl;h+=row(`${d.name} <span class="muted">×${S.demons[d.id]} / ${demonMax(d)}</span>`,`${d.desc} ${(d.tps*(1+.05*(S.lvl-1))).toFixed(2)} ticks/s each at your level. You can bind at most ${demonMax(d)}.${lk?' Requires level '+d.lvl+'.':''}`,S.demons[d.id]>=demonMax(d)?'':costStr(c),`<button data-a="demon" data-id="${d.id}" ${!lk&&S.demons[d.id]<demonMax(d)&&canAfford(c)?'':'disabled'}>${S.demons[d.id]>=demonMax(d)?'Full':'Summon'}</button>`,lk?'locked':(S.demons[d.id]>0?'owned':''));if(S.demons[d.id]>=demonMax(d)&&!lk){const el=empLevel(d.id);h+=row(`&nbsp;&nbsp;Empower ${d.name} <span class="muted">level ${el}</span>`,`Every ${d.name} does +${el<20?8:4}% more damage per level (now +${Math.round(empBonus(el)*100)}%). +8% a level up to 20, +4% after, no limit; from level 10 it also costs Epic shards. Resets with the Ritual.`,el<EMP_MAX?costStr(empCost(d)):'',`<button data-a="emp" data-id="${d.id}" ${canEmp(d)?'':'disabled'}>${el<EMP_MAX?'Empower':'Max'}</button>`);}});
+    DEMONS.forEach(d=>{const c=demonCost(d);const pact=demonMax(d)<=0;const lk=S.lvl<d.lvl||pact;h+=row(`${d.name} <span class="muted">×${S.demons[d.id]} / ${demonMax(d)}</span>`,`${d.desc} ${(d.tps*(1+.05*(S.lvl-1))).toFixed(2)} ticks/s each at your level. ${pact?'Needs Demonic Pact, the Demonology capstone (30 points).':'You can bind at most '+demonMax(d)+(tal('dempact')?'.':' (Demonic Pact raises it to '+d.max+').')}${S.lvl<d.lvl?' Requires level '+d.lvl+'.':''}`,S.demons[d.id]>=demonMax(d)?'':costStr(c),`<button data-a="demon" data-id="${d.id}" ${!lk&&S.demons[d.id]<demonMax(d)&&canAfford(c)?'':'disabled'}>${S.demons[d.id]>=demonMax(d)?'Full':'Summon'}</button>`,lk?'locked':(S.demons[d.id]>0?'owned':''));if(S.demons[d.id]>=demonMax(d)&&!lk){const el=empLevel(d.id);h+=row(`&nbsp;&nbsp;Empower ${d.name} <span class="muted">level ${el}</span>`,`Every ${d.name} does +${el<20?8:4}% more damage per level (now +${Math.round(empBonus(el)*100)}%). +8% a level up to 20, +4% after, no limit; from level 10 it also costs Epic shards. Resets with the Ritual.`,el<EMP_MAX?costStr(empCost(d)):'',`<button data-a="emp" data-id="${d.id}" ${canEmp(d)?'':'disabled'}>${el<EMP_MAX?'Empower':'Max'}</button>`);}});
   }else if(tab==='gear'){
     const DP={head:[115,8],chest:[18,80],legs:[18,160],hands:[212,110],wand:[212,200],trinket:[212,22]};const AB={head:'Head',chest:'Chest',legs:'Legs',hands:'Hands',wand:'Wand',trinket:'Trinket'};
     let doll=`<div class="doll"><svg class="fig" viewBox="0 0 140 290" xmlns="http://www.w3.org/2000/svg"><path d="M70 18c-14 0-22 12-22 26v10h44V44c0-14-8-26-22-26z" fill="#3a2a5a"/><ellipse cx="70" cy="42" rx="11" ry="13" fill="#d9b89a"/><path d="M52 54h36l10 40-4 120-20 10H60l-20-10-4-120z" fill="#4a2a7a" stroke="#2b1750" stroke-width="2"/><path d="M40 100l-14 60 10 6 16-56zM100 100l14 60-10 6-16-56z" fill="#4a2a7a" stroke="#2b1750" stroke-width="2"/><circle cx="26" cy="166" r="6" fill="#d9b89a"/><circle cx="114" cy="166" r="6" fill="#d9b89a"/><path d="M62 224h16l4 50H58z" fill="#2b1750"/><path d="M118 60v150" stroke="#6a4a2a" stroke-width="4"/><circle cx="118" cy="56" r="7" fill="#9b5cff"/></svg>`;
@@ -1810,6 +1827,10 @@ function renderTab(){
     h+=row('Shadow Bolt'+rk('bolt'),'Your click. Several clicks make one cast; each cast hits the target. Damage only.','','','owned');
     if(S.spells.drainsoul)h+=row('Drain Soul'+rk('drain'),'Always channeling on your target. Each tick takes 1 health and may yield a shard.','','','owned');
     SPELLS.filter(s=>S.spells[s.id]&&s.id!=='drainsoul').forEach(s=>h+=row(s.name+rk(s.id),s.desc,'','','owned'));
+    {const open=SP_EMP.filter(e=>spEmpOpen(e.id));const any=SP_EMP.some(e=>spEmpLevel(e.id)>0);
+     if(open.length||any){h+='<div class="tier" style="padding:10px 4px 2px">Empower spells</div><div class="muted" style="padding:2px 4px 6px;font-size:12px">A spell at max rank can be empowered with shards, with no limit: +8% damage per level up to 20, +4% after. Resets with the Ritual.</div>';
+       SP_EMP.forEach(e=>{const lv=spEmpLevel(e.id);const op=spEmpOpen(e.id);if(!op&&!lv)return;const r=RANKS.find(x=>x.id===e.id);
+         h+=row(`Empower ${e.name} <span class="muted">level ${lv}</span>`,op?`+${lv<20?8:4}% damage per level (now +${Math.round(empBonus(lv)*100)}%).`:`Train ${e.name} to max rank to keep empowering it.`,op?costStr(spEmpCost(e.id)):'',`<button data-a="spemp" data-id="${e.id}" ${canSpEmp(e.id)?'':'disabled'}>Empower</button>`,lv>0?'owned':'');});}}
     if(rank('council'))h+='<div class="muted" style="padding:6px 4px;font-size:12px">Breaking shards down is in the Shadow Council window (S).</div>';
   }else if(tab==='ranks_old'){
     h+='<div class="muted" style="padding:4px;font-size:12px">Higher ranks of spells you already know. Priced mostly in Uncommon shards. Ranks for a spell appear once you have learned it at the Trainer.</div>';
@@ -1848,7 +1869,7 @@ function importCode(code){code=(code||'').replace(/\s/g,'');if(code.slice(0,4)!=
   f.shards=arr(d.shards,5,0).map(Number);f.seen=arr(d.seen,5,false).map(Boolean);f.cleared=arr(d.cleared,6,false).map(Boolean);
   if(!Array.isArray(f.bag))f.bag=Object.values(f.bag||{});f.lootQ=[];f.gear=f.gear&&!Array.isArray(f.gear)?f.gear:{};
   for(const k of ['tal','ranks','spells','ach','flags','demons','emp','bossDead','dgLock','dgCleared'])if(!f[k]||typeof f[k]!=='object'||Array.isArray(f[k]))f[k]={};
-  if(!Array.isArray(f.adds))f.adds=[];f.cast=null;for(const sl in (f.gear||{}))migrateItem(f.gear[sl]);(f.bag||[]).forEach(migrateItem);if(f.tal&&f.tal.intensity>5)f.tal.intensity=5;if(!Array.isArray(f.dgPack))f.dgPack=[];if(f.dg&&!f.dg.kz&&(!DUNGEONS[f.dg.id]||f.dg.step>=DUNGEONS[f.dg.id].steps.length))f.dg=null;if(!f.kz||typeof f.kz!=='object')f.kz={best:0,marks:0,bless:0};if(!f.mythic||typeof f.mythic!=='object'||Array.isArray(f.mythic))f.mythic={};DUNGEONS.forEach(d=>{if((f.dgCleared||{})[d.id+':2']>0&&!f.mythic[d.id])f.mythic[d.id]=1;});
+  if(!Array.isArray(f.adds))f.adds=[];f.cast=null;for(const sl in (f.gear||{}))migrateItem(f.gear[sl]);(f.bag||[]).forEach(migrateItem);if(f.tal&&f.tal.intensity>5)f.tal.intensity=5;if(!Array.isArray(f.dgPack))f.dgPack=[];if(f.dg&&!f.dg.kz&&(!DUNGEONS[f.dg.id]||f.dg.step>=DUNGEONS[f.dg.id].steps.length))f.dg=null;if(!f.kz||typeof f.kz!=='object')f.kz={best:0,marks:0,bless:0};if(!f.mythic||typeof f.mythic!=='object'||Array.isArray(f.mythic))f.mythic={};if(!f.spemp||typeof f.spemp!=='object'||Array.isArray(f.spemp))f.spemp={};DUNGEONS.forEach(d=>{if((f.dgCleared||{})[d.id+':2']>0&&!f.mythic[d.id])f.mythic[d.id]=1;});
   if(!f.legacy||typeof f.legacy!=='object')f.legacy={points:0,perks:{}};if(!f.legacy.perks)f.legacy.perks={};
   if(!f.account||typeof f.account!=='object')f.account={gold:0,perks:{}};if(!f.account.perks)f.account.perks={};f.account.gold=Number(f.account.gold)||0;
   DEMONS.forEach(dm=>f.demons[dm.id]=Number(f.demons[dm.id])||0);
@@ -1858,7 +1879,7 @@ function importCode(code){code=(code||'').replace(/\s/g,'');if(code.slice(0,4)!=
 // ---------- save/load ----------
 function save(){try{S.last=Date.now();localStorage.setItem('drainsoul3',JSON.stringify(S));}catch(e){}}
 function load(){
-  try{const raw=localStorage.getItem('drainsoul3');if(!raw)return;const d=JSON.parse(raw);S=Object.assign(freshState(),d);for(const sl in (S.gear||{}))migrateItem(S.gear[sl]);(S.bag||[]).forEach(migrateItem);if(!S.mythic||typeof S.mythic!=='object')S.mythic={};DUNGEONS.forEach(d=>{if((S.dgCleared||{})[d.id+':2']>0&&!S.mythic[d.id])S.mythic[d.id]=1;});S.corpse=0;S.event=null;S.fighting=null;S.mode='drain';S.lifeT=0;S.hp=Math.max(1,Math.min(maxHp(),S.hp));
+  try{const raw=localStorage.getItem('drainsoul3');if(!raw)return;const d=JSON.parse(raw);S=Object.assign(freshState(),d);for(const sl in (S.gear||{}))migrateItem(S.gear[sl]);(S.bag||[]).forEach(migrateItem);if(!S.mythic||typeof S.mythic!=='object')S.mythic={};if(!S.spemp||typeof S.spemp!=='object')S.spemp={};DUNGEONS.forEach(d=>{if((S.dgCleared||{})[d.id+':2']>0&&!S.mythic[d.id])S.mythic[d.id]=1;});S.corpse=0;S.event=null;S.fighting=null;S.mode='drain';S.lifeT=0;S.hp=Math.max(1,Math.min(maxHp(),S.hp));
     Object.values(S.gear).forEach(it=>{if(it&&it.stats&&it.q<3)it.name=itemName(it);});S.bag.forEach(it=>{if(!it.junk&&it.stats&&it.q<3)it.name=itemName(it);});S.spells.darmor=true;if(S.lvl>=10&&S.spells.drainsoul===undefined)S.spells.drainsoul=true;clampDemons();
     const gap=Math.min(12*3600,(Date.now()-(S.last||Date.now()))/1000);
     if(gap>0){if((S.cds.camp||0)>0)S.cds.camp=Math.max(0,S.cds.camp-gap);if((S.cds.craftSs||0)>0)S.cds.craftSs=Math.max(0,S.cds.craftSs-gap);if((S.restedT||0)>0)S.restedT=Math.max(0,S.restedT-gap);if(S.camping){S.camping=false;S.eatT=0;}}
