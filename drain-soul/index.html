@@ -552,6 +552,18 @@ function makeEpic(ilvl,slot){
   if(slot==='wand'||slot==='trinket'){const opts=EPIC_OFFSET[slot].filter(o=>ilvl>=o.min);const o=opts[Math.floor(Math.random()*opts.length)];return {slot,name:o.name,ilvl:Math.max(ilvl,o.min),q:3,stats:spend(itemBudget(Math.max(ilvl,o.min),3)*1.1,o.mix,Math.max(ilvl,o.min)),hitFixed:true};}
   return setPiece(ilvl>=60?'Felheart':'Dreadmist',slot,ilvl);}
 function makeDungeonSet(tier,ilvl,slot,dtier){const T=DG_TIERS[dtier||0];return setPiece(DG_SETS[tier],slot,T.setIlvl||ilvl,dtier||0,T.setQ);}
+// Legendary forge (Shadow Council, level 60): forge a Legendary for Legendary shards, then reforge it higher forever.
+// +3 item levels per reforge up to 99 (Mythic 20 gear), +1 after; each reforge costs about 25% more than the last
+const FORGE_COST=3,FORGE_CAP=99;
+function legDef(it){if(!it||it.q!==4)return null;const nm=String(it.name).replace(/ \+\d+$/,'');return LEGENDARIES.find(L=>L.name===nm)||null;}
+function ownedLegendaries(){return Object.values(S.gear||{}).concat(S.bag||[],S.bank||[]).filter(it=>legDef(it));}
+function forgeOpen(){return S.lvl>=60&&rank('council')>0;}
+function reforgeStep(it){return it.ilvl<FORGE_CAP?Math.min(3,FORGE_CAP-it.ilvl):1;}
+function reforgeCost(it){return Math.ceil(Math.pow(1.25,it.forge||0));}
+function forgeLegendary(i){const L=LEGENDARIES[i];if(!L||!forgeOpen()||S.shards[4]<FORGE_COST)return;const it={slot:L.slot,name:L.name,ilvl:63,q:4,stats:spend(itemBudget(63,4),L.mix,63),hitFixed:true,forge:0};
+  if(!addToBag(it)){log('Your bags are full.','bad');return;}S.shards[4]-=FORGE_COST;S.lastDrop=it.uid;log(`The Council forges <span class="t4">${L.name}</span>.`,'loot');}
+function reforgeLegendary(uid){const it=ownedLegendaries().find(x=>x.uid===uid||(S.gear[x.slot]===x&&String(uid)==='g'+x.slot));const L=legDef(it);if(!L||!forgeOpen())return;const c=reforgeCost(it);if(S.shards[4]<c)return;
+  S.shards[4]-=c;it.ilvl+=reforgeStep(it);it.forge=(it.forge||0)+1;it.stats=spend(itemBudget(it.ilvl,4),L.mix,it.ilvl);it.name=L.name+' +'+it.forge;S.hp=Math.min(S.hp,maxHp());log(`<span class="t4">${it.name}</span> reforged to item level ${it.ilvl}.`,'good');}
 function makeLegendary(){const L=LEGENDARIES[Math.floor(Math.random()*LEGENDARIES.length)];return {slot:L.slot,name:L.name,ilvl:63,q:4,stats:spend(itemBudget(63,4),L.mix,63),hitFixed:true};}
 function setCounts(s){const c={};for(const sl in (s.gear||{})){const it=s.gear[sl];if(it&&it.set)c[it.set]=(c[it.set]||0)+1;}return c;}
 function setBonusStat(s,k){let t=0;const c=setCounts(s);for(const nm in c){const b=setBonusOf(nm,setTier(s,nm));for(const n in b){if(c[nm]>=+n&&b[n][k])t+=b[n][k];}}return t;}
@@ -1479,6 +1491,8 @@ $('tab').addEventListener('pointerdown',e=>{const b=e.target.closest('button,[da
   else if(a==='rank'){const r=RANKS.find(x=>x.id===id);const cur=rank(id);const c=r.cost(cur);const lvOk=!(r.lvls&&S.lvl<r.lvls[cur])&&(!r.lvl||S.lvl>=r.lvl);if(cur<r.max&&(!r.req||S.spells[r.req])&&lvOk&&canAfford(c)){pay(c);S.ranks[id]=cur+1;log(`${r.name} rank ${cur+2}.`);}}
   else if(a==='emp'){buyEmp(id);}
   else if(a==='spemp'){buySpEmp(id);}
+  else if(a==='forge'){forgeLegendary(+id);}
+  else if(a==='reforge'){reforgeLegendary(/^g/.test(id)?id:+id);}
   else if(a==='offer'){offer();}
   else if(a==='tmn'||a==='tmall'){const t=+id;if(rank('council')&&t>=1&&t<=4){const box=$('brk'+t);let n=a==='tmall'?S.shards[t]:Math.floor(+(box&&box.value)||0);n=Math.min(n,S.shards[t]);if(n>0){S.shards[t]-=n;S.shards[t-1]+=n*10;S.seen[t-1]=true;fly(`${fmt(n)} ${RAR[t]} → ${fmt(n*10)} ${RAR[t-1]}`,RCOL[t-1],null,null,false,'shard');}if(box)box.value='';}}
   else if(a==='offern'){const box=$('offern');let n=Math.floor(+(box&&box.value)||0);n=Math.min(n,Math.floor(S.shards[0]/OFFER_COST));for(let i=0;i<n;i++)offer();if(box)box.value='';}
@@ -1809,6 +1823,10 @@ function renderTab(){
     else{h+=row('Offering to the Council',`Give ${fmt(OFFER_COST)} Common shards. You get one better shard: 70% Rare, 27% Epic, 3% Legendary. You have ${fmt(S.shards[0])}.`,'',`<button data-a="offer" ${S.shards[0]>=OFFER_COST?'':'disabled'}>Offer</button>`);
       h+='<div class="muted" style="padding:4px;font-size:12px">Break a shard into ten of the tier below. The way back up is the offering above, or the mobs that pay the higher tiers.</div>';
       h+=row('Offer several',`Give ${fmt(OFFER_COST)} Common per offering. You can afford ${fmt(Math.floor(S.shards[0]/OFFER_COST))} right now.`,'',`<span style="display:inline-flex;gap:4px"><input id="offern" type="number" min="1" inputmode="numeric" placeholder="how many" style="width:90px;font:inherit;color:var(--text);background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:6px"><button data-a="offern" ${S.shards[0]>=OFFER_COST?'':'disabled'}>Offer</button></span>`);
+      if(forgeOpen()){h+='<div class="tier" style="padding:10px 4px 2px">Legendary forge</div><div class="muted" style="padding:2px 4px 6px;font-size:12px">Forge a Legendary, then reforge it: +3 item levels each time up to 99, +1 after that, with no end. You have '+fmt(S.shards[4])+' Legendary shards.</div>';
+        LEGENDARIES.forEach((L,i)=>{h+=row(`Forge <span class="t4">${L.name}</span>`,`A Legendary ${L.slot==='wand'?'wand':'trinket'} at item level 63.`,`<span class="t4">${FORGE_COST} Legendary</span>`,`<button data-a="forge" data-id="${i}" ${S.shards[4]>=FORGE_COST?'':'disabled'}>Forge</button>`);});
+        ownedLegendaries().forEach(it=>{const c=reforgeCost(it);const key=S.gear[it.slot]===it?'g'+it.slot:it.uid;h+=row(`Reforge <span class="t4">${it.name}</span>`,`Item level ${it.ilvl} → ${it.ilvl+reforgeStep(it)}${S.gear[it.slot]===it?' · worn':''}.`,`<span class="t4">${c} Legendary</span>`,`<button data-a="reforge" data-id="${key}" ${S.shards[4]>=c?'':'disabled'}>Reforge</button>`,'owned');});}
+      else if(rank('council'))h+=row('Legendary forge','At level 60 the Council forges Legendaries for Legendary shards, and reforges them higher forever.','','','locked');
       for(let t=4;t>=1;t--)h+=row(`Break <span class="t${t}">${RAR[t]}</span> → <span class="t${t-1}">${RAR[t-1]}</span>`,`Each ${RAR[t]} becomes 10 ${RAR[t-1]}. You have ${fmt(S.shards[t])} ${RAR[t]}.`,'',`<span style="display:inline-flex;gap:4px"><input id="brk${t}" type="number" min="1" max="${S.shards[t]}" inputmode="numeric" placeholder="how many" style="width:90px;font:inherit;color:var(--text);background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:6px"><button data-a="tmn" data-id="${t}" ${S.shards[t]>=1?'':'disabled'}>Break</button><button data-a="tm" data-id="${t}" ${S.shards[t]>=1?'':'disabled'}>1</button><button data-a="tmall" data-id="${t}" ${S.shards[t]>=1?'':'disabled'}>All</button></span>`);}
   }else if(tab==='shop'){
     h+=`<div class="muted" style="padding:4px;font-size:12px">Account perks. Everything here survives the Ritual of Doom. You have <span style="color:var(--gold)">${S.account.gold.toFixed(2)}g</span>.</div>`;
