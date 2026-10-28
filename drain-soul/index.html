@@ -987,6 +987,10 @@ function drawPetShape(ctx,id,x,y,sz){const [c,k]=PET_LOOK[id]||['#7b5fd6',.8];co
 const mobImgs={};
 let campIm=null;function campImg(){if(campIm===null){campIm=false;const im=new Image();im.onload=()=>{campIm=im;};im.src='camp_tent.png';}return campIm||null;}
 function mobSlug(n){return n.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');}
+// hit flash: tint just the sprite's own pixels (on a scratch canvas), not the scene behind it
+const flashCv=document.createElement('canvas'),flashCx=flashCv.getContext('2d');
+function drawFlash(ctx,name,im,meta,mw,mh,col){const fw=im.width/meta.frames,fh=im.height,f=Math.floor(sceneT*meta.fps)%meta.frames;flashCv.width=fw;flashCv.height=fh;flashCx.clearRect(0,0,fw,fh);flashCx.globalCompositeOperation='source-over';flashCx.drawImage(im,f*fw,0,fw,fh,0,0,fw,fh);flashCx.globalCompositeOperation='source-atop';flashCx.fillStyle=col;flashCx.fillRect(0,0,fw,fh);
+  ctx.save();ctx.imageSmoothingEnabled=false;ctx.scale(-1,1);ctx.drawImage(flashCv,Math.round(-mw/2),Math.round(-mh),Math.round(mw),Math.round(mh));ctx.restore();}
 function mobImage(n){return sprite('mob_'+mobSlug(n));}
 const actorPos={mob:null,lock:null};
 let bubWas=false,bubPop=0;
@@ -1079,7 +1083,7 @@ function drawScene(dt){
     const drawEnemy=(def,x,y,sz,ol,fl,al,depth)=>{shadow(x,y,sz*.42*depth);const mi=mobImage(def.n);
       if(mi){const name='mob_'+mobSlug(def.n);const meta=artMeta(name);const msc=pxScale(ws)*depth*(def.elite?1.5:def.ev?1.6:1)*(1+(def.rar||0)*.15);const mh=mi.height*msc,mw=(mi.width/meta.frames)*msc;ctx.save();ctx.translate(x,y);ctx.scale(1+fl*.06,1-fl*.1);
         if(ol){ctx.shadowColor=ol;ctx.shadowBlur=10;}drawSprite(ctx,name,0,0,msc,sceneT,true,al);ctx.shadowBlur=0;
-        if(fl>0){ctx.globalCompositeOperation='source-atop';ctx.fillStyle=`rgba(255,120,120,${(fl*.5).toFixed(2)})`;ctx.fillRect(-mw/2,-mh,mw,mh);}ctx.restore();}
+        if(fl>0)drawFlash(ctx,name,mi,meta,mw,mh,`rgba(255,120,120,${(fl*.5).toFixed(2)})`);ctx.restore();}
       else drawMob(ctx,x,y,sz*depth,def.ev?'demon':mobFamily(def.n),ol,fl,al);};
     (S.adds||[]).slice().reverse().forEach((a,ri)=>{const i=(S.adds.length-1-ri);const def=addDef(a);const depth=1-(i+1)*.12;const ax=mobX+(i+1)*size*(narrow?.32:.45),ay=baseY-(i+1)*size*.38;const ol=a.cast&&Math.floor(sceneT*6)%2===0?'#ff9c3a':a.enrageT>0?'#ff5a1a':null;drawEnemy(def,ax,ay,size*.85,ol,0,.9,depth);});
     const mx=mobX+(1-mobEnter)*120;drawEnemy(m,mx,baseY,size,outline,mobFlash>0?mobFlash/.18:0,.95*mobEnter,1);

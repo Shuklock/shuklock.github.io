@@ -48,7 +48,12 @@ Once a placeholder has a Gemini version, delete its grid from mk.py.
 
 ## Backdrops
 
-Optional. With no file for a place, the engine draws its own layered landscape from `ZONE_ART` (that is what every zone uses today). To paint one instead, add `art/bg_<key>.png` (jpg also works). The engine shows it from the top of the stage down to the horizon, scaled to cover the width with the bottom edge on the horizon line, and draws its own floor plane under it. So the bottom of the picture should be plain ground with nothing important in the lowest 15%.
+Optional. A place with no file uses the layered landscape drawn from `ZONE_ART`. A painted backdrop, `art/bg_<key>.png` (jpg also works), covers the whole stage, Final Fantasy style: a high camera with the floor filling the lower ~60% and scenery along the top. The engine fits it to the stage height, crops the sides, and draws no floor of its own.
+
+- Midjourney: "16-bit JRPG battle background, high angle three-quarter view looking down onto a wide flat open ground, the ground fills the lower two thirds of the image ... plain and uncluttered in the middle", `--ar 2:1 --style raw`, the warlock as `--sref`.
+- Painted horizon at roughly 35–40% from the top, so the demon formation stands on ground.
+- Keep the middle 60% across clear of tall things; phones crop the sides.
+- Shrink the render to its pixel grid before committing (Midjourney's 1536×768 → 512×256 with a box resize). The engine scales it up without smoothing, and the file stays small.
 
 Keys: durotar, tirisfal, westfall, barrens, duskwood, stranglethorn, tanaris, searing_gorge, blackrock, winterspring, molten_core, karazhan, dg_dm, dg_sfk, dg_gnom, dg_sm, dg_zf, dg_brd, dg_ubrs.
 
