@@ -1,6 +1,6 @@
 # Shardlock Idle art
 
-The sprites are Gemini (and now Midjourney) pixel art. Gemini paints each one on a flat magenta background, working from WoW screenshots and the Felheart warlock reference. `tools/grid.py` then snaps the render to its pixel grid. Black outlines stay on. Anything with no Gemini version yet gets a placeholder from `tools/mk.py`.
+The sprites are Gemini (and now Midjourney) pixel art. Gemini paints each one on a flat magenta background, working from WoW screenshots and the Felheart warlock reference. `tools/grid.py` then snaps the render to its pixel grid. Black outlines stay on. Midjourney works the same way (see below). Anything with no finished art yet gets a placeholder from `tools/mk.py`.
 
 | sprite | source | ART entry |
 |---|---|---|
@@ -9,7 +9,8 @@ The sprites are Gemini (and now Midjourney) pixel art. Gemini paints each one on
 | `pet_vw.png` | Gemini | `frames:1, scale:.38` |
 | `pet_succ.png` | Gemini | `frames:1, scale:.32` |
 | `pet_felh.png` | Midjourney | `frames:1, scale:.42` |
-| `pet_inf.png`, `pet_doom.png` | mk.py placeholder | `frames:2, fps:2, scale:1.2–1.3` |
+| `pet_inf.png` | Midjourney | `frames:1, scale:.53` |
+| `pet_doom.png` | Midjourney | `frames:1, scale:.45` |
 | `mob_scorpid.png` | mk.py placeholder | none (mob default) |
 
 ## How the engine reads a sprite
@@ -30,7 +31,7 @@ Names the engine looks for:
 
 ## Adding or replacing a sprite
 
-1. In Gemini, make a full-body pixel-art still on solid magenta (#ff00ff) with no ground shadow, facing right. If it comes out facing left, use `--flip` in step 2.
+1. In Gemini or Midjourney (`--style raw --stylize 50`, the warlock as `--sref`, a WoW screenshot as `--oref`), make a full-body pixel-art still on solid magenta (#ff00ff) with no ground shadow, facing right. If it comes out facing left, use `--flip` in step 2.
 2. Run `python3 tools/grid.py render.jpg pet_felh --preview`. This writes `drain-soul/art/pet_felh.png` and a 6× look in `tools/preview/` (not committed). If the grid is detected wrong, pass `--cell N`. For a render with no clean grid, `tools/clean.py render.jpg pet_felh --height 48` makes a quantized version instead.
 3. Set the sprite's `ART` entry to `{frames:1,fps:1,scale:S}`, using the height guide above.
 4. If you replaced `warlock.png` or `bg_durotar.jpg`, run `python3 tools/inline.py` so the base64 copies in index.html match. `--check` only reports.
