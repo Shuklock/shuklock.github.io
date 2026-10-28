@@ -193,6 +193,12 @@ h1,h2,h3,.gem-slot .n,.lvlline,#pname,#mname,.bar .lbl,#wintitle,.zonename{font-
 .bagslot.dragsrc{opacity:.35}.bagslot.droptgt,.slot.droptgt{border-color:var(--gold)!important;background:rgba(255,209,56,.22);box-shadow:0 0 0 2px var(--gold),0 0 12px rgba(255,209,56,.55);opacity:1}.dragghost{position:fixed;z-index:9999;pointer-events:none;opacity:.85;box-shadow:0 4px 14px #000a}
 .bagslot .cnt{position:absolute;right:3px;bottom:1px;font-size:10px;color:#fff;text-shadow:0 1px 2px #000}
 .detail{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px}
+.detail.fixed{height:200px;box-sizing:border-box;position:sticky;top:-12px;z-index:3;align-items:stretch;overflow:hidden;margin-top:0;box-shadow:0 -12px 0 rgb(14,11,20),0 6px 10px -4px #0009}
+.detail.fixed>span:first-child{overflow-y:auto;min-height:0;flex:1;padding-right:4px}
+.detail.fixed>span:only-child{display:flex;align-items:center;justify-content:center}
+.detail.fixed>span+span{align-self:flex-start}
+@media (max-width:700px){.detail.fixed{height:150px}}
+
 .treecols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
 @media (max-width:900px){.treecols{grid-template-columns:1fr}}
 .tree{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:6px}
@@ -1409,12 +1415,15 @@ let bagDrag=null;
 $('tab').addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||e.button!==0)return;const b=e.target.closest('[data-a="selBag"]');if(!b)return;bagDrag={uid:+b.dataset.id,x:e.clientX,y:e.clientY,on:false,ghost:null};},true);
 window.addEventListener('pointermove',e=>{if(!bagDrag)return;if(!bagDrag.on){if(Math.hypot(e.clientX-bagDrag.x,e.clientY-bagDrag.y)<6)return;const src=$('tab').querySelector(`[data-a="selBag"][data-id="${bagDrag.uid}"]`);if(!src){bagDrag=null;return;}bagDrag.on=true;hideTip();const g=src.cloneNode(true);g.classList.remove('sel');g.classList.add('dragghost');g.style.width=src.offsetWidth+'px';g.style.height=src.offsetHeight+'px';document.body.appendChild(g);bagDrag.ghost=g;src.classList.add('dragsrc');}
   bagDrag.ghost.style.left=(e.clientX-bagDrag.ghost.offsetWidth/2)+'px';bagDrag.ghost.style.top=(e.clientY-bagDrag.ghost.offsetHeight/2)+'px';
-  bagDrag.px=e.clientX;bagDrag.py=e.clientY;markDrop();});
+  bagDrag.px=e.clientX;bagDrag.py=e.clientY;markDrop();if(!bagDrag.scroller)bagDrag.scroller=setInterval(dragScroll,16);});
+// while dragging, holding near the top or bottom of the window scrolls it, so the bank is reachable from the bags and back
+function dragScroll(){const d=bagDrag;if(!d||!d.on)return;const tab=$('tab');const r=tab.getBoundingClientRect();const fix=tab.querySelector('.detail.fixed');const top=fix?Math.max(r.top,fix.getBoundingClientRect().bottom):r.top;const E=48;let v=0;
+  if(d.py>r.bottom-E)v=Math.min(1,(d.py-(r.bottom-E))/E);else if(d.py<top+E)v=-Math.min(1,((top+E)-d.py)/E);if(!v)return;const before=tab.scrollTop;tab.scrollTop+=v*14;if(tab.scrollTop!==before)markDrop();}
 // the slot a dragged item would land in: any bag or bank slot except its own, or the worn slot that takes it
 function dropTarget(d){const t=document.elementFromPoint(d.px,d.py);const ts=t&&$('tab').contains(t)&&t.closest('[data-pos],[data-a="selSlot"],[data-eqslot]');if(!ts)return null;
   if(ts.dataset.pos)return ts.dataset.id&&+ts.dataset.id===d.uid?null:ts;const it=findItem(d.uid)[0];return it&&!it.junk&&it.slot===(ts.dataset.eqslot||ts.dataset.id)?ts:null;}
 function markDrop(){document.querySelectorAll('.droptgt').forEach(x=>x.classList.remove('droptgt'));if(!bagDrag||!bagDrag.on)return;const ts=dropTarget(bagDrag);if(ts)ts.classList.add('droptgt');const src=$('tab').querySelector(`[data-a="selBag"][data-id="${bagDrag.uid}"]`);if(src)src.classList.add('dragsrc');}
-function endBagDrag(e){if(!bagDrag)return;const d=bagDrag;bagDrag=null;if(!d.on){if(e){selItem={where:'bag',uid:d.uid};tabDirty=true;}return;}if(d.ghost)d.ghost.remove();document.querySelectorAll('.dragsrc,.droptgt').forEach(x=>x.classList.remove('dragsrc','droptgt'));
+function endBagDrag(e){if(!bagDrag)return;const d=bagDrag;bagDrag=null;if(d.scroller)clearInterval(d.scroller);if(!d.on){if(e){selItem={where:'bag',uid:d.uid};tabDirty=true;}return;}if(d.ghost)d.ghost.remove();document.querySelectorAll('.dragsrc,.droptgt').forEach(x=>x.classList.remove('dragsrc','droptgt'));
   if(e){d.px=e.clientX;d.py=e.clientY;}const ts=e&&dropTarget(d);
   if(ts){if(ts.dataset.pos)moveItem(d.uid,ts.dataset.where,+ts.dataset.pos);else equipFromBag(d.uid);}
   tabDirty=true;}
@@ -1734,7 +1743,7 @@ function renderTab(){
     let det='<span class="muted">Select an item.</span>';
     if(selItem&&selItem.where==='gear'&&S.gear[selItem.slot]){const it=S.gear[selItem.slot];det=`<span>${itemCardHtml(it)}</span><span style="display:flex;gap:6px;align-self:flex-start"><button data-a="unequip" data-id="${selItem.slot}">Unequip</button><button data-a="sellEq" data-id="${selItem.slot}">Sell ${sellPrice(it)}g</button></span>`;}
     if(selItem&&selItem.where==='bag'){const [it,inW]=findItem(selItem.uid);const mv=it?`<button data-a="moveBank" data-id="${it.uid}">${inW==='bank'?'To bags':'To bank'}</button>`:'';if(it)det=it.junk?`<span><span class="t0">${it.name}</span> ×${it.count} <span class="muted">junk · ${it.price}g each</span></span><span style="display:flex;gap:6px;align-self:flex-start">${mv}<button data-a="sellBag" data-id="${it.uid}">Sell ${sellPrice(it)}g</button></span>`:`<span>${pairHtml(it)}</span><span style="display:flex;gap:6px;align-self:flex-start"><button data-a="equipBag" data-id="${it.uid}">Equip</button>${mv}<button data-a="sellBag" data-id="${it.uid}">Sell ${sellPrice(it)}g</button></span>`;}
-    h+=`<div class="detail">${det}</div>`;
+    h+=`<div class="detail fixed">${det}</div>`;
     h+='<div class="tier" style="padding:8px 4px 2px">Equipped</div><div class="bag" style="grid-template-columns:repeat(6,1fr)">'+SLOTS.map(([sl,nm])=>{const it=S.gear[sl];const sel=selItem&&selItem.where==='gear'&&selItem.slot===sl;return it?`<div class="bagslot q${it.q} ${sel?'sel':''}" data-a="selSlot" data-id="${sl}" title="${it.name}"><span class="t${it.q}">${AB[sl]}</span></div>`:`<div class="bagslot empty" data-eqslot="${sl}" title="${AB[sl]}: empty"><span class="muted">${AB[sl]}</span></div>`;}).join('')+'</div>';
     const cap=bagCap();const junkG=Math.round(S.bag.filter(x=>x.junk||x.q===0).reduce((a,x)=>a+sellPrice(x),0)*100)/100;const downN=S.bag.filter(x=>{if(x.junk||x.q>=4||x.bought)return false;const cur=S.gear[x.slot];return cur&&itemValue(x)<=itemValue(cur)&&!(x.set&&!cur.set);}).length;
     h+=`<div class="tier" style="padding:8px 4px 2px;display:flex;justify-content:space-between;align-items:center"><span>Bags · ${S.bag.length}/${cap} · ${S.account.gold.toFixed(2)}g</span><span style="display:flex;gap:6px"><button data-a="sellJunk" ${junkG>0?'':'disabled'} style="font-size:11px;padding:3px 8px">Sell all grey (${junkG}g)</button><button data-a="sellDown" ${downN>0?'':'disabled'} title="Sells gear that is no better than what you wear. Never sells Legendaries or bought items." style="font-size:11px;padding:3px 8px">Sell non-upgrades (${downN})</button>${S.bags<4?`<button data-a="buyBag" ${S.account.gold>=BAGS[S.bags].cost&&S.shards[2]>=(BAGS[S.bags].rare||0)&&S.shards[3]>=(BAGS[S.bags].epic||0)?'':'disabled'} style="font-size:11px;padding:3px 8px">Buy ${BAGS[S.bags].name} +${BAGS[S.bags].slots} (${BAGS[S.bags].cost}g${BAGS[S.bags].rare?' + '+BAGS[S.bags].rare+' Rare':''}${BAGS[S.bags].epic?' + 1 Epic':''})</button>`:''}</span></div>`;
