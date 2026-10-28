@@ -456,7 +456,7 @@ const TALENTS=[
  {id:'mdemo',tree:1,tier:25,max:5,name:'Master Demonologist',desc:'Per rank: a Voidwalker takes 2% off the damage you take, a Succubus adds 1.2% shard chance.'},
  {id:'dempact',tree:1,tier:30,max:1,ms:true,req:'soullink',name:'Demonic Pact',desc:'Milestone: at level 60 the full legion answers you: Imps 8, Voidwalkers 5, Succubi 4, Felhunters 5, Infernals 2 and a Doomguard. Your demons join the drain too: their ticks roll for shards at your chance, including while you are away. Needs Soul Link.'},
  {id:'dreach',tree:2,tier:0,max:2,name:'Destructive Reach',desc:'Each Shadow Bolt click has a 7% chance per rank to count twice.'},
- {id:'isb',tree:2,tier:0,max:5,name:'Improved Shadow Bolt',desc:'+8% Shadow Bolt damage per rank.'},
+ {id:'isb',tree:2,tier:0,max:5,name:'Improved Shadow Bolt',desc:'+5% Shadow Bolt damage per rank.'},
  {id:'bane',tree:2,tier:0,max:1,name:'Bane',desc:'Shadow Bolt needs 2 clicks per cast instead of 3, and Drain Soul ticks 5% faster.'},
  {id:'moltenskin',tree:2,tier:5,max:5,name:'Molten Skin',desc:'Enemies deal 2% less damage to you per rank.'},
  {id:'cataclysm',tree:2,tier:5,max:3,name:'Cataclysm',desc:'Immolate\'s extra-shard chance +6% per rank.'},
@@ -530,7 +530,7 @@ function setVal(k){return setBonusStat(S,k);}
 const SETS={
  Gloomweaver:{dungeon:true,q:2,pieces:{head:{name:'Gloomweaver Cowl',mix:{crit:.5,stam:.5}},chest:{name:'Gloomweaver Robe',mix:{stam:.5,power:.5}},legs:{name:'Gloomweaver Leggings',mix:{haste:.5,stam:.5}},hands:{name:'Gloomweaver Gloves',mix:{power:.6,hit:.4}}},bonusT:[{2:{corrAgony:15},4:{dsDot:4}},{2:{corrAgony:20},4:{dsDot:6}},{2:{corrAgony:25},4:{dsDot:8}}]},
  Hexbinder:{dungeon:true,q:2,pieces:{head:{name:'Hexbinder Hood',mix:{crit:.6,stam:.4}},chest:{name:'Hexbinder Vestments',mix:{stam:.4,power:.6}},legs:{name:'Hexbinder Trousers',mix:{haste:.6,stam:.4}},hands:{name:'Hexbinder Wraps',mix:{power:.6,hit:.4}}},bonusT:[{2:{curseUp:25},4:{coePet:50}},{2:{curseUp:40},4:{coePet:75}},{2:{curseUp:55},4:{coePet:100}}]},
- Emberwrought:{dungeon:true,q:2,pieces:{head:{name:'Emberwrought Circlet',mix:{haste:.6,stam:.4}},chest:{name:'Emberwrought Mantle',mix:{power:.6,stam:.4}},legs:{name:'Emberwrought Greaves',mix:{crit:.6,stam:.4}},hands:{name:'Emberwrought Grips',mix:{power:.5,spirit:.5}}},bonusT:[{2:{power:12},4:{immoSpeed:20}},{2:{power:18},4:{immoSpeed:35}},{2:{power:24},4:{immoSpeed:50}}]},
+ Emberwrought:{dungeon:true,q:2,pieces:{head:{name:'Emberwrought Circlet',mix:{haste:.6,stam:.4}},chest:{name:'Emberwrought Mantle',mix:{power:.6,stam:.4}},legs:{name:'Emberwrought Greaves',mix:{crit:.6,stam:.4}},hands:{name:'Emberwrought Grips',mix:{power:.5,spirit:.5}}},bonusT:[{2:{power:12},4:{immoSpeed:90}},{2:{power:18},4:{immoSpeed:160}},{2:{power:24},4:{immoSpeed:225}}]},
  Pactbound:{dungeon:true,q:2,pieces:{head:{name:'Pactbound Cowl',mix:{crit:.5,stam:.5}},chest:{name:'Pactbound Robe',mix:{power:.6,stam:.4}},legs:{name:'Pactbound Leggings',mix:{haste:.5,stam:.5}},hands:{name:'Pactbound Gloves',mix:{power:.5,crit:.5}}},bonusT:[{2:{petDmg:10},4:{petShare:10}},{2:{petDmg:15},4:{petShare:15}},{2:{petDmg:20},4:{petShare:20}}]},
  Dreadmist:{q:3,pieces:{head:{name:'Dreadmist Mask',mix:{spirit:.55,stam:.45}},chest:{name:'Dreadmist Robe',mix:{power:.55,stam:.45}},legs:{name:'Dreadmist Leggings',mix:{haste:.55,stam:.45}},hands:{name:'Dreadmist Wraps',mix:{power:.6,hit:.4}}},bonus:{2:{haste:10},4:{spirit:10}},bonusText:{2:'+10% Haste',4:'+10 Spirit'}},
  Felheart:{q:3,pieces:{head:{name:'Felheart Horns',mix:{crit:.55,stam:.45}},chest:{name:'Felheart Robes',mix:{power:.55,stam:.45}},legs:{name:'Felheart Pants',mix:{haste:.55,stam:.45}},hands:{name:'Felheart Gloves',mix:{power:.6,hit:.4}}},bonus:{2:{spirit:20},4:{spirit:16}},bonusText:{2:'+20 Spirit',4:'+16 Spirit'}},
@@ -747,7 +747,7 @@ function maxHpOf(s){return Math.floor((50+18*s.lvl)*(1+.04*(s.tal&&s.tal.embrace
 const maxHp=()=>maxHpOf(S);
 function globalHaste(){return (1+.1*leg('bloodline'))*(1+achCount()*.01);}
 // talent and demon tuning knobs (today's values); the web profiler (claude/balance-bot/web_profile.py) reads damage through these
-const TN={mal:.04,impcorr:.10,shm:.02,impcoa:.12,isb:.08,fabr:.04,sf:.03,dotDmg:0,pet:1,sp:2.8,big:1,wrackHit:1.2,wrackDot:.1,pactFrom:59,pactTo:60,doom:1,agHold:2};
+const TN={mal:.04,impcorr:.10,shm:.02,impcoa:.12,isb:.05,fabr:.04,sf:.03,dotDmg:0,pet:1,sp:2.8,big:1,wrackHit:1.2,wrackDot:.1,pactFrom:59,pactTo:60,doom:1,agHold:2,ember:1};
 // Wrack (Affliction capstone) takes over the channel: same ticks and shard rolls as Drain Soul, harder hits, and stronger DoTs while it runs
 function chanName(){return tal('wrack')?'Wrack':'Drain Soul';}
 function wrackOn(){return tal('wrack')>0&&!!S.spells.drainsoul&&S.mode!=='life'&&S.eatT<=0&&S.corpse<=0;}
@@ -771,7 +771,7 @@ function petTps(){let t=0;const u=(1+.05*tal('unholy'))*(1+.05*tal('energies'));
   DEMONS.forEach(d=>{let m=u;if(d.id==='imp')m*=1+.15*tal('impimp');if(d.id==='vw')m*=1+.15*tal('impvw');if(d.id==='succ')m*=1+.15*tal('impsayaad');if(d.id==='felh')m*=1+.15*tal('impfelh');m*=1+empBonus(empLevel(d.id));if(d.id==='vw'&&S.cds.sacrifice>0)m=0;t+=Math.min(S.demons[d.id],demonMax(d))*d.tps*m*(d.id==='inf'||d.id==='doom'?TN.big:1)*(d.id==='doom'?TN.doom:1);});
   const share=setVal('petShare')/100;
   return TN.pet*t*globalHaste()*(1+.05*(S.lvl-1))*(1+setVal('petDmg')/100)*(1+share*gearStat('power')/100);}
-function immoTps(){if(!S.spells.immo)return 0;return spMult('immo')*dotWrack()*(setFx('Emberwrought')?2:1)*(1+setVal('immoSpeed')/100)*.25*(1+.08*rank('immo'))*(1+.06*tal('aftermath'))*(1+TN.shm*tal('shmast'))*(1+gearStat('haste')/100)*globalHaste();}
+function immoTps(){if(!S.spells.immo)return 0;return spMult('immo')*dotWrack()*(setFx('Emberwrought')?2:1)*(1+TN.ember*setVal('immoSpeed')/100)*.25*(1+.08*rank('immo'))*(1+.06*tal('aftermath'))*(1+TN.shm*tal('shmast'))*(1+gearStat('haste')/100)*globalHaste();}
 // curses: Hexbinder makes them stronger, and its Mythic four-piece holds two at once (the two you cast last)
 function curseMul(){return 1+setVal('curseUp')/100;}
 function hasCurse(id){return S.curse===id||(S.curse2===id&&setFx('Hexbinder'));}
