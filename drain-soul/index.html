@@ -375,7 +375,9 @@ const DG_TIERS=[
  {name:'Mythic',cost:null,lvl:59,hpm:2.4,dm:1.8,setQ:3,setIlvl:60,setChance:1,bossAb:3}];
 // Mythic is an endless ladder per dungeon, like Karazhan: clear Mythic N to open N+1. Mythic 1 is the old Mythic; each level
 // adds Karazhan's per-floor growth (+12% soul, +6% damage), and enemies creep from level 59 to 62 over the first 30 levels
-function mythicTier(n){n=Math.max(1,n|0);const b=DG_TIERS[2],k=n-1;return Object.assign({},b,{name:'Mythic '+n,ml:n,lvl:b.lvl+Math.min(3,Math.floor(k/10)),hpm:Math.round(b.hpm*Math.pow(1.12,k)*100)/100,dm:Math.round(b.dm*(1+.06*k)*100)/100});}
+// soft cap: Mythic gear gains 2 item levels per Mythic level up to Mythic 20 (ilvl 98), then 1 per level with no end
+function mythicIlvl(n){return 60+2*Math.min(n-1,19)+Math.max(0,n-20);}
+function mythicTier(n){n=Math.max(1,n|0);const b=DG_TIERS[2],k=n-1;return Object.assign({},b,{name:'Mythic '+n,ml:n,setIlvl:mythicIlvl(n),lvl:b.lvl+Math.min(3,Math.floor(k/10)),hpm:Math.round(b.hpm*Math.pow(1.12,k)*100)/100,dm:Math.round(b.dm*(1+.06*k)*100)/100});}
 function mythicBest(d){return ((S.mythic||{})[d.id])||0;}
 function tierOf(tier,ml){return tier===2?mythicTier(ml||1):DG_TIERS[tier||0];}
 function dgTierOf(){if(!S.dg)return DG_TIERS[0];return S.dg.kz?kzTier(S.dg.floor):tierOf(S.dg.tier||0,S.dg.ml);}
@@ -656,6 +658,8 @@ RANKS.forEach(rk=>{const f=rk.cost;rk.cost=r=>{const c=f(r);if(c[1]){const l=(rk
 const EMP_MAX=Infinity,EMP_BASE={imp:150,vw:250,succ:400,felh:700,inf:1200,doom:2000},OFFER_COST=800;
 const empLevel=id=>(S.emp&&S.emp[id])||0;
 // endless: Common ×1.55, Uncommon from level 3, Rare from 6 and Epic from 10 all keep climbing; each level is +8% damage for that demon
+// soft cap: +8% per level up to level 20 (+160%), then +4% per level forever
+function empBonus(n){return .08*Math.min(n,20)+.04*Math.max(0,n-20);}
 function empCost(d){const n=empLevel(d.id);const c={0:Math.floor(EMP_BASE[d.id]*Math.pow(1.55,n))};if(n>=3)c[1]=n*2;if(n>=6)c[2]=n-4;if(n>=10)c[3]=Math.floor((n-8)/2);return c;}
 function canEmp(d){return S.demons[d.id]>=demonMax(d)&&empLevel(d.id)<EMP_MAX&&canAfford(empCost(d));}
 function buyEmp(id){const d=DEMONS.find(x=>x.id===id);if(d&&canEmp(d)){pay(empCost(d));S.emp=S.emp||{};S.emp[id]=empLevel(id)+1;log(`${d.name} empowered to level ${S.emp[id]}.`);return true;}}
@@ -741,7 +745,7 @@ function boltPower(){let p=1*(1+.08*tal('isb'))*(1+.12*rank('bolt'))*(1+gearStat
 const clickPull=boltPower;
 function demonMax(d){return d.max+(setFx('Pactbound')?1:0);}
 function petTps(){let t=0;const u=(1+.05*tal('unholy'))*(1+.05*tal('energies'));
-  DEMONS.forEach(d=>{let m=u;if(d.id==='imp')m*=1+.15*tal('impimp');if(d.id==='vw')m*=1+.15*tal('impvw');if(d.id==='succ')m*=1+.15*tal('impsayaad');if(d.id==='felh')m*=1+.15*tal('impfelh');m*=1+.08*empLevel(d.id);if(d.id==='vw'&&S.cds.sacrifice>0)m=0;t+=Math.min(S.demons[d.id],demonMax(d))*d.tps*m;});
+  DEMONS.forEach(d=>{let m=u;if(d.id==='imp')m*=1+.15*tal('impimp');if(d.id==='vw')m*=1+.15*tal('impvw');if(d.id==='succ')m*=1+.15*tal('impsayaad');if(d.id==='felh')m*=1+.15*tal('impfelh');m*=1+empBonus(empLevel(d.id));if(d.id==='vw'&&S.cds.sacrifice>0)m=0;t+=Math.min(S.demons[d.id],demonMax(d))*d.tps*m;});
   const share=setVal('petShare')/100;
   return t*globalHaste()*(1+.05*(S.lvl-1))*(1+setVal('petDmg')/100)*(1+share*gearStat('power')/100)*(1+share*critChance()*.5);}
 function immoTps(){if(!S.spells.immo)return 0;return (setFx('Emberwrought')?2:1)*(1+setVal('immoSpeed')/100)*.25*(1+.08*rank('immo'))*(1+.06*tal('aftermath'))*(1+.02*tal('shmast'))*(1+gearStat('haste')/100)*globalHaste();}
@@ -831,8 +835,8 @@ function dgKill(m){if(S.dg.kz){if(Math.random()<.5)giveShard(1,'(tower)');S.dgPa
   const d=dgDef();const tier=S.dg.tier||0;const T=dgTierOf();
   if(m.elite){S.dgCleared[dgKey(d,tier)]=(S.dgCleared[dgKey(d,tier)]||0)+1;
     // the boss always drops a Rare, and a set piece one time in four; BRD and UBRS also pay an Epic shard
-    {const needy=SLOTS.map(x=>x[0]).filter(sl=>!S.gear[sl]||S.gear[sl].q<2);const slot=(needy.length&&Math.random()<.6?needy:SLOTS.map(x=>x[0]))[Math.floor(Math.random()*(needy.length&&Math.random()<.6?needy.length:SLOTS.length))]||'chest';const it=makeItem(m.l,2,slot);if(addToBag(it)){S.lastDrop=it.uid;log(`${m.n} dropped <span class="t2">${it.name}</span>.`,'loot');}}
-    if(Math.random()<T.setChance){const have=['head','chest','legs','hands'].filter(sl=>!(S.gear[sl]&&S.gear[sl].set===DG_SETS[d.tier]&&(S.gear[sl].tier||0)>=tier));const pool=have.length&&Math.random()<.7?have:['head','chest','legs','hands'];const sl=pool[Math.floor(Math.random()*pool.length)];const it=makeDungeonSet(d.tier,m.l,sl,tier);if(addToBag(it)){S.lastDrop=it.uid;log(`${m.n} dropped <span class="t${it.q}">${it.name}</span> (${DG_SETS[d.tier]} set).`,'loot');}}
+    {const needy=SLOTS.map(x=>x[0]).filter(sl=>!S.gear[sl]||S.gear[sl].q<2);const slot=(needy.length&&Math.random()<.6?needy:SLOTS.map(x=>x[0]))[Math.floor(Math.random()*(needy.length&&Math.random()<.6?needy.length:SLOTS.length))]||'chest';const it=makeItem(tier===2?T.setIlvl:m.l,2,slot);if(addToBag(it)){S.lastDrop=it.uid;log(`${m.n} dropped <span class="t2">${it.name}</span>.`,'loot');}}
+    if(Math.random()<T.setChance){const have=['head','chest','legs','hands'].filter(sl=>!(S.gear[sl]&&S.gear[sl].set===DG_SETS[d.tier]&&(S.gear[sl].tier||0)>=tier));const pool=have.length&&Math.random()<.7?have:['head','chest','legs','hands'];const sl=pool[Math.floor(Math.random()*pool.length)];const it=setPiece(DG_SETS[d.tier],sl,T.setIlvl||m.l,tier,T.setQ);if(addToBag(it)){S.lastDrop=it.uid;log(`${m.n} dropped <span class="t${it.q}">${it.name}</span> (${DG_SETS[d.tier]} set).`,'loot');}}
     if(d.epicShard)giveShard(3,'(dungeon)');
     // Mythic: opens the next level, and pays more the higher you go: an Epic shard per two levels, a Legendary every fifth
     if(tier===2){const n=S.dg.ml||1;S.mythic=S.mythic||{};if(n>(S.mythic[d.id]||0)){S.mythic[d.id]=n;log(`Mythic ${n+1} ${d.name} is open.`,'lvl');}
@@ -1689,7 +1693,7 @@ function renderTab(){
   const row=(n,d,cost,btn,cls)=>`<div class="row ${cls||''}"><div><div class="n">${n}</div><div class="d">${d}</div></div><div style="display:flex;align-items:center;gap:8px"><div class="cost">${cost}</div>${btn}</div></div>`;
   if(tab==='demons'){
     h+=`<div class="muted" style="padding:4px;font-size:12px">Each demon attacks your target, all the time, even while you are dead or away: one point of damage per tick. Demons grow with you: +5% per level. Their hits do not pull shards until Demonic Pact. Total: ${petTps().toFixed(2)} ticks/s.</div>`;
-    DEMONS.forEach(d=>{const c=demonCost(d);const lk=S.lvl<d.lvl;h+=row(`${d.name} <span class="muted">×${S.demons[d.id]} / ${demonMax(d)}</span>`,`${d.desc} ${(d.tps*(1+.05*(S.lvl-1))).toFixed(2)} ticks/s each at your level. You can bind at most ${demonMax(d)}.${lk?' Requires level '+d.lvl+'.':''}`,S.demons[d.id]>=demonMax(d)?'':costStr(c),`<button data-a="demon" data-id="${d.id}" ${!lk&&S.demons[d.id]<demonMax(d)&&canAfford(c)?'':'disabled'}>${S.demons[d.id]>=demonMax(d)?'Full':'Summon'}</button>`,lk?'locked':(S.demons[d.id]>0?'owned':''));if(S.demons[d.id]>=demonMax(d)&&!lk){const el=empLevel(d.id);h+=row(`&nbsp;&nbsp;Empower ${d.name} <span class="muted">level ${el}</span>`,`Every ${d.name} does +8% more damage per level (now +${8*el}%). No limit; from level 10 it also costs Epic shards. Resets with the Ritual.`,el<EMP_MAX?costStr(empCost(d)):'',`<button data-a="emp" data-id="${d.id}" ${canEmp(d)?'':'disabled'}>${el<EMP_MAX?'Empower':'Max'}</button>`);}});
+    DEMONS.forEach(d=>{const c=demonCost(d);const lk=S.lvl<d.lvl;h+=row(`${d.name} <span class="muted">×${S.demons[d.id]} / ${demonMax(d)}</span>`,`${d.desc} ${(d.tps*(1+.05*(S.lvl-1))).toFixed(2)} ticks/s each at your level. You can bind at most ${demonMax(d)}.${lk?' Requires level '+d.lvl+'.':''}`,S.demons[d.id]>=demonMax(d)?'':costStr(c),`<button data-a="demon" data-id="${d.id}" ${!lk&&S.demons[d.id]<demonMax(d)&&canAfford(c)?'':'disabled'}>${S.demons[d.id]>=demonMax(d)?'Full':'Summon'}</button>`,lk?'locked':(S.demons[d.id]>0?'owned':''));if(S.demons[d.id]>=demonMax(d)&&!lk){const el=empLevel(d.id);h+=row(`&nbsp;&nbsp;Empower ${d.name} <span class="muted">level ${el}</span>`,`Every ${d.name} does +${el<20?8:4}% more damage per level (now +${Math.round(empBonus(el)*100)}%). +8% a level up to 20, +4% after, no limit; from level 10 it also costs Epic shards. Resets with the Ritual.`,el<EMP_MAX?costStr(empCost(d)):'',`<button data-a="emp" data-id="${d.id}" ${canEmp(d)?'':'disabled'}>${el<EMP_MAX?'Empower':'Max'}</button>`);}});
   }else if(tab==='gear'){
     const DP={head:[115,8],chest:[18,80],legs:[18,160],hands:[212,110],wand:[212,200],trinket:[212,22]};const AB={head:'Head',chest:'Chest',legs:'Legs',hands:'Hands',wand:'Wand',trinket:'Trinket'};
     let doll=`<div class="doll"><svg class="fig" viewBox="0 0 140 290" xmlns="http://www.w3.org/2000/svg"><path d="M70 18c-14 0-22 12-22 26v10h44V44c0-14-8-26-22-26z" fill="#3a2a5a"/><ellipse cx="70" cy="42" rx="11" ry="13" fill="#d9b89a"/><path d="M52 54h36l10 40-4 120-20 10H60l-20-10-4-120z" fill="#4a2a7a" stroke="#2b1750" stroke-width="2"/><path d="M40 100l-14 60 10 6 16-56zM100 100l14 60-10 6-16-56z" fill="#4a2a7a" stroke="#2b1750" stroke-width="2"/><circle cx="26" cy="166" r="6" fill="#d9b89a"/><circle cx="114" cy="166" r="6" fill="#d9b89a"/><path d="M62 224h16l4 50H58z" fill="#2b1750"/><path d="M118 60v150" stroke="#6a4a2a" stroke-width="4"/><circle cx="118" cy="56" r="7" fill="#9b5cff"/></svg>`;
