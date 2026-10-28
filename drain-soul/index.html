@@ -424,7 +424,7 @@ const TALENTS=[
  {id:'impcorr',tree:0,tier:0,max:5,name:'Improved Corruption',desc:'Corruption ticks 10% faster per rank.'},
  {id:'malediction',tree:0,tier:5,max:5,name:'Malediction',desc:'Drain Soul ticks 4% faster per rank.'},
  {id:'soulharvest',tree:0,tier:5,max:2,name:'Soul Harvest',desc:'+1 shard per rank when a soul completes.'},
- {id:'impdrains',tree:0,tier:5,max:3,name:'Improved Drains',desc:'+5% shard chance per tick, per rank.'},
+ {id:'impdrains',tree:0,tier:5,max:3,name:'Improved Drains',desc:'+5% shard chance per tick and +20% damage from your channel, per rank.'},
  {id:'impcoa',tree:0,tier:10,max:2,name:'Improved Bane of Agony',desc:'Bane of Agony ramps up 12% harder per rank.'},
  {id:'fconc',tree:0,tier:10,max:3,name:'Fel Concentration',desc:'+3% critical drain chance per rank. A critical drain always yields a shard.'},
  {id:'ampc',tree:0,tier:10,max:1,ms:true,name:'Amplify Curse',desc:'Milestone: your curses are 50% stronger.'},
@@ -434,8 +434,8 @@ const TALENTS=[
  {id:'siphonlife',tree:0,tier:20,max:1,ms:true,name:'Siphon Life',desc:'Milestone: each Drain Soul tick heals you 0.4% of max health, and each Corruption or Bane of Agony tick 0.2%. Demon hits and Shadow Bolts do not.'},
  {id:'soulsiphon',tree:0,tier:20,max:3,name:'Soul Siphon',desc:'+4% shard chance per rank for each aura on the target (Corruption, Immolate, curse).'},
  {id:'pandemic',tree:0,tier:20,max:1,ms:true,name:'Pandemic',desc:'Milestone: Corruption and Bane of Agony crits hit for double instead of 1.5×.'},
- {id:'shmast',tree:0,tier:25,max:5,name:'Shadow Mastery',desc:'+2% speed for your own channel, Corruption, Immolate and Bane of Agony, per rank.'},
- {id:'wrack',tree:0,tier:30,max:1,ms:true,req:'siphonlife',name:'Wrack',desc:'Milestone: Wrack replaces Drain Soul as your channel. It ticks and rolls for shards just like Drain Soul, but each tick deals 20% more soul, and while it channels your Corruption, Immolate and Bane of Agony deal 10% more. Needs Siphon Life.'},
+ {id:'shmast',tree:0,tier:25,max:5,name:'Shadow Mastery',desc:'+5% speed for your own channel, Corruption, Immolate and Bane of Agony, per rank.'},
+ {id:'wrack',tree:0,tier:30,max:1,ms:true,req:'siphonlife',name:'Wrack',desc:'Milestone: Wrack replaces Drain Soul as your channel. It ticks and rolls for shards just like Drain Soul, but each tick deals 20% more soul, and while it channels your Corruption, Immolate and Bane of Agony deal 25% more. Needs Siphon Life.'},
  {id:'impfunnel',tree:1,tier:0,max:2,name:'Improved Health Funnel',desc:'Your demons feed you health: +0.04% of max health per second per rank while you have a demon.'},
  {id:'impimp',tree:1,tier:0,max:3,name:'Improved Imp',desc:'+15% Imp damage per rank.'},
  {id:'embrace',tree:1,tier:0,max:5,name:'Demonic Embrace',desc:'+4% max health per rank.'},
@@ -453,24 +453,24 @@ const TALENTS=[
  {id:'impfelh',tree:1,tier:20,max:3,name:'Improved Felhunter',desc:'+15% Felhunter damage and Spell Lock cooldown -3s, per rank.'},
  {id:'soullink',tree:1,tier:25,max:1,ms:true,name:'Soul Link',desc:'Milestone: while you have any demon out, 20% of damage you take goes to it instead.'},
  {id:'demknow',tree:1,tier:25,max:3,name:'Demonic Knowledge',desc:'Drain Soul ticks 4% faster per rank for each demon type you own.'},
- {id:'mdemo',tree:1,tier:25,max:5,name:'Master Demonologist',desc:'Per rank: a Voidwalker takes 2% off the damage you take, a Succubus adds 1.2% shard chance.'},
+ {id:'mdemo',tree:1,tier:25,max:5,name:'Master Demonologist',desc:'Per rank: your demons deal 7% more damage, a Voidwalker takes 2% off the damage you take, and a Succubus adds 1.2% shard chance.'},
  {id:'dempact',tree:1,tier:30,max:1,ms:true,req:'soullink',name:'Demonic Pact',desc:'Milestone: at level 60 the full legion answers you: Imps 8, Voidwalkers 5, Succubi 4, Felhunters 5, Infernals 2 and a Doomguard. Your demons join the drain too: their ticks roll for shards at your chance, including while you are away. Needs Soul Link.'},
  {id:'dreach',tree:2,tier:0,max:2,name:'Destructive Reach',desc:'Each Shadow Bolt click has a 7% chance per rank to count twice.'},
- {id:'isb',tree:2,tier:0,max:5,name:'Improved Shadow Bolt',desc:'+5% Shadow Bolt damage per rank.'},
+ {id:'isb',tree:2,tier:0,max:5,name:'Improved Shadow Bolt',desc:'+3% Shadow Bolt damage per rank.'},
  {id:'bane',tree:2,tier:0,max:1,name:'Bane',desc:'Shadow Bolt needs 2 clicks per cast instead of 3, and Drain Soul ticks 5% faster.'},
  {id:'moltenskin',tree:2,tier:5,max:5,name:'Molten Skin',desc:'Enemies deal 2% less damage to you per rank.'},
  {id:'cataclysm',tree:2,tier:5,max:3,name:'Cataclysm',desc:'Immolate\'s extra-shard chance +6% per rank.'},
- {id:'aftermath',tree:2,tier:5,max:5,name:'Aftermath',desc:'Immolate ticks 6% faster per rank.'},
+ {id:'aftermath',tree:2,tier:5,max:5,name:'Aftermath',desc:'Immolate ticks 2% faster per rank.'},
  {id:'ruin',tree:2,tier:10,max:1,ms:true,name:'Ruin',desc:'Milestone: Shadow Bolt and Incinerate crits hit for double instead of 1.5×.'},
  {id:'shadowburn',tree:2,tier:10,max:1,ms:true,name:'Shadowburn',desc:'Milestone: new ability. Instantly kill a target at 25% health or less. 15s cooldown.'},
- {id:'intensity',tree:2,tier:10,max:5,name:'Intensity',desc:'Your click spell casts itself: one full cast every 12 / 9 / 7 / 5 / 4 seconds by rank, even while you are away.'},
+ {id:'intensity',tree:2,tier:10,max:5,name:'Intensity',desc:'Your click spell casts itself: one full cast every 19 / 14 / 11 / 8 / 6 seconds by rank, even while you are away.'},
  {id:'agonizing',tree:2,tier:15,max:3,name:'Agonizing Flames',desc:'Bane of Agony deals 6% more damage per rank.'},
  {id:'conflag',tree:2,tier:15,max:1,ms:true,name:'Conflagrate',desc:'Milestone: new ability. For 8s Shadow Bolts deal triple damage. 30s cooldown.'},
  {id:'pyro',tree:2,tier:15,max:2,name:'Pyroclasm',desc:'A soul you finish has a 12% chance per rank to pay one extra shard.'},
  {id:'havoc',tree:2,tier:20,max:1,name:'Bane of Havoc',desc:'15% of your Shadow Bolt damage carries over to the next target.'},
  {id:'fabr',tree:2,tier:20,max:3,name:'Fire and Brimstone',desc:'+4% Shadow Bolt damage per rank while Immolate is on the target.'},
- {id:'shadowflame',tree:2,tier:25,max:5,name:'Shadow and Flame',desc:'+3% Shadow Bolt damage per rank for each damage-over-time on the target (Corruption, Immolate, Agony).'},
- {id:'incinerate',tree:2,tier:30,max:1,req:'havoc',name:'Incinerate',desc:'Learn Incinerate as a second click spell, switched on the cast bar. It hits for 85% of a Shadow Bolt and every cast fires one extra Immolate tick. Needs Bane of Havoc.'},
+ {id:'shadowflame',tree:2,tier:25,max:5,name:'Shadow and Flame',desc:'Immolate ticks 70% faster per rank.'},
+ {id:'incinerate',tree:2,tier:30,max:1,req:'havoc',name:'Incinerate',desc:'Learn Incinerate as a second click spell, switched on the cast bar. It hits for 85% of a Shadow Bolt and every cast fires one extra Immolate tick. Immolate also ticks 40% faster. Needs Bane of Havoc.'},
 ];
 const TREES=['Affliction','Demonology','Destruction'];
 // ---------- gear ----------
@@ -523,15 +523,15 @@ function spend(budget,mix,ilvl){const o={};let left=0;for(const k in mix){let v=
   for(const k in o)o[k]=Math.round(o[k]*10)/10;return o;}
 // sets: a piece is 110% of a random item of its quality, plus the bonus
 // bonusT: one entry per dungeon tier. The Mythic 4-piece is an effect, not a number; see SET_FX
-const SET_FX={Gloomweaver:'Bane of Agony never fades: once it reaches its middle strength it stays there.',Hexbinder:'Two curses at once.',Emberwrought:'Immolate ticks twice as fast.',Pactbound:'+1 to your Imp, Voidwalker, Succubus and Felhunter limits.'};
+const SET_FX={Gloomweaver:'Bane of Agony never fades: once it reaches its middle strength it stays there.',Hexbinder:'Two curses at once.',Emberwrought:'Immolate ticks 10% faster still.',Pactbound:'+1 to your Imp, Voidwalker, Succubus and Felhunter limits.'};
 // set bonuses that aren't gear stats: what each one says
 const SET_EFX={corrAgony:v=>`Corruption and Bane of Agony deal +${v}%`,dsDot:v=>`Drain Soul ticks ${v}% faster per DoT on the target`,curseUp:v=>`Curses ${v}% stronger`,coePet:v=>`Curse of the Elements works on demon hits (${v}% of its chance)`,immoSpeed:v=>`Immolate ticks ${v}% faster`,petDmg:v=>`Demons deal +${v}%`,petShare:v=>`Demons gain ${v}% of your Spell power`};
 function setVal(k){return setBonusStat(S,k);}
 const SETS={
- Gloomweaver:{dungeon:true,q:2,pieces:{head:{name:'Gloomweaver Cowl',mix:{crit:.5,stam:.5}},chest:{name:'Gloomweaver Robe',mix:{stam:.5,power:.5}},legs:{name:'Gloomweaver Leggings',mix:{haste:.5,stam:.5}},hands:{name:'Gloomweaver Gloves',mix:{power:.6,hit:.4}}},bonusT:[{2:{corrAgony:15},4:{dsDot:4}},{2:{corrAgony:20},4:{dsDot:6}},{2:{corrAgony:25},4:{dsDot:8}}]},
- Hexbinder:{dungeon:true,q:2,pieces:{head:{name:'Hexbinder Hood',mix:{crit:.6,stam:.4}},chest:{name:'Hexbinder Vestments',mix:{stam:.4,power:.6}},legs:{name:'Hexbinder Trousers',mix:{haste:.6,stam:.4}},hands:{name:'Hexbinder Wraps',mix:{power:.6,hit:.4}}},bonusT:[{2:{curseUp:25},4:{coePet:50}},{2:{curseUp:40},4:{coePet:75}},{2:{curseUp:55},4:{coePet:100}}]},
- Emberwrought:{dungeon:true,q:2,pieces:{head:{name:'Emberwrought Circlet',mix:{haste:.6,stam:.4}},chest:{name:'Emberwrought Mantle',mix:{power:.6,stam:.4}},legs:{name:'Emberwrought Greaves',mix:{crit:.6,stam:.4}},hands:{name:'Emberwrought Grips',mix:{power:.5,spirit:.5}}},bonusT:[{2:{power:12},4:{immoSpeed:90}},{2:{power:18},4:{immoSpeed:160}},{2:{power:24},4:{immoSpeed:225}}]},
- Pactbound:{dungeon:true,q:2,pieces:{head:{name:'Pactbound Cowl',mix:{crit:.5,stam:.5}},chest:{name:'Pactbound Robe',mix:{power:.6,stam:.4}},legs:{name:'Pactbound Leggings',mix:{haste:.5,stam:.5}},hands:{name:'Pactbound Gloves',mix:{power:.5,crit:.5}}},bonusT:[{2:{petDmg:10},4:{petShare:10}},{2:{petDmg:15},4:{petShare:15}},{2:{petDmg:20},4:{petShare:20}}]},
+ Gloomweaver:{dungeon:true,q:2,pieces:{head:{name:'Gloomweaver Cowl',mix:{crit:.5,stam:.5}},chest:{name:'Gloomweaver Robe',mix:{stam:.5,power:.5}},legs:{name:'Gloomweaver Leggings',mix:{haste:.5,stam:.5}},hands:{name:'Gloomweaver Gloves',mix:{power:.6,hit:.4}}},bonusT:[{2:{corrAgony:25},4:{dsDot:12}},{2:{corrAgony:30},4:{dsDot:15}},{2:{corrAgony:30},4:{dsDot:15}}]},
+ Hexbinder:{dungeon:true,q:2,pieces:{head:{name:'Hexbinder Hood',mix:{crit:.6,stam:.4}},chest:{name:'Hexbinder Vestments',mix:{stam:.4,power:.6}},legs:{name:'Hexbinder Trousers',mix:{haste:.6,stam:.4}},hands:{name:'Hexbinder Wraps',mix:{power:.6,hit:.4}}},bonusT:[{2:{curseUp:25},4:{coePet:40}},{2:{curseUp:40},4:{coePet:50}},{2:{curseUp:55},4:{coePet:60}}]},
+ Emberwrought:{dungeon:true,q:2,pieces:{head:{name:'Emberwrought Circlet',mix:{haste:.6,stam:.4}},chest:{name:'Emberwrought Mantle',mix:{power:.6,stam:.4}},legs:{name:'Emberwrought Greaves',mix:{crit:.6,stam:.4}},hands:{name:'Emberwrought Grips',mix:{power:.5,spirit:.5}}},bonusT:[{2:{power:70},4:{immoSpeed:20}},{2:{power:75},4:{immoSpeed:30}},{2:{power:80},4:{immoSpeed:30}}]},
+ Pactbound:{dungeon:true,q:2,pieces:{head:{name:'Pactbound Cowl',mix:{crit:.5,stam:.5}},chest:{name:'Pactbound Robe',mix:{power:.6,stam:.4}},legs:{name:'Pactbound Leggings',mix:{haste:.5,stam:.5}},hands:{name:'Pactbound Gloves',mix:{power:.5,crit:.5}}},bonusT:[{2:{petDmg:28},4:{petShare:7}},{2:{petDmg:33},4:{petShare:8}},{2:{petDmg:33},4:{petShare:8}}]},
  Dreadmist:{q:3,pieces:{head:{name:'Dreadmist Mask',mix:{spirit:.55,stam:.45}},chest:{name:'Dreadmist Robe',mix:{power:.55,stam:.45}},legs:{name:'Dreadmist Leggings',mix:{haste:.55,stam:.45}},hands:{name:'Dreadmist Wraps',mix:{power:.6,hit:.4}}},bonus:{2:{haste:10},4:{spirit:10}},bonusText:{2:'+10% Haste',4:'+10 Spirit'}},
  Felheart:{q:3,pieces:{head:{name:'Felheart Horns',mix:{crit:.55,stam:.45}},chest:{name:'Felheart Robes',mix:{power:.55,stam:.45}},legs:{name:'Felheart Pants',mix:{haste:.55,stam:.45}},hands:{name:'Felheart Gloves',mix:{power:.6,hit:.4}}},bonus:{2:{spirit:20},4:{spirit:16}},bonusText:{2:'+20 Spirit',4:'+16 Spirit'}},
 };
@@ -663,7 +663,7 @@ const empLevel=id=>(S.emp&&S.emp[id])||0;
 const SP_EMP=[{id:'drain',name:'Drain Soul',need:'drainsoul'},{id:'corr',name:'Corruption',need:'corr'},{id:'coa',name:'Bane of Agony',need:'coa'},{id:'immo',name:'Immolate',need:'immo'},{id:'bolt',name:'Shadow Bolt',need:null}];
 const SP_EMP_BASE=600;
 const spEmpLevel=id=>(S.spemp&&S.spemp[id])||0;
-function spMult(id){return 1+empBonus(spEmpLevel(id));}
+function spMult(id){return 1+TN.spEmp*empBonus(spEmpLevel(id));}
 function spEmpOpen(id){const e=SP_EMP.find(x=>x.id===id);const r=RANKS.find(x=>x.id===id);return !!e&&(!e.need||!!S.spells[e.need])&&(!r||rank(id)>=r.max);}
 function spEmpCost(id){const n=spEmpLevel(id);const c={0:Math.floor(SP_EMP_BASE*Math.pow(1.55,n))};if(n>=3)c[1]=n*2;if(n>=6)c[2]=n-4;if(n>=10)c[3]=Math.floor((n-8)/2);return c;}
 function canSpEmp(id){return spEmpOpen(id)&&canAfford(spEmpCost(id));}
@@ -747,11 +747,13 @@ function maxHpOf(s){return Math.floor((50+18*s.lvl)*(1+.04*(s.tal&&s.tal.embrace
 const maxHp=()=>maxHpOf(S);
 function globalHaste(){return (1+.1*leg('bloodline'))*(1+achCount()*.01);}
 // talent and demon tuning knobs (today's values); the web profiler (claude/balance-bot/web_profile.py) reads damage through these
-const TN={mal:.04,impcorr:.10,shm:.02,impcoa:.12,isb:.05,fabr:.04,sf:.03,dotDmg:0,pet:1,sp:2.8,big:1,wrackHit:1.2,wrackDot:.1,pactFrom:59,pactTo:60,doom:1,agHold:2,ember:1};
+const TN={mal:.04,impcorr:.10,shm:.05,impcoa:.12,isb:.03,fabr:.04,sf:0,dotDmg:0,pet:.95,sp:2.8,big:1,wrackHit:1.2,wrackDot:.25,pactFrom:59,pactTo:60,doom:1,agHold:2,ember:1,mdemoDmg:.07,sfImmo:.7,aft:.02,intensMul:1,impdrainsDmg:.2,incinImmo:.4,petSp:0,spEmp:.75,emberFx:1.1};
 // Wrack (Affliction capstone) takes over the channel: same ticks and shard rolls as Drain Soul, harder hits, and stronger DoTs while it runs
 function chanName(){return tal('wrack')?'Wrack':'Drain Soul';}
 function wrackOn(){return tal('wrack')>0&&!!S.spells.drainsoul&&S.mode!=='life'&&S.eatT<=0&&S.corpse<=0;}
-function channelHit(){return spMult('drain')*(tal('wrack')?TN.wrackHit:1);}
+function channelHit(){return spMult('drain')*(tal('wrack')?TN.wrackHit:1)*(1+TN.impdrainsDmg*tal('impdrains'));}
+// Intensity: seconds between autocasts (the profiler reads it through this too)
+function intensityIv(){return tal('intensity')?[19,14,11,8,6][tal('intensity')-1]*TN.intensMul:0;}
 function dotWrack(){return wrackOn()?1+TN.wrackDot:1;}
 // Bane of Agony's damage per ramp step (the profiler reads it through this too)
 function agonyMult(){return (1+.15*rank('coa'))*(1+.06*tal('agonizing'))*(1+TN.impcoa*tal('impcoa'))*(1+TN.shm*tal('shmast'))*(1+TN.dotDmg*tal('malediction'))*(1+setVal('corrAgony')/100)*spMult('coa')*dotWrack();}
@@ -768,10 +770,10 @@ const clickPull=boltPower;
 function pactFrac(){return Math.max(0,Math.min(1,(S.lvl-TN.pactFrom)/(TN.pactTo-TN.pactFrom)));}
 function demonMax(d){const n=tal('dempact')?d.base+Math.round((d.max-d.base)*pactFrac()):d.base;return n+(setFx('Pactbound')&&d.id!=='inf'&&d.id!=='doom'?1:0);}
 function petTps(){let t=0;const u=(1+.05*tal('unholy'))*(1+.05*tal('energies'));
-  DEMONS.forEach(d=>{let m=u;if(d.id==='imp')m*=1+.15*tal('impimp');if(d.id==='vw')m*=1+.15*tal('impvw');if(d.id==='succ')m*=1+.15*tal('impsayaad');if(d.id==='felh')m*=1+.15*tal('impfelh');m*=1+empBonus(empLevel(d.id));if(d.id==='vw'&&S.cds.sacrifice>0)m=0;t+=Math.min(S.demons[d.id],demonMax(d))*d.tps*m*(d.id==='inf'||d.id==='doom'?TN.big:1)*(d.id==='doom'?TN.doom:1);});
-  const share=setVal('petShare')/100;
+  DEMONS.forEach(d=>{let m=u;if(d.id==='imp')m*=1+.15*tal('impimp');if(d.id==='vw')m*=1+.15*tal('impvw');if(d.id==='succ')m*=1+.15*tal('impsayaad');if(d.id==='felh')m*=1+.15*tal('impfelh');m*=1+empBonus(empLevel(d.id));m*=1+TN.mdemoDmg*tal('mdemo');if(d.id==='vw'&&S.cds.sacrifice>0)m=0;t+=Math.min(S.demons[d.id],demonMax(d))*d.tps*m*(d.id==='inf'||d.id==='doom'?TN.big:1)*(d.id==='doom'?TN.doom:1);});
+  const share=setVal('petShare')/100+TN.petSp;
   return TN.pet*t*globalHaste()*(1+.05*(S.lvl-1))*(1+setVal('petDmg')/100)*(1+share*gearStat('power')/100);}
-function immoTps(){if(!S.spells.immo)return 0;return spMult('immo')*dotWrack()*(setFx('Emberwrought')?2:1)*(1+TN.ember*setVal('immoSpeed')/100)*.25*(1+.08*rank('immo'))*(1+.06*tal('aftermath'))*(1+TN.shm*tal('shmast'))*(1+gearStat('haste')/100)*globalHaste();}
+function immoTps(){if(!S.spells.immo)return 0;return spMult('immo')*dotWrack()*(setFx('Emberwrought')?TN.emberFx:1)*(1+TN.ember*setVal('immoSpeed')/100)*(1+TN.sfImmo*tal('shadowflame'))*(1+TN.incinImmo*tal('incinerate'))*.25*(1+.08*rank('immo'))*(1+TN.aft*tal('aftermath'))*(1+TN.shm*tal('shmast'))*(1+gearStat('haste')/100)*globalHaste();}
 // curses: Hexbinder makes them stronger, and its Mythic four-piece holds two at once (the two you cast last)
 function curseMul(){return 1+setVal('curseUp')/100;}
 function hasCurse(id){return S.curse===id||(S.curse2===id&&setFx('Hexbinder'));}
@@ -1364,7 +1366,7 @@ function loopBody(dt){
   if(S.corpse>0){S.corpse-=dt;if(S.corpse<=0)revive();}
   else if(S.eatT>0){S.eatT-=dt;S.hp=Math.min(maxHp(),S.hp+maxHp()*(S.camping?1/CAMP_REST:EAT_RATE)*dt);if(S.eatT<=0){S.eatT=0;if(S.camping)S.hp=maxHp();if(S.camping){S.camping=false;S.restedT=CAMP_BUFF;log('Well Rested: +50% XP for 30 minutes. Back to it.','good');fly('Well Rested','#6fcf3a',null,null,false,'heal');}else log(S.hp>=maxHp()-1?'Full health. Back to it.':`Done eating: ${Math.round(S.hp/maxHp()*100)}% health. Back to it.`,'good');}}
   else{
-    if(tal('intensity')&&S.corpse<=0&&S.eatT<=0&&S.soul>0){S.autoT=(S.autoT||0)+dt;const iv=[12,9,7,5,4][tal('intensity')-1];if(S.autoT>=iv){S.autoT-=iv;boltLand();}}
+    if(tal('intensity')&&S.corpse<=0&&S.eatT<=0&&S.soul>0){S.autoT=(S.autoT||0)+dt;const iv=intensityIv();if(S.autoT>=iv){S.autoT-=iv;boltLand();}}
     if(S.mode!=='life'){S.prog+=youTps()*dt;while(S.prog>=1&&S.soul>0){S.prog-=1;S.chanN=((S.chanN||0)+1)%5;tick('you');}}
     if(tal('impfunnel')&&demonTypes()>0&&S.hp<maxHp())S.hp=Math.min(maxHp(),S.hp+maxHp()*.0004*tal('impfunnel')*dt);
     if(S.spells.darmor){S.armorT=(S.armorT||0)+dt;if(S.armorT>=2){S.armorT-=2;const h=maxHp()*armorRegen();if(S.hp<maxHp()){S.hp=Math.min(maxHp(),S.hp+h);fly('+'+Math.round(h),'#6fcf3a',null,null,true,'heal');}}}
@@ -1526,7 +1528,7 @@ let abKey='';
 const ABIL_TIPS={camp:['Make Camp','Rest by a campfire for 20 seconds. The fight pauses and you heal. Then Well Rested: +50% XP for 30 minutes. Clicking does not break camp.','2 hour cooldown'],spelllock:['Spell Lock','Your Felhunter silences the target, cancelling whatever it is casting and locking it out for 12s. Only usable while the target is casting.','24s cooldown, shorter with Improved Felhunter'],sstoneOn:['Soulstone','Active. If you die, you come back at half health and skip the corpse run.',''],eat:['Eat','Back off, reset the target and heal 4% a second for 20 seconds, 80% in all. Any click stops it and you keep what you got. Fleeing an elite or Infernal puts you on the zone’s top regular mob.','3 min cooldown'],
  hs:['Healthstone','Heals 40% of your health, +10% per Healthstone rank.','60s cooldown'],
  craftSs:['Create Soulstone','Costs 1 Epic shard. Die with it active and you skip the corpse run. Once it saves you, you cannot make another for an hour.','1 hour cooldown after it saves you'],sacrifice:['Sacrifice','Your Voidwalkers shield you for 30% of your health (+10% per Improved Voidwalker rank). Damage hits the shield first. It lasts 20 seconds. Voidwalkers deal no damage until the cooldown ends.','20s shield, 60s cooldown'],
- shadowburn:['Shadowburn','Instantly kill a target at 25% health or less.','15s cooldown'],conflag:['Conflagrate','For 8 seconds Shadow Bolts deal triple damage.','30s cooldown'],coex:['Curse of Exhaustion','The target deals 15% less damage to you and your channel ticks 10% faster against it. One curse at a time.',''],wrack:['Wrack','Your channel. Ticks and rolls for shards like Drain Soul, hits 20% harder, and your DoTs deal 10% more while it runs.','Affliction capstone']};
+ shadowburn:['Shadowburn','Instantly kill a target at 25% health or less.','15s cooldown'],conflag:['Conflagrate','For 8 seconds Shadow Bolts deal triple damage.','30s cooldown'],coex:['Curse of Exhaustion','The target deals 15% less damage to you and your channel ticks 10% faster against it. One curse at a time.',''],wrack:['Wrack','Your channel. Ticks and rolls for shards like Drain Soul, hits 20% harder, and your DoTs deal 25% more while it runs.','Affliction capstone']};
 function abilityTip(id){
   if(id==='castSpell')return [S.castSpell==='incin'?'Incinerate':'Shadow Bolt','Click to switch what your clicks cast. Shadow Bolt is the bigger hit; Incinerate hits for 85% and fires one extra Immolate tick per cast, so it wins once Immolate talents are stacked.',''];
   let t=ABIL_TIPS[id];if(!t){const sp=SPELLS.find(x=>x.id===id);t=sp?[sp.name,sp.desc,sp.cd?sp.cd+'s cooldown':'']:[id,'',''];}
@@ -1833,12 +1835,12 @@ function renderTab(){
   }else if(tab==='spellbook'){
     const rk=id=>{const r=RANKS.find(x=>x.id===id);return r?` <span class="muted">rank ${rank(id)+1}${rank(id)>=r.max?' (max)':''}</span>`:'';};
     h+=row('Shadow Bolt'+rk('bolt'),'Your click. Several clicks make one cast; each cast hits the target. Damage only.','','','owned');
-    if(S.spells.drainsoul)h+=row(chanName()+rk('drain'),'Always channeling on your target. Each tick takes 1 health and may yield a shard.'+(tal('wrack')?' Wrack hits 20% harder than Drain Soul, and your DoTs deal 10% more while it channels.':''),'','','owned');
+    if(S.spells.drainsoul)h+=row(chanName()+rk('drain'),'Always channeling on your target. Each tick takes 1 health and may yield a shard.'+(tal('wrack')?' Wrack hits 20% harder than Drain Soul, and your DoTs deal 25% more while it channels.':''),'','','owned');
     SPELLS.filter(s=>S.spells[s.id]&&s.id!=='drainsoul').forEach(s=>h+=row(s.name+rk(s.id),s.desc,'','','owned'));
     {const open=SP_EMP.filter(e=>spEmpOpen(e.id));const any=SP_EMP.some(e=>spEmpLevel(e.id)>0);
-     if(open.length||any){h+='<div class="tier" style="padding:10px 4px 2px">Empower spells</div><div class="muted" style="padding:2px 4px 6px;font-size:12px">A spell at max rank can be empowered with shards, with no limit: +8% damage per level up to 20, +4% after. Resets with the Ritual.</div>';
+     if(open.length||any){h+='<div class="tier" style="padding:10px 4px 2px">Empower spells</div><div class="muted" style="padding:2px 4px 6px;font-size:12px">A spell at max rank can be empowered with shards, with no limit: +6% damage per level up to 20, +3% after. Resets with the Ritual.</div>';
        SP_EMP.forEach(e=>{const lv=spEmpLevel(e.id);const op=spEmpOpen(e.id);if(!op&&!lv)return;const r=RANKS.find(x=>x.id===e.id);
-         h+=row(`Empower ${e.id==='drain'?chanName():e.name} <span class="muted">level ${lv}</span>`,op?`+${lv<20?8:4}% damage per level (now +${Math.round(empBonus(lv)*100)}%).`:`Train ${e.name} to max rank to keep empowering it.`,op?costStr(spEmpCost(e.id)):'',`<button data-a="spemp" data-id="${e.id}" ${canSpEmp(e.id)?'':'disabled'}>Empower</button>`,lv>0?'owned':'');});}}
+         h+=row(`Empower ${e.id==='drain'?chanName():e.name} <span class="muted">level ${lv}</span>`,op?`+${lv<20?6:3}% damage per level (now +${Math.round(TN.spEmp*empBonus(lv)*100)}%).`:`Train ${e.name} to max rank to keep empowering it.`,op?costStr(spEmpCost(e.id)):'',`<button data-a="spemp" data-id="${e.id}" ${canSpEmp(e.id)?'':'disabled'}>Empower</button>`,lv>0?'owned':'');});}}
     if(rank('council'))h+='<div class="muted" style="padding:6px 4px;font-size:12px">Breaking shards down is in the Shadow Council window (S).</div>';
   }else if(tab==='ranks_old'){
     h+='<div class="muted" style="padding:4px;font-size:12px">Higher ranks of spells you already know. Priced mostly in Uncommon shards. Ranks for a spell appear once you have learned it at the Trainer.</div>';
