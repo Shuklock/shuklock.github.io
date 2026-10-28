@@ -1,6 +1,6 @@
 # Shardlock Idle art
 
-The sprites are Gemini (and now Midjourney) pixel art. Gemini paints each one on a flat magenta background, working from WoW screenshots and the Felheart warlock reference. `tools/grid.py` then snaps the render to its pixel grid. Black outlines stay on. Midjourney works the same way (see below). Anything with no finished art yet gets a placeholder from `tools/mk.py`.
+The sprites are Gemini (and now Midjourney) pixel art. Gemini paints each one on a flat magenta background, working from WoW screenshots and the Felheart warlock reference. `tools/grid.py` then snaps the render to its pixel grid. Black outlines stay on. Midjourney works the same way (see below). Enemies with no sprite yet show as a floating soul crystal in their rarity colour.
 
 | sprite | source | ART entry |
 |---|---|---|
@@ -11,7 +11,7 @@ The sprites are Gemini (and now Midjourney) pixel art. Gemini paints each one on
 | `pet_felh.png` | Midjourney | `frames:1, scale:.42` |
 | `pet_inf.png` | Midjourney | `frames:1, scale:.53` |
 | `pet_doom.png` | Midjourney | `frames:1, scale:.45` |
-| `mob_scorpid.png` | mk.py placeholder | none (mob default) |
+| `crystal_0.png` … `crystal_4.png` | Gemini, via `tools/crystal.py` | enemy stand-ins: common, uncommon, rare, epic, legendary |
 
 ## How the engine reads a sprite
 
@@ -27,7 +27,7 @@ Names the engine looks for:
 
 - `warlock.png`, plus an optional `warlock_channel.png`. The channel sprite needs the same size and anchors as `warlock.png` and its own ART entry, so leave it out until a Gemini channel pose exists.
 - `pet_imp.png`, `pet_vw.png`, `pet_succ.png`, `pet_felh.png`, `pet_inf.png`, `pet_doom.png`
-- `mob_<slug>.png`, where the slug is the enemy name lower-cased with non-letters turned into `_`. Examples: `mob_kobold_miner.png`, `mob_edwin_vancleef.png`, `mob_ragnaros.png`. A missing one draws the built-in silhouette for that mob family.
+- `mob_<slug>.png`, where the slug is the enemy name lower-cased with non-letters turned into `_`. Examples: `mob_kobold_miner.png`, `mob_edwin_vancleef.png`, `mob_ragnaros.png`. A missing one draws a crystal stand-in.
 
 ## Adding or replacing a sprite
 
@@ -36,15 +36,11 @@ Names the engine looks for:
 3. Set the sprite's `ART` entry to `{frames:1,fps:1,scale:S}`, using the height guide above.
 4. If you replaced `warlock.png`, run `python3 tools/inline.py` so the base64 copy in index.html matches. `--check` only reports.
 
-## Placeholders (`tools/mk.py`)
+## Enemy stand-in crystals
 
-`mk.py` draws 2-frame sprites from text grids for anything still waiting on Gemini art. It never writes the Gemini sprites. By default it also skips any PNG that already exists, so a Gemini file you drop in stays put.
+Until an enemy has its own `mob_<slug>.png`, the scene draws `crystal_<rarity>.png` where it stands. 0 is common, 1 uncommon, 2 rare, 3 epic and 4 legendary, matching the shard colours. The crystal floats and sways, and it gets the same rarity outline glow, hit squash, red flash and fade as a sprite. It also scales up with rarity and for elites.
 
-- `python3 tools/mk.py` writes only the placeholders that are missing.
-- `python3 tools/mk.py pet_inf --force` redraws one.
-- `--preview` writes a contact sheet to `tools/preview/`.
-
-Once a placeholder has a Gemini version, delete its grid from mk.py.
+The crystals are glowing gems painted on black. `python3 tools/crystal.py gem.jpg crystal_2` keys out the black but keeps the glow translucent, so it sits over any backdrop. It also keeps the dark core opaque and trims the image to 192 px tall.
 
 ## Backdrops
 
