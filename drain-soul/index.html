@@ -190,6 +190,7 @@ h1,h2,h3,.gem-slot .n,.lvlline,#pname,#mname,.bar .lbl,#wintitle,.zonename{font-
 .bagslot.empty{opacity:.45;cursor:default}
 .bagslot.q0{border-color:#8a8a8a}.bagslot.q1{border-color:var(--c1)}.bagslot.q2{border-color:#4aa3ff}.bagslot.q3{border-color:var(--c3)}.bagslot.q4{border-color:var(--c4)}
 .bagslot.junk{border-color:#6a6a6a;color:#bdbdbd}
+.mpick{display:inline-flex;gap:2px}.mpick>button:first-child,.mpick>button:last-child{padding-left:7px;padding-right:7px}
 .bagslot .cnt{position:absolute;right:3px;bottom:1px;font-size:10px;color:#fff;text-shadow:0 1px 2px #000}
 .detail{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px}
 .treecols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
@@ -372,7 +373,12 @@ const DG_TIERS=[
  {name:'Normal',cost:null,lvl:null,hpm:1,dm:1,setQ:2,setIlvl:null,setChance:.25,bossAb:2},
  {name:'Heroic',cost:3,lvl:58,hpm:1.6,dm:1.4,setQ:3,setIlvl:56,setChance:.4,bossAb:2},
  {name:'Mythic',cost:4,lvl:59,hpm:2.4,dm:1.8,setQ:3,setIlvl:60,setChance:1,bossAb:3}];
-function dgTierOf(){if(!S.dg)return DG_TIERS[0];return S.dg.kz?kzTier(S.dg.floor):DG_TIERS[S.dg.tier||0];}
+// Mythic is an endless ladder per dungeon, like Karazhan: clear Mythic N to open N+1. Mythic 1 is the old Mythic; each level
+// adds Karazhan's per-floor growth (+12% soul, +6% damage), and enemies creep from level 59 to 62 over the first 30 levels
+function mythicTier(n){n=Math.max(1,n|0);const b=DG_TIERS[2],k=n-1;return Object.assign({},b,{name:'Mythic '+n,ml:n,lvl:b.lvl+Math.min(3,Math.floor(k/10)),hpm:Math.round(b.hpm*Math.pow(1.12,k)*100)/100,dm:Math.round(b.dm*(1+.06*k)*100)/100});}
+function mythicBest(d){return ((S.mythic||{})[d.id])||0;}
+function tierOf(tier,ml){return tier===2?mythicTier(ml||1):DG_TIERS[tier||0];}
+function dgTierOf(){if(!S.dg)return DG_TIERS[0];return S.dg.kz?kzTier(S.dg.floor):tierOf(S.dg.tier||0,S.dg.ml);}
 function dgKey(d,tier){return tier?d.id+':'+tier:d.id;}
 const DG_SETS=['Gloomweaver','Hexbinder','Emberwrought'];
 const ZONES=[
@@ -695,13 +701,13 @@ function freshState(keep){
   const lp=keep?keep.legacy:{points:0,perks:{}};
   const s={lvl:1,xp:0,hp:100,shards:[0,0,0,0,0],life:0,souls:0,clicks:0,deaths:0,corpse:0,corpseTotal:0,
     demons:{},emp:{},spells:{darmor:true},tal:{},ranks:{},zone:0,mob:0,cleared:[],cds:{},curse:null,hs:0,sstone:false,mode:'drain',
-    soul:0,soulMax:1,prog:0,petProg:0,corrT:0,fear:0,conflagT:0,havoc:0,shield:0,eatT:0,lifeT:0,mobRar:0,coaBoost:false,autosell:{},castSpell:'bolt',kz:{best:0,marks:0,bless:0},powAcc:0,autoT:0,lifeTick:0,dg:null,dgPack:[],dgLock:{},dgCleared:{},dgReturn:null,cast:null,castCd:8,enrageT:0,swingT:0,flurryN:0,alt:0,adds:[],mobReturn:null,fearPull:false,lastInput:Date.now(),
+    soul:0,soulMax:1,prog:0,petProg:0,corrT:0,fear:0,conflagT:0,havoc:0,shield:0,eatT:0,lifeT:0,mobRar:0,coaBoost:false,autosell:{},castSpell:'bolt',kz:{best:0,marks:0,bless:0},mythic:{},powAcc:0,autoT:0,lifeTick:0,dg:null,dgPack:[],dgLock:{},dgCleared:{},dgReturn:null,cast:null,castCd:8,enrageT:0,swingT:0,flurryN:0,alt:0,adds:[],mobReturn:null,fearPull:false,lastInput:Date.now(),
     event:null,eventT:180+Math.random()*120,fighting:null,bossDead:{},
     seen:[false,false,false,false,false],flags:{},ach:keep?keep.ach:{},prestiges:keep?keep.prestiges:0,legacy:lp,last:Date.now(),
     gear:{},lootQ:[],bag:[],bags:0,uid:0,lastDrop:null,account:keep&&keep.account?keep.account:{gold:0,perks:{}}};
   DEMONS.forEach(d=>s.demons[d.id]=0);
   if(s.account.perks.books){s.spells.corr=true;s.spells.immo=true;s.spells.cow=true;}
-  if(keep&&keep.kz)s.kz=keep.kz;
+  if(keep&&keep.mythic)s.mythic=keep.mythic;if(keep&&keep.kz)s.kz=keep.kz;
   if(s.account.perks.handme2)s.gear.chest={slot:'chest',name:'Woolen Robe of Shadow Wrath',ilvl:15,q:1,stats:{power:6,stam:5}};
   if(lp.perks.veteran){s.lvl=10;s.spells.drainsoul=true;}
   if(lp.perks.handme)s.demons.imp=5;
@@ -800,23 +806,26 @@ function dgStartStep(){const d=dgDef();const st=d.steps[S.dg.step];S.adds=[];S.d
   const T=dgTierOf();if(st!=='boss'){S.dgPack=st.map(n=>({n,l:T.lvl||(d.kz?d.lvl:dgLvl(d))}));S.adds=S.dgPack.slice(1).map(def=>({def,swingT:Math.random()*.6,castCd:4+Math.random()*3,cast:null,enrageT:0,flurryN:0,alt:0}));}
   spawn(true);S.mobRar=0;const m=curMob();S.soulMax=soulNeed(m);S.soul=S.soulMax;
   if(S.dg.kz)log(st==='boss'?`Floor ${S.dg.floor}: ${d.boss.n}.`:`Floor ${S.dg.floor}: ${st.length>1?st.length+' enemies':st[0]}.`);else log(st==='boss'?`${d.boss.n} waits at the end of ${d.name}.`:`Pull ${S.dg.step+1} of ${d.steps.length-1}: ${st.length>1?st.length+' enemies':st[0]}.`);}
-function dgEnter(i,tier){tier=tier||0;const d=DUNGEONS[i];const T=DG_TIERS[tier];const key=dgKey(d,tier);if(S.lvl<d.band[0]){log(`You need to be level ${d.band[0]} for ${d.name}.`,'bad');return;}if(dgLock(key)>0){log(`${T.name} ${d.name} is locked for another ${Math.ceil(dgLock(key)/60)} minutes.`,'bad');return;}
+function dgEnter(i,tier,ml){tier=tier||0;const d=DUNGEONS[i];if(tier===2){ml=Math.max(1,Math.min(ml||mythicBest(d)+1,mythicBest(d)+1));}const T=tierOf(tier,ml);const key=dgKey(d,tier);if(S.lvl<d.band[0]){log(`You need to be level ${d.band[0]} for ${d.name}.`,'bad');return;}if(dgLock(key)>0){log(`${T.name} ${d.name} is locked for another ${Math.ceil(dgLock(key)/60)} minutes.`,'bad');return;}
   if(!dgTierOpen(d,tier)){log(`Clear ${DG_TIERS[tier-1].name} ${d.name} first.`,'bad');return;}
   if(T.cost!=null){if(S.shards[T.cost]<1){log(`${T.name} needs one ${RAR[T.cost]} shard at the door.`,'bad');return;}S.shards[T.cost]-=1;fly(`−1 ${RAR[T.cost]}`,RCOL[T.cost],null,null,false,'shard');}
   if(S.fighting==='ev'){S.fighting=null;}if(S.eatT>0){S.eatT=0;S.camping=false;}
-  S.dg={id:i,step:0,tier};S.dgReturn={zone:S.zone,mob:S.mob};
+  S.dg={id:i,step:0,tier};if(tier===2)S.dg.ml=ml;S.dgReturn={zone:S.zone,mob:S.mob};
   log(`You enter ${tier?T.name+' ':''}${d.name}. No eating, no camp, and a death ends the run. ${tier?'Clearing it locks it for 30 minutes; failing it only for 5.':'It locks for 5 minutes when you clear or leave it.'}`,'lvl');dgStartStep();buildPickers();}
 function dgLeave(reason){if(!S.dg)return;if(S.dg.kz){const f=S.dg.floor;const r=S.dgReturn||{zone:2,mob:0};S.dg=null;S.dgPack=[];S.adds=[];S.mobReturn=null;S.zone=r.zone;S.mob=Math.min(3,r.mob||0);log(reason==='death'?`You fall on floor ${f} of Karazhan. Best: ${S.kz.best||0}.`:`You leave Karazhan on floor ${f}.`,reason==='death'?'bad':'');buildPickers();if(reason!=='death')spawn();return;}
-  const d=dgDef();const tn=S.dg.tier?DG_TIERS[S.dg.tier].name+' ':'';const lockS=dgLockFor(S.dg.tier||0,reason);S.dgLock[dgKey(d,S.dg.tier||0)]=Date.now()/1000+lockS;const r=S.dgReturn||{zone:d.zone,mob:0};S.dg=null;S.dgPack=[];S.adds=[];S.mobReturn=null;S.zone=r.zone;S.mob=Math.min(3,r.mob||0);
+  const d=dgDef();const tn=S.dg.tier?dgTierOf().name+' ':'';const lockS=dgLockFor(S.dg.tier||0,reason);S.dgLock[dgKey(d,S.dg.tier||0)]=Date.now()/1000+lockS;const r=S.dgReturn||{zone:d.zone,mob:0};S.dg=null;S.dgPack=[];S.adds=[];S.mobReturn=null;S.zone=r.zone;S.mob=Math.min(3,r.mob||0);
   if(reason==='death')log(`Your run through ${tn}${d.name} ends. You can try again in ${DG_RETRY/60} minutes.`,'bad');else if(reason==='done')log(`${tn}${d.name} cleared. Locked for ${lockS/60} minutes.`,'lvl');else log(`You leave ${tn}${d.name}. You can go back in ${DG_RETRY/60} minutes.`);
   buildPickers();if(reason!=='death')spawn();}
 function dgKill(m){if(S.dg.kz){if(Math.random()<.5)giveShard(1,'(tower)');S.dgPack.shift();if(S.dgPack.length){S.adds.shift();spawn(true);S.mobRar=0;const nm=curMob();S.soulMax=soulNeed(nm);S.soul=S.soulMax;}else kzFloorDone();return;}
-  const d=dgDef();const tier=S.dg.tier||0;const T=DG_TIERS[tier];
+  const d=dgDef();const tier=S.dg.tier||0;const T=dgTierOf();
   if(m.elite){S.dgCleared[dgKey(d,tier)]=(S.dgCleared[dgKey(d,tier)]||0)+1;
     // the boss always drops a Rare, and a set piece one time in four; BRD and UBRS also pay an Epic shard
     {const needy=SLOTS.map(x=>x[0]).filter(sl=>!S.gear[sl]||S.gear[sl].q<2);const slot=(needy.length&&Math.random()<.6?needy:SLOTS.map(x=>x[0]))[Math.floor(Math.random()*(needy.length&&Math.random()<.6?needy.length:SLOTS.length))]||'chest';const it=makeItem(m.l,2,slot);if(addToBag(it)){S.lastDrop=it.uid;log(`${m.n} dropped <span class="t2">${it.name}</span>.`,'loot');}}
     if(Math.random()<T.setChance){const have=['head','chest','legs','hands'].filter(sl=>!(S.gear[sl]&&S.gear[sl].set===DG_SETS[d.tier]&&(S.gear[sl].tier||0)>=tier));const pool=have.length&&Math.random()<.7?have:['head','chest','legs','hands'];const sl=pool[Math.floor(Math.random()*pool.length)];const it=makeDungeonSet(d.tier,m.l,sl,tier);if(addToBag(it)){S.lastDrop=it.uid;log(`${m.n} dropped <span class="t${it.q}">${it.name}</span> (${DG_SETS[d.tier]} set).`,'loot');}}
     if(d.epicShard)giveShard(3,'(dungeon)');
+    // Mythic: opens the next level, and pays more the higher you go: an Epic shard per two levels, a Legendary every fifth
+    if(tier===2){const n=S.dg.ml||1;S.mythic=S.mythic||{};if(n>(S.mythic[d.id]||0)){S.mythic[d.id]=n;log(`Mythic ${n+1} ${d.name} is open.`,'lvl');}
+      for(let i=0;i<Math.floor(n/2);i++)giveShard(3,'(mythic)');if(n%5===0)giveShard(4,'(mythic)');}
     dgLeave('done');return;}
   // pack kill: an extra Uncommon half the time, then the next enemy in the pull or the next pull
   if(Math.random()<.5)giveShard(1,'(dungeon)');
@@ -1413,7 +1422,8 @@ $('tab').addEventListener('pointerdown',e=>{const b=e.target.closest('button,[da
   else if(a==='mapsel'){mapSel=b.dataset.z==='kz'?'kz':+b.dataset.z;}
   else if(a==='kzEnter'){kzEnter(+id);closeWin();}
   else if(a==='kzBless'){const c=kzBlessCost();if((S.kz.marks||0)>=c){S.kz.marks-=c;const k=blessNext();S.kz.bless=(S.kz.bless||0)+1;log(`Blessing of Medivh rank ${S.kz.bless}: +${S.kz.bless<=12?1:.5} ${STATS[k]}.`,'good');}}
-  else if(a==='dgEnter'){dgEnter(+id,+(b.dataset.tier||0));closeWin();}
+  else if(a==='dgEnter'){dgEnter(+id,+(b.dataset.tier||0),+(b.dataset.ml||0));closeWin();}
+  else if(a==='mythPick'){const d=DUNGEONS.find(x=>x.id===id);if(d){const top=mythicBest(d)+1;mythSel[id]=Math.max(1,Math.min(top,(mythSel[id]||top)+(+b.dataset.d)));}}
   else if(a==='dgLeave'){dgLeave('leave');}
   else if(a==='go'){if(S.dg)dgLeave('leave');S.zone=+b.dataset.z;S.mob=+b.dataset.m;S.fighting=null;buildPickers();spawn();closeWin();}
   else if(a==='patchok'){closeWin();return;}
@@ -1443,7 +1453,7 @@ function ritualPoints(){if(S.flags.rag)return 3;return Math.max(0,ritualTier()-(
 function doPrestige(btn){
   const pts=ritualPoints();if(pts<1)return;
   if(!arm('prestige','Press again to perform the Ritual. This warlock is consumed.',btn))return;
-  const keep={ach:S.ach,prestiges:S.prestiges+1,legacy:{points:S.legacy.points+pts,perks:S.legacy.perks,paid:S.flags.rag?(S.legacy.paid||0):(S.legacy.paid||0)+pts},account:S.account,kz:S.kz,carry:Math.floor(S.shards[0]*.1*(leg('inherit')+perk('bank')))};
+  const keep={ach:S.ach,prestiges:S.prestiges+1,legacy:{points:S.legacy.points+pts,perks:S.legacy.perks,paid:S.flags.rag?(S.legacy.paid||0):(S.legacy.paid||0)+pts},account:S.account,kz:S.kz,mythic:S.mythic,carry:Math.floor(S.shards[0]*.1*(leg('inherit')+perk('bank')))};
   S=freshState(keep);buildPickers();spawn();log(`The ritual is complete. A new warlock takes up the grimoire with ${S.legacy.points} Legacy points to spend.`,'lvl');
 }
 // ---------- ability icons (original glyphs; the addon build maps these ids to Interface\Icons texture paths instead) ----------
@@ -1601,7 +1611,7 @@ let trainerKey='';
 function renderTrainerHead(){const [n,a]=trainables();const key=n+':'+a;if(key===trainerKey)return;trainerKey=key;const b=$('trainerbadge');b.style.display=n?'grid':'none';b.textContent=n;
   $('trainerhead').classList.toggle('ready',a>0);setHTML('trainerlbl',n?`Trainer<br><span class="${a?'t1':'muted'}">${a?a+' you can afford':n+' to learn, not affordable yet'}</span>`:'Trainer<br><span class="muted">nothing new</span>');}
 // ---------- the world map: a stylised journey from Durotar to the Molten Core, zones as regions, dungeons as skulls, the elite as a star ----------
-let mapSel=null;
+let mapSel=null;const mythSel={}; // Map: chosen Mythic level per dungeon (defaults to the highest open)
 const MAP_ZONES=[
  {x:85,y:300,rx:62,ry:34,c:'#8a3a1e',c2:'#c25a2a'},    // Durotar & Tirisfal
  {x:218,y:332,rx:70,ry:36,c:'#8a6a1e',c2:'#c99a3a'},   // Westfall & Barrens
@@ -1722,7 +1732,7 @@ function renderTab(){
     h+=`<div class="muted" style="padding:4px;font-size:12px">Account perks. Everything here survives the Ritual of Doom. You have <span style="color:var(--gold)">${S.account.gold.toFixed(2)}g</span>.</div>`;
     SHOP.forEach(p=>{const cur=perk(p.id);const lk=p.req&&!perk(p.req);if(cur>=p.max){h+=row(p.name,p.desc,'','<span class="t1">Owned</span>','owned');return;}const c=p.cost(cur);h+=row(`${p.name}${p.max>1?' <span class="muted">'+cur+'/'+p.max+'</span>':''}`,p.desc+(lk?' Requires '+SHOP.find(x=>x.id===p.req).name+'.':''),`${c}g`,`<button data-a="shop" data-id="${p.id}" ${!lk&&S.account.gold>=c?'':'disabled'}>Buy</button>`,lk?'locked':'');});
   }else if(tab==='map'){
-    if(S.dg){const d=dgDef();h+=`<div class="event" style="background:#1a1a3a;border-color:#4aa3ff"><span>⚔ ${S.dg.kz?`Karazhan · floor ${S.dg.floor} (${d.steps[0]==='boss'?d.boss.n:d.steps[0].join(', ')}) · best ${S.kz.best||0}`:`In ${S.dg.tier?DG_TIERS[S.dg.tier].name+' ':''}${d.name} · pull ${S.dg.step+1} of ${d.steps.length} (${d.steps[S.dg.step]==='boss'?d.boss.n:d.steps[S.dg.step].join(', ')})`}</span><button data-a="dgLeave">Leave</button></div>`;}
+    if(S.dg){const d=dgDef();h+=`<div class="event" style="background:#1a1a3a;border-color:#4aa3ff"><span>⚔ ${S.dg.kz?`Karazhan · floor ${S.dg.floor} (${d.steps[0]==='boss'?d.boss.n:d.steps[0].join(', ')}) · best ${S.kz.best||0}`:`In ${S.dg.tier?dgTierOf().name+' ':''}${d.name} · pull ${S.dg.step+1} of ${d.steps.length} (${d.steps[S.dg.step]==='boss'?d.boss.n:d.steps[S.dg.step].join(', ')})`}</span><button data-a="dgLeave">Leave</button></div>`;}
     h+=worldMapSvg();
     if(mapSel==null)mapSel=S.zone;
     if(mapSel==='kz'){h+=kzPanel(row);}else{
@@ -1732,9 +1742,14 @@ function renderTab(){
       z.mobs.forEach((mm,mi)=>{const m={n:mm.n,l:mm.l,hpm:1,dm:1,shards:1};const cls=lvlDiff(m);const cur=S.zone===zi&&S.mob===mi&&S.fighting!=='ev'&&!S.dg;h+=row(`${mm.n} <span class="lv-${cls}">Lv ${mm.l}</span>`,`${cls}${noShards(m)?' · no XP, no shards':''}`,'',`<button data-a="go" data-z="${zi}" data-m="${mi}" ${cur?'disabled':''}>${cur?'Fighting':'Face'}</button>`,cur?'owned':'');});
       const el={n:z.elite.n,l:z.elite.l,elite:true,hpm:10,dm:3,shards:5};const lk=bossLock(zi);const cur=S.zone===zi&&S.mob===4&&!S.dg;h+=row(`★ ${z.elite.n} <span class="lv-${lvlDiff(el)}">Lv ${z.elite.l}</span> elite`,lk>0?`dead, back in ${Math.ceil(lk/60)} min`:(z.elite.n==='Ragnaros'?'2 hour lockout after a kill':'20 minute lockout after a kill')+(fearImmune(el)?' · immune to Fear':''),`<span class="t2">Rare${zi>=3?' + Epic':''} shards</span>`,`<button data-a="go" data-z="${zi}" data-m="4" ${cur||lk>0?'disabled':''}>${cur?'Fighting':lk>0?'Dead':'Face'}</button>`,cur?'owned':(lk>0?'locked':''));
       DUNGEONS.forEach((d,di)=>{if(d.zone!==zi)return;const low=S.lvl<d.band[0];const inThis=S.dg&&S.dg.id===di;
-        const btns=DG_TIERS.map((T,ti)=>{const key=dgKey(d,ti);const lk=dgLock(key);const here=inThis&&(S.dg.tier||0)===ti;const open=dgTierOpen(d,ti);const canPay=T.cost==null||S.shards[T.cost]>=1;const cl=S.dgCleared[key]||0;
+        const btns=DG_TIERS.map((T0,ti)=>{const key=dgKey(d,ti);const lk=dgLock(key);const here=inThis&&(S.dg.tier||0)===ti;const open=dgTierOpen(d,ti);const canPay=T0.cost==null||S.shards[T0.cost]>=1;const cl=S.dgCleared[key]||0;
+          const top=mythicBest(d)+1;const ml=ti===2?Math.max(1,Math.min(top,mythSel[d.id]||top)):0;const T=ti===2?mythicTier(ml):T0;
           const why=here?'Inside':low?'Lv '+d.band[0]:!open?'Clear '+DG_TIERS[ti-1].name:lk>0?Math.ceil(lk/60)+' min':!canPay?'Need '+RAR[T.cost]:'';
-          return `<button data-a="dgEnter" data-id="${di}" data-tier="${ti}" ${here||low||!open||lk>0||!canPay?'disabled':''} title="${T.cost!=null?'Costs one '+RAR[T.cost]+' shard. ':''}${ti?'Enemies at level '+T.lvl+', '+T.hpm+'× soul, '+T.dm+'× damage. Set pieces drop Epic at ilvl '+T.setIlvl+(T.setChance>=1?', guaranteed.':'.'):''}${cl?' Cleared ×'+cl+'.':''}">${T.name}${why?' · '+why:''}</button>`;}).join('');
+          const dis=here||low||!open||lk>0||!canPay;
+          const pay=ti===2?` Clear pays ${Math.floor(ml/2)} extra Epic shard${Math.floor(ml/2)===1?'':'s'}${ml%5===0?' and a Legendary shard':''}${ml===top?' and opens Mythic '+(ml+1):''}.`:'';
+          const enter=`<button data-a="dgEnter" data-id="${di}" data-tier="${ti}" data-ml="${ml}" ${dis?'disabled':''} title="${T.cost!=null?'Costs one '+RAR[T.cost]+' shard. ':''}${ti?'Enemies at level '+T.lvl+', '+T.hpm+'× soul, '+T.dm+'× damage. Set pieces drop Epic at ilvl '+T.setIlvl+(T.setChance>=1?', guaranteed.':'.'):''}${pay}${cl?' Cleared ×'+cl+'.':''}${ti===2&&mythicBest(d)?' Best: Mythic '+mythicBest(d)+'.':''}">${T.name}${why?' · '+why:''}</button>`;
+          if(ti!==2||!open||low)return enter;
+          return `<span class="mpick"><button data-a="mythPick" data-id="${d.id}" data-d="-1" ${ml<=1?'disabled':''} title="Lower Mythic level">‹</button>${enter}<button data-a="mythPick" data-id="${d.id}" data-d="1" ${ml>=top?'disabled':''} title="${ml>=top?'Clear Mythic '+ml+' to open Mythic '+(ml+1):'Higher Mythic level'}">›</button></span>`;}).join('');
         const bm={n:d.boss.n,l:Math.max(d.boss.l,dgLvl(d)+2),elite:true,hpm:8,dm:2.2,shards:4};
         h+=row(`⚔ ${d.name} <span class="lv-${lvlDiff({n:'',l:dgLvl(d),hpm:1,dm:1})}">Lv ${dgLvl(d)}</span> · ${d.boss.n} <span class="lv-${lvlDiff(bm)}">Lv ${Math.max(d.boss.l,dgLvl(d)+2)}</span>`,`${d.steps.length-1} pulls then the boss · enemies match your level up to ${d.band[1]} · no eating inside, a death ends the run · 5 min lockout on Normal; Heroic and Mythic 30 min after a clear, 5 after a fail${d.fearImm?' · boss immune to Fear':''}`,`<span class="t2">${DG_SETS[d.tier]} set${d.epicShard?' · Epic shard':''}</span>`,`<span style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${btns}</span>`,inThis?'owned':(low?'locked':''));});
     }}
@@ -1816,7 +1831,7 @@ function importCode(code){code=(code||'').replace(/\s/g,'');if(code.slice(0,4)!=
   f.shards=arr(d.shards,5,0).map(Number);f.seen=arr(d.seen,5,false).map(Boolean);f.cleared=arr(d.cleared,6,false).map(Boolean);
   if(!Array.isArray(f.bag))f.bag=Object.values(f.bag||{});f.lootQ=[];f.gear=f.gear&&!Array.isArray(f.gear)?f.gear:{};
   for(const k of ['tal','ranks','spells','ach','flags','demons','emp','bossDead','dgLock','dgCleared'])if(!f[k]||typeof f[k]!=='object'||Array.isArray(f[k]))f[k]={};
-  if(!Array.isArray(f.adds))f.adds=[];f.cast=null;for(const sl in (f.gear||{}))migrateItem(f.gear[sl]);(f.bag||[]).forEach(migrateItem);if(f.tal&&f.tal.intensity>5)f.tal.intensity=5;if(!Array.isArray(f.dgPack))f.dgPack=[];if(f.dg&&!f.dg.kz&&(!DUNGEONS[f.dg.id]||f.dg.step>=DUNGEONS[f.dg.id].steps.length))f.dg=null;if(!f.kz||typeof f.kz!=='object')f.kz={best:0,marks:0,bless:0};
+  if(!Array.isArray(f.adds))f.adds=[];f.cast=null;for(const sl in (f.gear||{}))migrateItem(f.gear[sl]);(f.bag||[]).forEach(migrateItem);if(f.tal&&f.tal.intensity>5)f.tal.intensity=5;if(!Array.isArray(f.dgPack))f.dgPack=[];if(f.dg&&!f.dg.kz&&(!DUNGEONS[f.dg.id]||f.dg.step>=DUNGEONS[f.dg.id].steps.length))f.dg=null;if(!f.kz||typeof f.kz!=='object')f.kz={best:0,marks:0,bless:0};if(!f.mythic||typeof f.mythic!=='object'||Array.isArray(f.mythic))f.mythic={};DUNGEONS.forEach(d=>{if((f.dgCleared||{})[d.id+':2']>0&&!f.mythic[d.id])f.mythic[d.id]=1;});
   if(!f.legacy||typeof f.legacy!=='object')f.legacy={points:0,perks:{}};if(!f.legacy.perks)f.legacy.perks={};
   if(!f.account||typeof f.account!=='object')f.account={gold:0,perks:{}};if(!f.account.perks)f.account.perks={};f.account.gold=Number(f.account.gold)||0;
   DEMONS.forEach(dm=>f.demons[dm.id]=Number(f.demons[dm.id])||0);
@@ -1826,7 +1841,7 @@ function importCode(code){code=(code||'').replace(/\s/g,'');if(code.slice(0,4)!=
 // ---------- save/load ----------
 function save(){try{S.last=Date.now();localStorage.setItem('drainsoul3',JSON.stringify(S));}catch(e){}}
 function load(){
-  try{const raw=localStorage.getItem('drainsoul3');if(!raw)return;const d=JSON.parse(raw);S=Object.assign(freshState(),d);for(const sl in (S.gear||{}))migrateItem(S.gear[sl]);(S.bag||[]).forEach(migrateItem);S.corpse=0;S.event=null;S.fighting=null;S.mode='drain';S.lifeT=0;S.hp=Math.max(1,Math.min(maxHp(),S.hp));
+  try{const raw=localStorage.getItem('drainsoul3');if(!raw)return;const d=JSON.parse(raw);S=Object.assign(freshState(),d);for(const sl in (S.gear||{}))migrateItem(S.gear[sl]);(S.bag||[]).forEach(migrateItem);if(!S.mythic||typeof S.mythic!=='object')S.mythic={};DUNGEONS.forEach(d=>{if((S.dgCleared||{})[d.id+':2']>0&&!S.mythic[d.id])S.mythic[d.id]=1;});S.corpse=0;S.event=null;S.fighting=null;S.mode='drain';S.lifeT=0;S.hp=Math.max(1,Math.min(maxHp(),S.hp));
     Object.values(S.gear).forEach(it=>{if(it&&it.stats&&it.q<3)it.name=itemName(it);});S.bag.forEach(it=>{if(!it.junk&&it.stats&&it.q<3)it.name=itemName(it);});S.spells.darmor=true;if(S.lvl>=10&&S.spells.drainsoul===undefined)S.spells.drainsoul=true;clampDemons();
     const gap=Math.min(12*3600,(Date.now()-(S.last||Date.now()))/1000);
     if(gap>0){if((S.cds.camp||0)>0)S.cds.camp=Math.max(0,S.cds.camp-gap);if((S.cds.craftSs||0)>0)S.cds.craftSs=Math.max(0,S.cds.craftSs-gap);if((S.restedT||0)>0)S.restedT=Math.max(0,S.restedT-gap);if(S.camping){S.camping=false;S.eatT=0;}}
