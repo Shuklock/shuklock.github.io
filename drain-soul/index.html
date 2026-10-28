@@ -465,6 +465,7 @@ const TALENTS=[
  {id:'ruin',tree:2,tier:10,max:1,ms:true,name:'Ruin',desc:'Milestone: Shadow Bolt and Incinerate crits hit for double instead of 1.5×.'},
  {id:'shadowburn',tree:2,tier:10,max:1,ms:true,name:'Shadowburn',desc:'Milestone: new ability. Instantly kill a target at 25% health or less. 15s cooldown.'},
  {id:'intensity',tree:2,tier:10,max:5,name:'Intensity',desc:'Your click spell casts itself: one full cast every 19 / 14 / 11 / 8 / 6 seconds by rank, even while you are away.'},
+ {id:'backlash',tree:2,tier:15,max:3,name:'Backlash',desc:'Every Shadow Bolt or Incinerate cast wraps you in a shield worth 4.5% of your max health per rank, holding up to 13% per rank. It loses a tenth of its strength every second, so it stays up while you keep casting.'},
  {id:'agonizing',tree:2,tier:15,max:3,name:'Agonizing Flames',desc:'Bane of Agony deals 6% more damage per rank.'},
  {id:'conflag',tree:2,tier:15,max:1,ms:true,name:'Conflagrate',desc:'Milestone: new ability. For 8s Shadow Bolts deal triple damage. 30s cooldown.'},
  {id:'pyro',tree:2,tier:15,max:2,name:'Pyroclasm',desc:'A soul you finish has a 12% chance per rank to pay one extra shard.'},
@@ -748,7 +749,7 @@ function maxHpOf(s){return Math.floor((50+18*s.lvl)*(1+.04*(s.tal&&s.tal.embrace
 const maxHp=()=>maxHpOf(S);
 function globalHaste(){return (1+.1*leg('bloodline'))*(1+achCount()*.01);}
 // talent and demon tuning knobs (today's values); the web profiler (claude/balance-bot/web_profile.py) reads damage through these
-const TN={mal:.04,impcorr:.10,shm:.05,impcoa:.12,isb:.03,fabr:.04,sf:0,dotDmg:0,pet:.85,sp:2.8,big:1,wrackHit:1.2,wrackDot:.25,pactFrom:59,pactTo:60,doom:1,agHold:2,ember:1,mdemoDmg:0,sfImmo:.7,aft:.02,intensMul:1,impdrainsDmg:.2,incinImmo:.4,petSp:0,spEmp:.75,emberFx:1.1,mdImp:.002,mdSucc:.10,mdFelh:.03,mdBig:.01,dkPet:.008,dbFrac:.2,dbDur:5,dbEat:.25};
+const TN={mal:.04,impcorr:.10,shm:.05,impcoa:.12,isb:.03,fabr:.04,sf:0,dotDmg:0,pet:.85,sp:2.8,big:1,wrackHit:1.2,wrackDot:.25,pactFrom:59,pactTo:60,doom:1,agHold:2,ember:1,mdemoDmg:0,sfImmo:.7,aft:.02,intensMul:1,impdrainsDmg:.2,incinImmo:.4,petSp:0,spEmp:.75,emberFx:1.1,mdImp:.002,mdSucc:.10,mdFelh:.03,mdBig:.01,dkPet:.008,dbFrac:.2,dbDur:5,dbEat:.25,blAdd:.045,blCap:.13,blDecay:.1};
 // Wrack (Affliction capstone) takes over the channel: same ticks and shard rolls as Drain Soul, harder hits, and stronger DoTs while it runs
 function chanName(){return tal('wrack')?'Wrack':'Drain Soul';}
 function wrackOn(){return tal('wrack')>0&&!!S.spells.drainsoul&&S.mode!=='life'&&S.eatT<=0&&S.corpse<=0;}
@@ -836,7 +837,9 @@ function dmgTakenMult(){
 const SSTONE_CD=3600; // a Soulstone that saves you cannot be made again for an hour
 const SHIELD_DUR=20; // seconds the Sacrifice shield lasts (the cooldown is longer)
 function shieldMax(){return maxHp()*(.3+.1*tal('impvw'));}
-function takeDamage(d,raw){if(!raw&&tal('darkbargain')){const def=d*Math.min(.9,TN.dbFrac*tal('darkbargain'));const dots=(S.spells.corr?1:0)+(S.spells.immo?1:0)+(S.coaT>0?1:0);S.bargain=(S.bargain||0)+def*Math.max(0,1-TN.dbEat*dots);d-=def;}if(S.shield>0){const a=Math.min(S.shield,d);S.shield-=a;d-=a;}S.hp-=d;}
+function takeDamage(d,raw){if(!raw&&tal('darkbargain')){const def=d*Math.min(.9,TN.dbFrac*tal('darkbargain'));const dots=(S.spells.corr?1:0)+(S.spells.immo?1:0)+(S.coaT>0?1:0);S.bargain=(S.bargain||0)+def*Math.max(0,1-TN.dbEat*dots);d-=def;}if(S.backlash>0){const a=Math.min(S.backlash,d);S.backlash-=a;d-=a;}if(S.shield>0){const a=Math.min(S.shield,d);S.shield-=a;d-=a;}S.hp-=d;}
+// Backlash fades by blDecay of its size each second
+function backlashTick(dt){if(S.backlash>0)S.backlash=Math.max(0,S.backlash*(1-Math.min(1,TN.blDecay*dt))-.01);}
 // Dark Bargain: the deferred damage drains away evenly over dbDur seconds
 function bargainTick(dt){if(!(S.bargain>0))return;const t=Math.min(S.bargain,S.bargain*dt/TN.dbDur+.001);S.bargain-=t;takeDamage(t,true);}
 function demonCost(d){const c={0:Math.floor(d.cost*Math.pow(1.15,S.demons[d.id])*(tal('feldom')?.85:1)*(1-.06*tal('msumm')))};if(d.extra)Object.assign(c,d.extra);return c;}
@@ -1311,7 +1314,7 @@ function gainXp(x){if(S.lvl>=60)return;S.xp+=x;while(S.lvl<60&&S.xp>=xpNeed(S.lv
 function die(){
   const m=curMob();if(S.mode==='life'){S.mode='drain';S.lifeT=0;S.cds.drainlife=30;}
   if(S.sstone){S.sstone=false;S.cds.craftSs=SSTONE_CD;S.hp=maxHp()*.5;fly('Soulstone','#c77dff',null,null,false,'heal');fly('+'+fmt(Math.floor(S.hp)),'#6fcf3a',null,null,false,'heal');log('You died. The Soulstone pulled you back.','good');return;}
-  S.deaths++;S.hp=0;S.bargain=0;if(m.n==='Kobold Miner')S.flags.koboldDeath=true;
+  S.deaths++;S.hp=0;S.bargain=0;S.backlash=0;if(m.n==='Kobold Miner')S.flags.koboldDeath=true;
   S.corpseTotal=Math.round(Math.min(90,30+10*(S.deaths-1))*(perk('epicmount')?.25:perk('riding')?.5:1));S.corpse=S.corpseTotal;S.event=null;S.fighting=null;S.havoc=0;if(S.dg)dgLeave('death');spawn();
   log(`You died to ${m.n}. Your channel is down for ${S.corpseTotal}s; your demons keep draining.`,'bad');
 }
@@ -1322,7 +1325,7 @@ function pull(){if(S.soul<=0)return;
   S.clicks++;S.bolt=(S.bolt||0)+(Math.random()<.07*tal('dreach')?2:1)/clicksPerCast();
   if(S.bolt>=1-1e-9){S.bolt=0;boltLand();}
   else fly('casting…','#8a7aa8',null,null,true,'heal');}
-function boltLand(){bolts.push({t:0});let p=boltPower();if(Math.random()<critChance()){p*=tal('ruin')?2:1.5;fly('★ crit','#ff9c3a',null,null,true);}if(S.castSpell==='incin'&&tal('incinerate')&&S.spells.immo){p*=.85;tick('immo');}if(tal('havoc'))S.havoc+=p*.15;S.boltAcc=(S.boltAcc||0)+p;let n=0;while(S.boltAcc>=1&&S.soul>0){S.boltAcc-=1;tick('bolt');n++;}
+function boltLand(){bolts.push({t:0});if(tal('backlash'))S.backlash=Math.min(maxHp()*TN.blCap*tal('backlash'),(S.backlash||0)+maxHp()*TN.blAdd*tal('backlash'));let p=boltPower();if(Math.random()<critChance()){p*=tal('ruin')?2:1.5;fly('★ crit','#ff9c3a',null,null,true);}if(S.castSpell==='incin'&&tal('incinerate')&&S.spells.immo){p*=.85;tick('immo');}if(tal('havoc'))S.havoc+=p*.15;S.boltAcc=(S.boltAcc||0)+p;let n=0;while(S.boltAcc>=1&&S.soul>0){S.boltAcc-=1;tick('bolt');n++;}
   fly('Shadow Bolt'+(n>1?' ×'+n:''),'#c9a6ff',null,null,n===0,'dmg');}
 function lifeTapCost(){return maxHp()*(.2-.03*tal('ilt'));}
 function lifeTapShards(){return Math.round(Math.max(Math.ceil(S.lvl/6),Math.round(4*shardsPerSec()))*(1+.15*rank('lifetap')+.15*tal('ilt'))*(1+gearStat('spirit')/100));}
@@ -1382,7 +1385,7 @@ function loopBody(dt){
     dmgFlush(dt);
     if(S.soul>0){if(S.fear<=0)runAttacker(S,m,dt);
       (S.adds||[]).forEach(a=>{if(S.hp>0)runAttacker(a,addDef(a),dt);});
-      bargainTick(dt);
+      bargainTick(dt);backlashTick(dt);
       if(S.spells.autohs&&S.spells.hstone&&S.shards[1]>=3&&!(S.cds.hs>0)&&S.hp<maxHp()*.3)cast('hs');
       if(S.hp<=0)die();}
     // auto-eat when you are away: low health, nobody has touched the game for a minute, and the meal is ready
@@ -1567,6 +1570,7 @@ function auraTip(k){
     case 'enrage':return ['Enraged','The target hits twice as hard. Interrupt the wind-up next time with Fear, Death Coil or Spell Lock.',`${Math.ceil(S.enrageT)}s left`];
     case 'darmor':return ['Demon Armor',`Always on. Regenerates ${pct(armorRegen())}% of your health every 2 seconds and cuts all damage you take by 10%.`,'Higher ranks at the trainer.'];
     case 'sstone':return ['Soulstone','If you die you come straight back at half health and skip the corpse run. Used up when it saves you.',''];
+    case 'backlash':return ['Backlash',`Absorbs ${Math.ceil(S.backlash||0)} damage. Every Shadow Bolt or Incinerate adds to it; it fades fast when you stop casting.`,'From Backlash (Destruction).'];
     case 'bargain':return ['Dark Bargain',`${Math.ceil(S.bargain||0)} damage deferred, draining into your health over the next few seconds.`,'From Dark Bargain (Affliction).'];
     case 'shield':return ['Sacrifice shield',`Absorbs damage before your health does. ${Math.ceil(S.shield)} left, fades in ${Math.ceil(Math.max(0,S.shieldT||0))}s.`,'From sacrificing a Voidwalker.'];
     case 'dlife':return ['Drain Life',`Heals you while it channels, about ${Math.round((.4+.05*rank('drainlife'))*100)}% of your health over the full 6 seconds. No shards from anything until it ends.`,`${Math.ceil(S.lifeT||0)}s left. Press its action bar button to stop early.`];
@@ -1635,7 +1639,7 @@ function render(){
   $('drainrow').style.display=S.spells.drainsoul?'':'none';$('castbar').className='cast'+(S.mode==='life'?' life':'');$('castbar').style.width=(S.mode==='life'?Math.min(100,(6-(S.lifeT||0))/6*100):Math.min(100,((S.chanN||0)+Math.min(1,S.prog))/5*100))+'%';
   setText('castlbl',S.corpse>0?'Dead':S.camping?'Resting by the fire':S.eatT>0?'Eating':(S.mode==='life'?'Drain Life — no shards while this runs':chanName()));
   setHTML('auras',(S.spells.corr?'<span class="dot sh" data-tip="corr">Corruption</span>':'')+(S.spells.immo?'<span class="dot fi" data-tip="immo">Immolate</span>':'')+(hasCurse('cow')?'<span class="dot cu" data-tip="cow">Weakness</span>':'')+(hasCurse('coe')?'<span class="dot cu" data-tip="coe">Elements</span>':'')+(hasCurse('coex')?'<span class="dot cu" data-tip="coex">Exhaustion</span>':'')+(S.coaT>0?`<span class="dot cu" data-tip="coa">Agony ${Math.ceil(S.coaT)}s</span>`:'')+(S.fear>0?`<span class="dot" data-tip="fear">Feared ${Math.ceil(S.fear)}s</span>`:'')+(S.enrageT>0?`<span class="dot fi" data-tip="enrage">Enraged ${Math.ceil(S.enrageT)}s</span>`:''));
-  setHTML('pauras',(S.spells.darmor?'<span class="dot sh" data-tip="darmor">Demon Armor</span>':'')+(S.sstone?'<span class="dot gd" data-tip="sstone">Soulstone</span>':'')+(S.shield>0?`<span class="dot" data-tip="shield" style="border-color:#7fb0ff">Shield ${Math.ceil(S.shield)}</span>`:'')+(S.bargain>=1?`<span class="dot" data-tip="bargain" style="border-color:#b07fff">Bargain −${Math.ceil(S.bargain)}</span>`:'')+(S.mode==='life'?`<span class="dot cu" data-tip="dlife">Drain Life ${Math.ceil(S.lifeT||0)}s</span>`:'')+(S.camping?`<span class="dot gd" data-tip="camping">Resting ${Math.ceil(S.eatT)}s</span>`:S.eatT>0?`<span class="dot gd" data-tip="eat">Eating ${Math.ceil(S.eatT)}s</span>`:'')+((S.restedT||0)>0?`<span class="dot" data-tip="rested" style="border-color:#6fcf3a;color:#9fe87a">Well Rested ${Math.ceil(S.restedT/60)}m</span>`:'')+(S.conflagT>0?`<span class="dot fi" data-tip="conflag">Conflagrate ${Math.ceil(S.conflagT)}s</span>`:''));
+  setHTML('pauras',(S.spells.darmor?'<span class="dot sh" data-tip="darmor">Demon Armor</span>':'')+(S.sstone?'<span class="dot gd" data-tip="sstone">Soulstone</span>':'')+(S.shield>0?`<span class="dot" data-tip="shield" style="border-color:#7fb0ff">Shield ${Math.ceil(S.shield)}</span>`:'')+(S.bargain>=1?`<span class="dot" data-tip="bargain" style="border-color:#b07fff">Bargain −${Math.ceil(S.bargain)}</span>`:'')+(S.backlash>=1?`<span class="dot fi" data-tip="backlash">Backlash ${Math.ceil(S.backlash)}</span>`:'')+(S.mode==='life'?`<span class="dot cu" data-tip="dlife">Drain Life ${Math.ceil(S.lifeT||0)}s</span>`:'')+(S.camping?`<span class="dot gd" data-tip="camping">Resting ${Math.ceil(S.eatT)}s</span>`:S.eatT>0?`<span class="dot gd" data-tip="eat">Eating ${Math.ceil(S.eatT)}s</span>`:'')+((S.restedT||0)>0?`<span class="dot" data-tip="rested" style="border-color:#6fcf3a;color:#9fe87a">Well Rested ${Math.ceil(S.restedT/60)}m</span>`:'')+(S.conflagT>0?`<span class="dot fi" data-tip="conflag">Conflagrate ${Math.ceil(S.conflagT)}s</span>`:''));
   setText('pname',`You · Lv ${S.lvl}`);setText('pstate',S.corpse>0?'dead':S.eatT>0?'resting':S.mode==='life'?'draining life':'in combat');document.getElementById('pframe').classList.toggle('dead',S.corpse>0);
   const evKey=S.event?(S.fighting==='ev'?'f':'a'):'';if(evKey!==(render.evKey||'')){render.evKey=evKey;$('event').innerHTML=evKey==='a'?`<div class="event" style="flex-direction:column;align-items:stretch"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>🔥 An Infernal is here. 10 shards, Epic chance, 15% of a level, hits hard. <b id="evt"></b></span><button data-a="face">Face it</button></div><div class="evbar"><div id="evfill"></div></div></div>`:(evKey==='f'?`<div class="event" style="flex-direction:column;align-items:stretch"><div style="display:flex;justify-content:space-between;align-items:center"><span>🔥 Fighting the Infernal. It stays until one of you falls.</span><button data-a="run">Run</button></div></div>`:'');}
   if(S.event&&$('evt')){$('evt').textContent=Math.ceil(S.event.t)+'s';const ef=$('evfill');if(ef)ef.style.width=(S.event.t/45*100)+'%';}
