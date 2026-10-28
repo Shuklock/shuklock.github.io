@@ -1,41 +1,48 @@
 # Shardlock Idle art
 
-Every sprite is a PNG strip in this folder: frames side by side, all the same size, transparent background, drawn facing right. The game flips enemies to face left. `ART` in index.html says how many frames a strip has and how fast it plays; a `mob_*.png` with no entry is treated as 2 frames at 4 fps.
+The sprites are Gemini pixel art. Gemini paints each one on a flat magenta background, working from WoW screenshots and the Felheart warlock reference. `tools/grid.py` then snaps the render to its pixel grid. Black outlines stay on. Anything with no Gemini version yet gets a placeholder from `tools/mk.py`.
 
-One pixel size for the whole scene (2–5 screen pixels per sprite pixel, from the stage height), so size things relative to each other in the source:
+| sprite | source | ART entry |
+|---|---|---|
+| `warlock.png` | Gemini | `frames:1, scale:.36` |
+| `pet_imp.png` | Gemini | `frames:1, scale:.32` |
+| `pet_vw.png` | Gemini | `frames:1, scale:.45` |
+| `pet_succ.png` | Gemini | `frames:1, scale:.38` |
+| `pet_felh.png`, `pet_inf.png`, `pet_doom.png` | mk.py placeholder | `frames:2, fps:2, scale:1.3–1.5` |
+| `mob_scorpid.png` | mk.py placeholder | none (mob default) |
 
-- Warlock: 20×29. Pets: 12–18 px wide, 10–22 tall. Regular enemies: 16–28 tall. Zone bosses: 36–48 tall (the game also scales elites ×1.5).
-- Feet on the bottom row. Horizontal centre is the sprite centre.
-- Two idle frames is enough for anything that stands still; hits and deaths are done by the engine (flash, squash, fade).
+## How the engine reads a sprite
+
+- Each file is a PNG strip: frames side by side, all the same size, on a transparent background.
+- Sprites face right. Enemies are flipped to face left; the warlock and pets are drawn as they are.
+- `ART` in index.html gives each sprite's `frames`, `fps` and `scale`. A `mob_*.png` with no entry counts as 2 frames at 4 fps with scale 1.
+- On-screen size is (sprite height × `scale`) × the scene pixel size (2–5, from the stage height). For example, the warlock is 151 px × .36 ≈ 54 units tall. Choose `scale` to place a new sprite against that: imp ≈ 36, voidwalker ≈ 52, succubus ≈ 44.
+- Put the feet on the bottom row and centre the figure horizontally.
+- The Shadow Bolt and Drain Soul beams start from fixed points on the warlock sprite: the hand at (−14, 90) and the staff tip at (47, 129), in sprite pixels from the feet centre. A new warlock render has to move these numbers in `drawScene` too.
+- Hits, deaths and bobbing are done by the engine. A still is enough.
 
 Names the engine looks for:
 
-- `warlock.png`, `warlock_channel.png`
+- `warlock.png`, plus an optional `warlock_channel.png`. The channel sprite needs the same size and anchors as `warlock.png` and its own ART entry, so leave it out until a Gemini channel pose exists.
 - `pet_imp.png`, `pet_vw.png`, `pet_succ.png`, `pet_felh.png`, `pet_inf.png`, `pet_doom.png`
-- `mob_<slug>.png` where slug is the enemy name lower-cased with non-letters as `_`: `mob_kobold_miner.png`, `mob_edwin_vancleef.png`, `mob_ragnaros.png`
+- `mob_<slug>.png`, where the slug is the enemy name lower-cased with non-letters turned into `_`. Examples: `mob_kobold_miner.png`, `mob_edwin_vancleef.png`, `mob_ragnaros.png`. A missing one draws the built-in silhouette for that mob family.
 
-Palette (16 colours, plus transparent). Fel green is the only bright colour; keep it for flames, eyes and glow.
+## Adding or replacing a sprite
 
-| key | hex | use |
-|---|---|---|
-| K | #0b0912 | outline |
-| N | #1a1433 | darkest navy |
-| P | #2d2459 | navy |
-| V | #4a3a8a | violet |
-| L | #7b5fd6 | lilac highlight |
-| G | #2fff6a | fel green |
-| g | #1b8a3c | fel dark |
-| Y | #c9ff8a | fel bright |
-| R | #7a2e1e | robe shadow |
-| r | #a8472a | robe |
-| o | #d9733a | orange / imp |
-| B | #e8d9b0 | bone |
-| S | #8a8fa8 | steel |
-| s | #555a70 | steel dark |
-| E | #ff4d4d | red eye |
-| b | #4878ff | blue |
+1. In Gemini, make a full-body pixel-art still on solid magenta (#ff00ff) with no ground shadow, facing right. If it comes out facing left, use `--flip` in step 2.
+2. Run `python3 tools/grid.py render.jpg pet_felh --preview`. This writes `drain-soul/art/pet_felh.png` and a 6× look in `tools/preview/` (not committed). If the grid is detected wrong, pass `--cell N`. For a render with no clean grid, `tools/clean.py render.jpg pet_felh --height 48` makes a quantized version instead.
+3. Set the sprite's `ART` entry to `{frames:1,fps:1,scale:S}`, using the height guide above.
+4. If you replaced `warlock.png` or `bg_durotar.jpg`, run `python3 tools/inline.py` so the base64 copies in index.html match. `--check` only reports.
 
-`mk.py` (repo root `tools/`) draws the first set from text grids using these keys. Edit a grid, run it, and the PNGs are regenerated. Replace any PNG with hand-drawn art at any time; the engine only cares about the strip layout.
+## Placeholders (`tools/mk.py`)
+
+`mk.py` draws 2-frame sprites from text grids for anything still waiting on Gemini art. It never writes the Gemini sprites. By default it also skips any PNG that already exists, so a Gemini file you drop in stays put.
+
+- `python3 tools/mk.py` writes only the placeholders that are missing.
+- `python3 tools/mk.py pet_inf --force` redraws one.
+- `--preview` writes a contact sheet to `tools/preview/`.
+
+Once a placeholder has a Gemini version, delete its grid from mk.py.
 
 ## Backdrops
 
