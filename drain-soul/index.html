@@ -190,7 +190,7 @@ h1,h2,h3,.gem-slot .n,.lvlline,#pname,#mname,.bar .lbl,#wintitle,.zonename{font-
 .bagslot.empty{opacity:.45;cursor:default}
 .bagslot.q0{border-color:#8a8a8a}.bagslot.q1{border-color:var(--c1)}.bagslot.q2{border-color:#4aa3ff}.bagslot.q3{border-color:var(--c3)}.bagslot.q4{border-color:var(--c4)}
 .bagslot.junk{border-color:#6a6a6a;color:#bdbdbd}
-.bagslot.dragsrc{opacity:.35}.bagslot.droptgt{outline:2px dashed var(--gold)}.dragghost{position:fixed;z-index:9999;pointer-events:none;opacity:.85;box-shadow:0 4px 14px #000a}
+.bagslot.dragsrc{opacity:.35}.bagslot.droptgt,.slot.droptgt{border-color:var(--gold)!important;background:rgba(255,209,56,.22);box-shadow:0 0 0 2px var(--gold),0 0 12px rgba(255,209,56,.55);opacity:1}.dragghost{position:fixed;z-index:9999;pointer-events:none;opacity:.85;box-shadow:0 4px 14px #000a}
 .bagslot .cnt{position:absolute;right:3px;bottom:1px;font-size:10px;color:#fff;text-shadow:0 1px 2px #000}
 .detail{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px}
 .treecols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
@@ -1409,10 +1409,14 @@ let bagDrag=null;
 $('tab').addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||e.button!==0)return;const b=e.target.closest('[data-a="selBag"]');if(!b)return;bagDrag={uid:+b.dataset.id,x:e.clientX,y:e.clientY,on:false,ghost:null};},true);
 window.addEventListener('pointermove',e=>{if(!bagDrag)return;if(!bagDrag.on){if(Math.hypot(e.clientX-bagDrag.x,e.clientY-bagDrag.y)<6)return;const src=$('tab').querySelector(`[data-a="selBag"][data-id="${bagDrag.uid}"]`);if(!src){bagDrag=null;return;}bagDrag.on=true;hideTip();const g=src.cloneNode(true);g.classList.remove('sel');g.classList.add('dragghost');g.style.width=src.offsetWidth+'px';g.style.height=src.offsetHeight+'px';document.body.appendChild(g);bagDrag.ghost=g;src.classList.add('dragsrc');}
   bagDrag.ghost.style.left=(e.clientX-bagDrag.ghost.offsetWidth/2)+'px';bagDrag.ghost.style.top=(e.clientY-bagDrag.ghost.offsetHeight/2)+'px';
-  document.querySelectorAll('.bagslot.droptgt').forEach(x=>x.classList.remove('droptgt'));const t=document.elementFromPoint(e.clientX,e.clientY);const ts=t&&t.closest('[data-pos],[data-a="selSlot"],[data-eqslot]');if(ts&&$('tab').contains(ts))ts.classList.add('droptgt');});
+  bagDrag.px=e.clientX;bagDrag.py=e.clientY;markDrop();});
+// the slot a dragged item would land in: any bag or bank slot except its own, or the worn slot that takes it
+function dropTarget(d){const t=document.elementFromPoint(d.px,d.py);const ts=t&&$('tab').contains(t)&&t.closest('[data-pos],[data-a="selSlot"],[data-eqslot]');if(!ts)return null;
+  if(ts.dataset.pos)return ts.dataset.id&&+ts.dataset.id===d.uid?null:ts;const it=findItem(d.uid)[0];return it&&!it.junk&&it.slot===(ts.dataset.eqslot||ts.dataset.id)?ts:null;}
+function markDrop(){document.querySelectorAll('.droptgt').forEach(x=>x.classList.remove('droptgt'));if(!bagDrag||!bagDrag.on)return;const ts=dropTarget(bagDrag);if(ts)ts.classList.add('droptgt');const src=$('tab').querySelector(`[data-a="selBag"][data-id="${bagDrag.uid}"]`);if(src)src.classList.add('dragsrc');}
 function endBagDrag(e){if(!bagDrag)return;const d=bagDrag;bagDrag=null;if(!d.on){if(e){selItem={where:'bag',uid:d.uid};tabDirty=true;}return;}if(d.ghost)d.ghost.remove();document.querySelectorAll('.dragsrc,.droptgt').forEach(x=>x.classList.remove('dragsrc','droptgt'));
-  const t=e&&document.elementFromPoint(e.clientX,e.clientY);const ts=t&&$('tab').contains(t)&&t.closest('[data-pos],[data-a="selSlot"],[data-eqslot]');
-  if(ts){if(ts.dataset.pos)moveItem(d.uid,ts.dataset.where,+ts.dataset.pos);else{const it=findItem(d.uid)[0];if(it&&!it.junk&&it.slot===(ts.dataset.eqslot||ts.dataset.id))equipFromBag(d.uid);}}
+  if(e){d.px=e.clientX;d.py=e.clientY;}const ts=e&&dropTarget(d);
+  if(ts){if(ts.dataset.pos)moveItem(d.uid,ts.dataset.where,+ts.dataset.pos);else equipFromBag(d.uid);}
   tabDirty=true;}
 window.addEventListener('pointerup',endBagDrag);window.addEventListener('pointercancel',()=>endBagDrag(null));
 $('tab').addEventListener('contextmenu',e=>{const b=e.target.closest('[data-a="selBag"],[data-a="selSlot"]');if(!b)return;e.preventDefault();if(b.dataset.a==='selBag')quickSell(+b.dataset.id,b);else{const it=S.gear[b.dataset.id];if(it){it.uid=++S.uid;if(addToBag(it)){delete S.gear[b.dataset.id];S.hp=Math.min(S.hp,maxHp());}selItem=null;tabDirty=true;}}});
@@ -1623,7 +1627,7 @@ function render(){
   {const db=$('hudBR').querySelector('[data-win="demons"]');const can=DEMONS.some(d=>S.lvl>=d.lvl&&((S.demons[d.id]<d.max&&canAfford(demonCost(d)))||canEmp(d)));const dk='d'+can;if(db.dataset.k!==dk){db.dataset.k=dk;let st=db.querySelector('.star');if(can){if(!st){st=document.createElement('span');st.className='star';st.textContent='★';db.appendChild(st);}db.classList.add('ready');}else{if(st)st.remove();db.classList.remove('ready');}}}
   {const tb=$('hudBR').querySelector('[data-win="talents"]');const av=talPtsAvail();const key='t'+av;if(tb.dataset.k!==key){tb.dataset.k=key;let bd=tb.querySelector('.badge');if(av>0){if(!bd){bd=document.createElement('span');bd.className='badge';tb.appendChild(bd);}bd.textContent=av;tb.classList.add('glow');}else{if(bd)bd.remove();tb.classList.remove('glow');}}}
   renderTrainerHead();
-  if(winOpen&&(tabDirty||(frame%60===0&&!(document.activeElement&&$('tab').contains(document.activeElement)&&document.activeElement.tagName==='INPUT')))){renderTab();tabDirty=false;}
+  if(winOpen&&(tabDirty||(frame%60===0&&!(document.activeElement&&$('tab').contains(document.activeElement)&&document.activeElement.tagName==='INPUT')))){renderTab();markDrop();tabDirty=false;}
 }
 // respec cost climbs with use (1 Rare, 5 Rares, 1 Epic, 5 Epics) and drops one step every 4 hours
 const RESPEC_COSTS=[{2:1},{2:5},{3:1},{3:5},{3:5}];
