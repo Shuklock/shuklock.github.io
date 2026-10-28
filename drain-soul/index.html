@@ -337,7 +337,7 @@ const RAR=['Common','Uncommon','Rare','Epic','Legendary'];
 const RCOL=['#bdbdbd','#1eff00','#4aa3ff','#a335ee','#ff8000'];
 const IS_TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;
 // ---------- content ----------
-// ---------- dungeons: a fixed chain of pulls ending in a boss. No eating inside, death ends the run, 30 minute lockout ----------
+// ---------- dungeons: a fixed chain of pulls ending in a boss. No eating inside, death ends the run, no lockouts ----------
 const DUNGEONS=[
  {id:'dm',name:'The Deadmines',band:[17,24],zone:1,lvl:21,tier:0,boss:{n:'Edwin VanCleef',l:26},steps:[['Defias Miner'],['Defias Pirate','Defias Miner'],['Goblin Engineer'],['Defias Pirate','Defias Pirate','Defias Miner'],'boss']},
  {id:'sfk',name:'Shadowfang Keep',band:[22,30],zone:2,lvl:26,tier:0,boss:{n:'Archmage Arugal',l:32},steps:[['Worgen Guard'],['Haunting Spirit'],['Shadowfang Moonwalker','Worgen Guard'],['Haunting Spirit','Haunting Spirit'],['Worgen Guard','Worgen Guard','Shadowfang Moonwalker'],'boss']},
@@ -366,8 +366,7 @@ function kzFloorDone(){const f=S.dg.floor;const boss=f%5===0;
   S.kz.marks=(S.kz.marks||0)+f;fly('+'+f+' Tower Marks','#c9a4ff',null,null,false,'shard');
   if(f>(S.kz.best||0))S.kz.best=f;if(boss)log(`Floor ${f}: ${kzFloorDef(f).boss.n} falls. Checkpoint.`,'lvl');else log(`Floor ${f} cleared.`,'good');
   S.dg.floor=f+1;S.dg.step=0;dgStartStep();}
-const DG_LOCK=1800;const DG_RETRY=300; // Heroic and Mythic: 30 min after a clear; every tier: 5 min after a death or walking out
-function dgLockFor(tier,reason){return reason==='done'&&tier>0?DG_LOCK:DG_RETRY;} // Normal is always 5 min, even after a clear
+// no dungeon lockouts on any tier: run them back to back. The big Mythic rewards come with the first clear of each level instead
 // Normal / Heroic / Mythic. Heroic costs an Epic shard at the door; Mythic is free; both scale every enemy to level 58–60 and pay the same sets at Epic quality
 const DG_TIERS=[
  {name:'Normal',cost:null,lvl:null,hpm:1,dm:1,setQ:2,setIlvl:null,setChance:.25,bossAb:2},
@@ -379,6 +378,14 @@ const DG_TIERS=[
 function mythicIlvl(n){return 60+2*Math.min(n-1,19)+Math.max(0,n-20);}
 function mythicTier(n){n=Math.max(1,n|0);const b=DG_TIERS[2],k=n-1;return Object.assign({},b,{name:'Mythic '+n,ml:n,setIlvl:mythicIlvl(n),lvl:b.lvl+Math.min(3,Math.floor(k/10)),hpm:Math.round(b.hpm*Math.pow(1.12,k)*100)/100,dm:Math.round(b.dm*(1+.06*k)*100)/100});}
 function mythicBest(d){return ((S.mythic||{})[d.id])||0;}
+// Molten Core Heat: an endless ladder for the whole zone, like Mythic. Heat 1 is Molten Core as it always was; killing Ragnaros at
+// Heat N opens N+1. Each Heat adds Mythic's growth (+12% soul, +6% damage), enemies creep up 3 levels over the first 30 Heats,
+// and trash pays 10% more shards and XP per Heat. Ragnaros has no lockout; his Legendary and the bonus Epics come with the first kill at each Heat
+let _mcz=null;function mcZ(){return _mcz!=null?_mcz:(_mcz=ZONES.findIndex(z=>z.name==='Molten Core'));}
+function heatBest(){return (S.heat&&S.heat.best)||0;}
+function heatSel(){const top=heatBest()+1;const on=S.heat&&S.heat.on;return Math.max(1,Math.min(top,on||top));}
+function heatOf(){return S.zone===mcZ()&&!S.dg?heatSel():0;}
+function heatMob(m,h){const k=h-1;if(k<=0)return m;m.l+=Math.min(3,Math.floor(k/10));m.hpm=m.hpm*Math.pow(1.12,k);m.dm=m.dm*(1+.06*k);m.pay=1+.1*k;m.heat=h;return m;}
 function tierOf(tier,ml){return tier===2?mythicTier(ml||1):DG_TIERS[tier||0];}
 function dgTierOf(){if(!S.dg)return DG_TIERS[0];return S.dg.kz?kzTier(S.dg.floor):tierOf(S.dg.tier||0,S.dg.ml);}
 function dgKey(d,tier){return tier?d.id+':'+tier:d.id;}
@@ -735,13 +742,13 @@ function freshState(keep){
   const lp=keep?keep.legacy:{points:0,perks:{}};
   const s={lvl:1,xp:0,hp:100,shards:[0,0,0,0,0],life:0,souls:0,clicks:0,deaths:0,corpse:0,corpseTotal:0,
     demons:{},emp:{},spells:{darmor:true},tal:{},ranks:{},zone:0,mob:0,cleared:[],cds:{},curse:null,hs:0,sstone:false,mode:'drain',
-    soul:0,soulMax:1,prog:0,petProg:0,corrT:0,fear:0,conflagT:0,havoc:0,shield:0,eatT:0,lifeT:0,mobRar:0,coaBoost:false,autosell:{},castSpell:'bolt',kz:{best:0,marks:0,bless:0},mythic:{},spemp:{},powAcc:0,autoT:0,lifeTick:0,dg:null,dgPack:[],dgLock:{},dgCleared:{},dgReturn:null,cast:null,castCd:8,enrageT:0,swingT:0,flurryN:0,alt:0,adds:[],mobReturn:null,fearPull:false,lastInput:Date.now(),
+    soul:0,soulMax:1,prog:0,petProg:0,corrT:0,fear:0,conflagT:0,havoc:0,shield:0,eatT:0,lifeT:0,mobRar:0,coaBoost:false,autosell:{},castSpell:'bolt',kz:{best:0,marks:0,bless:0},mythic:{},heat:{best:0,on:null},spemp:{},powAcc:0,autoT:0,lifeTick:0,dg:null,dgPack:[],dgLock:{},dgCleared:{},dgReturn:null,cast:null,castCd:8,enrageT:0,swingT:0,flurryN:0,alt:0,adds:[],mobReturn:null,fearPull:false,lastInput:Date.now(),
     event:null,eventT:180+Math.random()*120,fighting:null,bossDead:{},
     seen:[false,false,false,false,false],flags:{},ach:keep?keep.ach:{},prestiges:keep?keep.prestiges:0,legacy:lp,last:Date.now(),
     gear:{},lootQ:[],bag:[],bags:0,uid:0,lastDrop:null,account:keep&&keep.account?keep.account:{gold:0,perks:{}}};
   DEMONS.forEach(d=>s.demons[d.id]=0);
   if(s.account.perks.books){s.spells.corr=true;s.spells.immo=true;s.spells.cow=true;}
-  if(keep&&keep.mythic)s.mythic=keep.mythic;if(keep&&keep.kz)s.kz=keep.kz;
+  if(keep&&keep.mythic)s.mythic=keep.mythic;if(keep&&keep.heat)s.heat={best:keep.heat.best||0,on:null};if(keep&&keep.kz)s.kz=keep.kz;
   if(s.account.perks.handme2)s.gear.chest={slot:'chest',name:'Woolen Robe of Shadow Wrath',ilvl:15,q:1,stats:{power:6,stam:5}};
   if(lp.perks.veteran){s.lvl=10;s.spells.drainsoul=true;}
   if(lp.perks.handme)s.demons.imp=5;
@@ -872,11 +879,11 @@ function xpNeed(l){return Math.floor(150*Math.pow(1.27,l-1)*xpStretch(l));}
 function curMob(){
   if(S.event&&S.fighting==='ev')return {n:'Infernal',l:S.lvl+2,hpm:5,dm:2,shards:10,ev:true,w:[20,30,28,15,7]};
   if(S.dg)return dgMob();
-  const z=ZONES[S.zone];if(S.mob===4)return Object.assign({elite:true,hpm:10,dm:2.5,shards:5},z.elite);const rr=S.mobRar||0;return Object.assign({hpm:[1,1.5,2.5][rr],dm:[1,1.25,1.5][rr],shards:1,rar:rr},z.mobs[S.mob]);}
+  const z=ZONES[S.zone];const h=heatOf();if(S.mob===4)return heatMob(Object.assign({elite:true,hpm:10,dm:2.5,shards:5},z.elite),h);const rr=S.mobRar||0;return heatMob(Object.assign({hpm:[1,1.5,2.5][rr],dm:[1,1.25,1.5][rr],shards:1,rar:rr},z.mobs[S.mob]),h);}
 function dgDef(){return S.dg.kz?kzFloorDef(S.dg.floor):DUNGEONS[S.dg.id];}
 function dgLvl(d){return Math.max(d.lvl,Math.min(S.lvl,d.band[1]));}
 function dgMob(){const d=dgDef();const T=dgTierOf();const st=d.steps[S.dg.step];if(st==='boss'){const b=Object.assign({elite:true,dg:true,fearImm:!!d.fearImm||S.dg.tier>0,hpm:8*T.hpm,dm:2.2*T.dm,shards:4},d.boss);if(T.lvl)b.l=T.lvl+(S.dg.tier>=2?4:2);else if(!d.kz)b.l=Math.max(d.boss.l,dgLvl(d)+2);if(S.dg.kz)b.hpm=6*T.hpm;return b;}const cur=(S.dgPack&&S.dgPack[0])||{n:st[0],l:dgLvl(d)};const m=Object.assign({hpm:1.3*T.hpm,dm:1.2*T.dm,shards:1,rar:0,dg:true},cur);if(T.lvl)m.l=T.lvl;else if(!d.kz)m.l=dgLvl(d);return m;}
-function dgLock(id){const t=(S.dgLock||{})[id]||0;return Math.max(0,t-Date.now()/1000);}
+function dgLock(id){return 0;}
 // Heroic needs a Normal clear of that dungeon, Mythic a Heroic clear
 function dgTierOpen(d,tier){if(tier===0)return true;return (S.dgCleared[dgKey(d,tier-1)]||0)>0;}
 function dgStartStep(){const d=dgDef();const st=d.steps[S.dg.step];S.adds=[];S.dgPack=[];S.mobReturn=null;
@@ -888,20 +895,22 @@ function dgEnter(i,tier,ml){tier=tier||0;const d=DUNGEONS[i];if(tier===2){ml=Mat
   if(T.cost!=null){if(S.shards[T.cost]<1){log(`${T.name} needs one ${RAR[T.cost]} shard at the door.`,'bad');return;}S.shards[T.cost]-=1;fly(`−1 ${RAR[T.cost]}`,RCOL[T.cost],null,null,false,'shard');}
   if(S.fighting==='ev'){S.fighting=null;}if(S.eatT>0){S.eatT=0;S.camping=false;}
   S.dg={id:i,step:0,tier};if(tier===2)S.dg.ml=ml;S.dgReturn={zone:S.zone,mob:S.mob};
-  log(`You enter ${tier?T.name+' ':''}${d.name}. No eating, no camp, and a death ends the run. ${tier?'Clearing it locks it for 30 minutes; failing it only for 5.':'It locks for 5 minutes when you clear or leave it.'}`,'lvl');dgStartStep();buildPickers();}
+  log(`You enter ${tier?T.name+' ':''}${d.name}. No eating, no camp, and a death ends the run.`,'lvl');dgStartStep();buildPickers();}
 function dgLeave(reason){if(!S.dg)return;if(S.dg.kz){const f=S.dg.floor;const r=S.dgReturn||{zone:2,mob:0};S.dg=null;S.dgPack=[];S.adds=[];S.mobReturn=null;S.zone=r.zone;S.mob=Math.min(3,r.mob||0);log(reason==='death'?`You fall on floor ${f} of Karazhan. Best: ${S.kz.best||0}.`:`You leave Karazhan on floor ${f}.`,reason==='death'?'bad':'');buildPickers();if(reason!=='death')spawn();return;}
-  const d=dgDef();const tn=S.dg.tier?dgTierOf().name+' ':'';const lockS=dgLockFor(S.dg.tier||0,reason);S.dgLock[dgKey(d,S.dg.tier||0)]=Date.now()/1000+lockS;const r=S.dgReturn||{zone:d.zone,mob:0};S.dg=null;S.dgPack=[];S.adds=[];S.mobReturn=null;S.zone=r.zone;S.mob=Math.min(3,r.mob||0);
-  if(reason==='death')log(`Your run through ${tn}${d.name} ends. You can try again in ${DG_RETRY/60} minutes.`,'bad');else if(reason==='done')log(`${tn}${d.name} cleared. Locked for ${lockS/60} minutes.`,'lvl');else log(`You leave ${tn}${d.name}. You can go back in ${DG_RETRY/60} minutes.`);
+  const d=dgDef();const tn=S.dg.tier?dgTierOf().name+' ':'';const r=S.dgReturn||{zone:d.zone,mob:0};S.dg=null;S.dgPack=[];S.adds=[];S.mobReturn=null;S.zone=r.zone;S.mob=Math.min(3,r.mob||0);
+  if(reason==='death')log(`Your run through ${tn}${d.name} ends. You can go straight back in.`,'bad');else if(reason==='done')log(`${tn}${d.name} cleared.`,'lvl');else log(`You leave ${tn}${d.name}.`);
   buildPickers();if(reason!=='death')spawn();}
 function dgKill(m){if(S.dg.kz){if(Math.random()<.5)giveShard(1,'(tower)');S.dgPack.shift();if(S.dgPack.length){S.adds.shift();spawn(true);S.mobRar=0;const nm=curMob();S.soulMax=soulNeed(nm);S.soul=S.soulMax;}else kzFloorDone();return;}
   const d=dgDef();const tier=S.dg.tier||0;const T=dgTierOf();
+  // Mythic: only the first clear of a level pays its milestones and the guaranteed set piece; repeats drop one 25% of the time
+  const firstMyth=tier===2&&(S.dg.ml||1)>mythicBest(d);const setCh=tier===2&&!firstMyth?.25:T.setChance;
   if(m.elite){S.dgCleared[dgKey(d,tier)]=(S.dgCleared[dgKey(d,tier)]||0)+1;
     // the boss always drops a Rare, and a set piece one time in four; BRD and UBRS also pay an Epic shard
     {const needy=SLOTS.map(x=>x[0]).filter(sl=>!S.gear[sl]||S.gear[sl].q<2);const slot=(needy.length&&Math.random()<.6?needy:SLOTS.map(x=>x[0]))[Math.floor(Math.random()*(needy.length&&Math.random()<.6?needy.length:SLOTS.length))]||'chest';const it=makeItem(tier===2?T.setIlvl:m.l,2,slot);if(addToBag(it)){S.lastDrop=it.uid;log(`${m.n} dropped <span class="t2">${it.name}</span>.`,'loot');}}
-    if(Math.random()<T.setChance){const have=['head','chest','legs','hands'].filter(sl=>!(S.gear[sl]&&S.gear[sl].set===DG_SETS[d.tier]&&(S.gear[sl].tier||0)>=tier));const pool=have.length&&Math.random()<.7?have:['head','chest','legs','hands'];const sl=pool[Math.floor(Math.random()*pool.length)];const it=setPiece(DG_SETS[d.tier],sl,T.setIlvl||m.l,tier,T.setQ);if(addToBag(it)){S.lastDrop=it.uid;log(`${m.n} dropped <span class="t${it.q}">${it.name}</span> (${DG_SETS[d.tier]} set).`,'loot');}}
+    if(Math.random()<setCh){const have=['head','chest','legs','hands'].filter(sl=>!(S.gear[sl]&&S.gear[sl].set===DG_SETS[d.tier]&&(S.gear[sl].tier||0)>=tier));const pool=have.length&&Math.random()<.7?have:['head','chest','legs','hands'];const sl=pool[Math.floor(Math.random()*pool.length)];const it=setPiece(DG_SETS[d.tier],sl,T.setIlvl||m.l,tier,T.setQ);if(addToBag(it)){S.lastDrop=it.uid;log(`${m.n} dropped <span class="t${it.q}">${it.name}</span> (${DG_SETS[d.tier]} set).`,'loot');}}
     if(d.epicShard)giveShard(3,'(dungeon)');
-    // Mythic: opens the next level, and pays more the higher you go: an Epic shard per two levels, a Legendary every fifth
-    if(tier===2){const n=S.dg.ml||1;S.mythic=S.mythic||{};if(n>(S.mythic[d.id]||0)){S.mythic[d.id]=n;log(`Mythic ${n+1} ${d.name} is open.`,'lvl');}
+    // Mythic first clear: opens the next level and pays more the higher you go: an Epic shard per two levels, a Legendary every fifth
+    if(firstMyth){const n=S.dg.ml||1;S.mythic=S.mythic||{};S.mythic[d.id]=n;log(`Mythic ${n+1} ${d.name} is open.`,'lvl');
       for(let i=0;i<Math.floor(n/2);i++)giveShard(3,'(mythic)');if(n%5===0)giveShard(4,'(mythic)');}
     dgLeave('done');return;}
   // pack kill: an extra Uncommon half the time, then the next enemy in the pull or the next pull
@@ -911,8 +920,8 @@ function soulNeed(m){const d=Math.max(0,m.l-S.lvl);return Math.max(4,Math.round(
 function mobDps(m){const d=m.l-S.lvl;let diff=d>=0?Math.pow(1.3,d):Math.max(.5,Math.pow(1.15,d));if(d>5)diff*=1+.25*(d-5);return ((50+18*m.l)/40)*m.dm*diff*(CASTERS[m.n]?.8:1);}
 function greyLevel(l){return l<=5?0:l<40?l-5-Math.floor(l/10):l<60?l-5-Math.floor(l/5):l-9;}
 function lvlDiff(m){const d=m.l-S.lvl;if(m.l<=greyLevel(S.lvl))return 'grey';return d>=5?'red':d>=3?'orange':d>=-2?'yellow':'green';}
-function xpFor(m){const f={red:1.5,orange:1.25,yellow:1,green:.6,grey:0}[lvlDiff(m)];if(m.ev)return xpNeed(S.lvl)*.15;return 12*Math.pow(1.15,m.l-1)*f*(m.elite?6:1)*dangerPay(m)*(1+.2*leg('rested'))*(S.lvl>=20?1+.25*leg('oldhand'):1)*((S.restedT||0)>0?1.5:1);}
-function deathShards(m){if(noShards(m))return 0;const f={red:1.5,orange:1.25,yellow:1,green:.6,grey:0}[lvlDiff(m)];return Math.max(1,Math.round((1+Math.floor(m.l/10))*m.shards*f*dangerPay(m)))+tal('soulharvest');}
+function xpFor(m){const f={red:1.5,orange:1.25,yellow:1,green:.6,grey:0}[lvlDiff(m)];if(m.ev)return xpNeed(S.lvl)*.15;return 12*Math.pow(1.15,m.l-1)*f*(m.elite?6:1)*dangerPay(m)*(1+.2*leg('rested'))*(S.lvl>=20?1+.25*leg('oldhand'):1)*((S.restedT||0)>0?1.5:1)*(m.pay||1);}
+function deathShards(m){if(noShards(m))return 0;const f={red:1.5,orange:1.25,yellow:1,green:.6,grey:0}[lvlDiff(m)];return Math.max(1,Math.round((1+Math.floor(m.l/10))*m.shards*f*dangerPay(m)*(m.pay||1)))+tal('soulharvest');}
 // Rarity sources. Ticks on anything roll from the zone's trash table (Common/Uncommon only).
 // Death shards roll from the source table: trash = zone table; elites = Rare source, Epics from Duskwood on; Infernals = Epic source scaling with level; Ragnaros = raid boss, Legendary chance.
 // ---------- mob rarity: the mob decides the shard tier ----------
@@ -1258,7 +1267,12 @@ function flushShardFly(){for(let r=0;r<5;r++){if(pendingShards[r]>0){fly('+'+pen
 let landKey='';
 
 // ---------- the drain ----------
-function bossLock(z){const t=(S.bossDead||{})[z]||0;return Math.max(0,t-Date.now()/1000);}
+function bossLock(z){if(z===mcZ())return 0;const t=(S.bossDead||{})[z]||0;return Math.max(0,t-Date.now()/1000);}
+// Ragnaros: the first kill at each Heat opens the next one and pays the big drops: a Legendary at Heat 1 and every fifth Heat,
+// one Epic plus one per two Heats. Repeat kills pay Rares and the ordinary shards only, since he has no lockout
+function ragFirstKill(m){const n=m.heat||1;if(n<=heatBest())return;S.heat=S.heat||{best:0,on:null};S.heat.best=n;
+  if(n===1||n%5===0)giveShard(4,'(Heat '+n+')');for(let i=0;i<1+Math.floor(n/2);i++)giveShard(3,'(Heat '+n+')');
+  log(`Molten Core Heat ${n+1} is open.`,'lvl');if(S.heat.on)S.heat.on=null;}
 function spawn(keep){S.cast=null;S.castCd=2+Math.random()*3;S.enrageT=0;S.swingT=Math.max(0,swingTime(curMob())-FIRST_SWING);S.flurryN=0;S.alt=0;S.fearPull=false;if(!keep){S.adds=[];if(S.mobReturn!=null){S.mob=S.mobReturn;S.mobReturn=null;}}const base=curMob();if(!base.elite&&!base.ev&&!base.dg){S.mobRar=rollMobRarity(base);if(S.mobRar===2){log(`A rare ${base.n} appears! Blue shards and better loot, if you can take it.`,'loot');fly('Rare!','#4aa3ff');}else if(S.mobRar===1)fly('Uncommon','#1eff00',null,null,true);}else S.mobRar=0;
   const m=curMob();S.soulMax=soulNeed(m);S.soul=S.soulMax;
   if(S.havoc>0){S.soul=Math.max(1,S.soul-S.havoc);S.havoc=0;}}
@@ -1301,7 +1315,7 @@ function complete(){
   if(n>0&&tal('pyro')&&Math.random()<.12*tal('pyro'))n++;
   if(n&&S.spells.immo&&Math.random()<.25+.06*tal('cataclysm')+.08*rank('immo'))n++;
   if(m.elite&&n>0){ // boss kill: one Epic (one Legendary too for Ragnaros), a few Rares, the rest Common/Uncommon
-    const rares=1+Math.floor(S.zone/3)+(Math.random()<.5?1:0);if(!m.dg)giveShard(3,'(boss)');if(m.n==='Ragnaros')giveShard(4,'(boss)');
+    const rares=1+Math.floor(S.zone/3)+(Math.random()<.5?1:0);if(!m.dg&&m.n!=='Ragnaros')giveShard(3,'(boss)');if(m.n==='Ragnaros')ragFirstKill(m);
     for(let i=0;i<rares;i++)giveShard(2,'(boss)');
     for(let i=0;i<n;i++)giveShard(Math.random()<.4?1:0,'(boss)');
   }else for(let i=0;i<n;i++)giveShard(rollRarity(m,'death'),'(soul)');
@@ -1310,7 +1324,7 @@ function complete(){
   if(m.ev){S.flags.infernal=true;S.event=null;S.fighting=null;log('The Infernal crumbles.','good');{const sw=document.getElementById('soulwrap');sw.classList.remove('pulse');void sw.offsetWidth;sw.classList.add('pulse');}spawn(!!S.dg);return;}
   if(S.dg){{const sw=document.getElementById('soulwrap');sw.classList.remove('pulse');void sw.offsetWidth;sw.classList.add('pulse');}dgKill(m);return;}
   if(m.elite&&!S.cleared[S.zone]){S.cleared[S.zone]=true;buildPickers();log(`${m.n}’s soul is yours. ${ZONES[S.zone+1]?ZONES[S.zone+1].name+' is open.':'The world is yours.'}`,'lvl');}
-  if(m.elite){const lock=m.n==='Ragnaros'?7200:1200;S.bossDead[S.zone]=Date.now()/1000+lock;log(`${m.n} is dead. It returns in ${lock/60} minutes.`);S.mob=3;buildPickers();}
+  if(m.elite&&m.n!=='Ragnaros'){const lock=1200;S.bossDead[S.zone]=Date.now()/1000+lock;log(`${m.n} is dead. It returns in ${lock/60} minutes.`);S.mob=3;buildPickers();}
   if(m.n==='Ragnaros')S.flags.rag=true;
   {const sw=document.getElementById('soulwrap');sw.classList.remove('pulse');void sw.offsetWidth;sw.classList.add('pulse');}
   if(S.adds&&S.adds.length&&!m.elite&&!m.ev){const a=S.adds.shift();if(S.mobReturn==null)S.mobReturn=S.mob;S.mob=a.idx;S.mobRar=0;spawn(true);log(`${curMob().n} steps up.`);}else spawn();
@@ -1512,6 +1526,7 @@ $('tab').addEventListener('pointerdown',e=>{const b=e.target.closest('button,[da
   else if(a==='kzEnter'){kzEnter(+id);closeWin();}
   else if(a==='kzBless'){const c=kzBlessCost();if((S.kz.marks||0)>=c){S.kz.marks-=c;const k=blessNext();S.kz.bless=(S.kz.bless||0)+1;log(`Blessing of Medivh rank ${S.kz.bless}: +${S.kz.bless<=12?1:.5} ${STATS[k]}.`,'good');}}
   else if(a==='dgEnter'){dgEnter(+id,+(b.dataset.tier||0),+(b.dataset.ml||0));closeWin();}
+  else if(a==='heatPick'){const top=heatBest()+1;const v=Math.max(1,Math.min(top,heatSel()+(+b.dataset.d)));S.heat=S.heat||{best:0,on:null};S.heat.on=v>=top?null:v;if(S.zone===mcZ()&&!S.dg){S.fighting=null;spawn();buildPickers();}}
   else if(a==='mythPick'){const d=DUNGEONS.find(x=>x.id===id);if(d){const top=mythicBest(d)+1;mythSel[id]=Math.max(1,Math.min(top,(mythSel[id]||top)+(+b.dataset.d)));}}
   else if(a==='dgLeave'){dgLeave('leave');}
   else if(a==='go'){if(S.dg)dgLeave('leave');S.zone=+b.dataset.z;S.mob=+b.dataset.m;S.fighting=null;buildPickers();spawn();closeWin();}
@@ -1542,7 +1557,7 @@ function ritualPoints(){if(S.flags.rag)return 3;return Math.max(0,ritualTier()-(
 function doPrestige(btn){
   const pts=ritualPoints();if(pts<1)return;
   if(!arm('prestige','Press again to perform the Ritual. This warlock is consumed.',btn))return;
-  const keep={ach:S.ach,prestiges:S.prestiges+1,legacy:{points:S.legacy.points+pts,perks:S.legacy.perks,paid:S.flags.rag?(S.legacy.paid||0):(S.legacy.paid||0)+pts},account:S.account,kz:S.kz,mythic:S.mythic,carry:Math.floor(S.shards[0]*.1*(leg('inherit')+perk('bank')))};
+  const keep={ach:S.ach,prestiges:S.prestiges+1,legacy:{points:S.legacy.points+pts,perks:S.legacy.perks,paid:S.flags.rag?(S.legacy.paid||0):(S.legacy.paid||0)+pts},account:S.account,kz:S.kz,mythic:S.mythic,heat:S.heat,carry:Math.floor(S.shards[0]*.1*(leg('inherit')+perk('bank')))};
   S=freshState(keep);buildPickers();spawn();log(`The ritual is complete. A new warlock takes up the grimoire with ${S.legacy.points} Legacy points to spend.`,'lvl');
 }
 // ---------- ability icons (original glyphs; the addon build maps these ids to Interface\Icons texture paths instead) ----------
@@ -1839,19 +1854,21 @@ function renderTab(){
     const zi=mapSel,z=ZONES[zi];const locked=zi>0&&!S.cleared[zi-1];
     h+=`<div class="tier" style="padding:10px 4px 2px">${z.name} · levels ${z.band[0]}–${z.band[1]}${S.zone===zi?' · <span class="t1">you are here</span>':''}${locked?' · <span class="muted">locked: drain '+ZONES[zi-1].elite.n+' first</span>':''}</div>`;
     if(!locked){
-      z.mobs.forEach((mm,mi)=>{const m={n:mm.n,l:mm.l,hpm:1,dm:1,shards:1};const cls=lvlDiff(m);const cur=S.zone===zi&&S.mob===mi&&S.fighting!=='ev'&&!S.dg;h+=row(`${mm.n} <span class="lv-${cls}">Lv ${mm.l}</span>`,`${cls}${noShards(m)?' · no XP, no shards':''}`,'',`<button data-a="go" data-z="${zi}" data-m="${mi}" ${cur?'disabled':''}>${cur?'Fighting':'Face'}</button>`,cur?'owned':'');});
-      const el={n:z.elite.n,l:z.elite.l,elite:true,hpm:10,dm:3,shards:5};const lk=bossLock(zi);const cur=S.zone===zi&&S.mob===4&&!S.dg;h+=row(`★ ${z.elite.n} <span class="lv-${lvlDiff(el)}">Lv ${z.elite.l}</span> elite`,lk>0?`dead, back in ${Math.ceil(lk/60)} min`:(z.elite.n==='Ragnaros'?'2 hour lockout after a kill':'20 minute lockout after a kill')+(fearImmune(el)?' · immune to Fear':''),`<span class="t2">Rare${zi>=3?' + Epic':''} shards</span>`,`<button data-a="go" data-z="${zi}" data-m="4" ${cur||lk>0?'disabled':''}>${cur?'Fighting':lk>0?'Dead':'Face'}</button>`,cur?'owned':(lk>0?'locked':''));
+      if(zi===mcZ()){const hs=heatSel(),top=heatBest()+1,k=hs-1;h+=row(`🔥 Heat <span class="mpick"><button data-a="heatPick" data-d="-1" ${hs<=1?'disabled':''} title="Lower Heat">‹</button><b style="padding:0 6px">${hs}</b><button data-a="heatPick" data-d="1" ${hs>=top?'disabled':''} title="${hs>=top?'Kill Ragnaros at Heat '+hs+' to open Heat '+(hs+1):'Higher Heat'}">›</button></span>`,hs===1?'Molten Core as it has always been. Kill Ragnaros to open Heat 2.':`Enemies +${Math.min(3,Math.floor(k/10))} levels, ${Math.round(Math.pow(1.12,k)*100)/100}× soul, ${Math.round((1+.06*k)*100)/100}× damage · ${Math.round((1+.1*k)*100)/100}× shards and XP`,`<span class="muted">best ${heatBest()?'Heat '+heatBest():'none'}</span>`,'');}
+      const hc=zi===mcZ()?Math.min(3,Math.floor((heatSel()-1)/10)):0;
+      z.mobs.forEach((mm0,mi)=>{const mm={n:mm0.n,l:mm0.l+hc};const m={n:mm.n,l:mm.l,hpm:1,dm:1,shards:1};const cls=lvlDiff(m);const cur=S.zone===zi&&S.mob===mi&&S.fighting!=='ev'&&!S.dg;h+=row(`${mm.n} <span class="lv-${cls}">Lv ${mm.l}</span>`,`${cls}${noShards(m)?' · no XP, no shards':''}`,'',`<button data-a="go" data-z="${zi}" data-m="${mi}" ${cur?'disabled':''}>${cur?'Fighting':'Face'}</button>`,cur?'owned':'');});
+      const el={n:z.elite.n,l:z.elite.l+hc,elite:true,hpm:10,dm:3,shards:5};const lk=bossLock(zi);const cur=S.zone===zi&&S.mob===4&&!S.dg;h+=row(`★ ${z.elite.n} <span class="lv-${lvlDiff(el)}">Lv ${el.l}</span> elite`,lk>0?`dead, back in ${Math.ceil(lk/60)} min`:(z.elite.n==='Ragnaros'?'no lockout · first kill at each Heat opens the next'+(heatSel()>heatBest()?' and pays '+((heatSel()===1||heatSel()%5===0)?'a Legendary + ':'')+(1+Math.floor(heatSel()/2))+' Epic':' (already killed at this Heat)'):'20 minute lockout after a kill')+(fearImmune(el)?' · immune to Fear':''),`<span class="t2">Rare${zi>=3?' + Epic':''} shards</span>`,`<button data-a="go" data-z="${zi}" data-m="4" ${cur||lk>0?'disabled':''}>${cur?'Fighting':lk>0?'Dead':'Face'}</button>`,cur?'owned':(lk>0?'locked':''));
       DUNGEONS.forEach((d,di)=>{if(d.zone!==zi)return;const low=S.lvl<d.band[0];const inThis=S.dg&&S.dg.id===di;
         const btns=DG_TIERS.map((T0,ti)=>{const key=dgKey(d,ti);const lk=dgLock(key);const here=inThis&&(S.dg.tier||0)===ti;const open=dgTierOpen(d,ti);const canPay=T0.cost==null||S.shards[T0.cost]>=1;const cl=S.dgCleared[key]||0;
           const top=mythicBest(d)+1;const ml=ti===2?Math.max(1,Math.min(top,mythSel[d.id]||top)):0;const T=ti===2?mythicTier(ml):T0;
           const why=here?'Inside':low?'Lv '+d.band[0]:!open?'Clear '+DG_TIERS[ti-1].name:lk>0?Math.ceil(lk/60)+' min':!canPay?'Need '+RAR[T.cost]:'';
           const dis=here||low||!open||lk>0||!canPay;
-          const pay=ti===2?` Clear pays ${Math.floor(ml/2)} extra Epic shard${Math.floor(ml/2)===1?'':'s'}${ml%5===0?' and a Legendary shard':''}${ml===top?' and opens Mythic '+(ml+1):''}.`:'';
-          const enter=`<button data-a="dgEnter" data-id="${di}" data-tier="${ti}" data-ml="${ml}" ${dis?'disabled':''} title="${T.cost!=null?'Costs one '+RAR[T.cost]+' shard. ':''}${ti?'Enemies at level '+T.lvl+', '+T.hpm+'× soul, '+T.dm+'× damage. Set pieces drop Epic at ilvl '+T.setIlvl+(T.setChance>=1?', guaranteed.':'.'):''}${pay}${cl?' Cleared ×'+cl+'.':''}${ti===2&&mythicBest(d)?' Best: Mythic '+mythicBest(d)+'.':''}">${T.name}${why?' · '+why:''}</button>`;
+          const pay=ti===2?(ml===top?` First clear pays ${Math.floor(ml/2)} extra Epic shard${Math.floor(ml/2)===1?'':'s'}${ml%5===0?' and a Legendary shard':''}, a guaranteed set piece, and opens Mythic ${ml+1}.`:' Already cleared: repeat clears drop a set piece 25% of the time.'):'';
+          const enter=`<button data-a="dgEnter" data-id="${di}" data-tier="${ti}" data-ml="${ml}" ${dis?'disabled':''} title="${T.cost!=null?'Costs one '+RAR[T.cost]+' shard. ':''}${ti?'Enemies at level '+T.lvl+', '+T.hpm+'× soul, '+T.dm+'× damage. Set pieces drop Epic at ilvl '+T.setIlvl+'.':''}${pay}${cl?' Cleared ×'+cl+'.':''}${ti===2&&mythicBest(d)?' Best: Mythic '+mythicBest(d)+'.':''}">${T.name}${why?' · '+why:''}</button>`;
           if(ti!==2||!open||low)return enter;
           return `<span class="mpick"><button data-a="mythPick" data-id="${d.id}" data-d="-1" ${ml<=1?'disabled':''} title="Lower Mythic level">‹</button>${enter}<button data-a="mythPick" data-id="${d.id}" data-d="1" ${ml>=top?'disabled':''} title="${ml>=top?'Clear Mythic '+ml+' to open Mythic '+(ml+1):'Higher Mythic level'}">›</button></span>`;}).join('');
         const bm={n:d.boss.n,l:Math.max(d.boss.l,dgLvl(d)+2),elite:true,hpm:8,dm:2.2,shards:4};
-        h+=row(`⚔ ${d.name} <span class="lv-${lvlDiff({n:'',l:dgLvl(d),hpm:1,dm:1})}">Lv ${dgLvl(d)}</span> · ${d.boss.n} <span class="lv-${lvlDiff(bm)}">Lv ${Math.max(d.boss.l,dgLvl(d)+2)}</span>`,`${d.steps.length-1} pulls then the boss · enemies match your level up to ${d.band[1]} · no eating inside, a death ends the run · 5 min lockout on Normal; Heroic and Mythic 30 min after a clear, 5 after a fail${d.fearImm?' · boss immune to Fear':''}`,`<span class="t2">${DG_SETS[d.tier]} set${d.epicShard?' · Epic shard':''}</span>`,`<span style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${btns}</span>`,inThis?'owned':(low?'locked':''));});
+        h+=row(`⚔ ${d.name} <span class="lv-${lvlDiff({n:'',l:dgLvl(d),hpm:1,dm:1})}">Lv ${dgLvl(d)}</span> · ${d.boss.n} <span class="lv-${lvlDiff(bm)}">Lv ${Math.max(d.boss.l,dgLvl(d)+2)}</span>`,`${d.steps.length-1} pulls then the boss · enemies match your level up to ${d.band[1]} · no eating inside, a death ends the run · no lockouts${d.fearImm?' · boss immune to Fear':''}`,`<span class="t2">${DG_SETS[d.tier]} set${d.epicShard?' · Epic shard':''}</span>`,`<span style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${btns}</span>`,inThis?'owned':(low?'locked':''));});
     }}
   }else if(tab==='patch'){
     h+=`<div class="muted" style="padding:4px;font-size:12px">${patchSince?'Shardlock Idle has been updated since you last played.':'What changed in recent versions of Shardlock Idle.'}</div>`;
@@ -1935,7 +1952,7 @@ function importCode(code){code=(code||'').replace(/\s/g,'');if(code.slice(0,4)!=
   f.shards=arr(d.shards,5,0).map(Number);f.seen=arr(d.seen,5,false).map(Boolean);f.cleared=arr(d.cleared,6,false).map(Boolean);
   if(!Array.isArray(f.bag))f.bag=Object.values(f.bag||{});f.lootQ=[];f.gear=f.gear&&!Array.isArray(f.gear)?f.gear:{};
   for(const k of ['tal','ranks','spells','ach','flags','demons','emp','bossDead','dgLock','dgCleared'])if(!f[k]||typeof f[k]!=='object'||Array.isArray(f[k]))f[k]={};
-  if(!Array.isArray(f.adds))f.adds=[];f.cast=null;for(const sl in (f.gear||{}))migrateItem(f.gear[sl]);(f.bag||[]).forEach(migrateItem);if(f.tal&&f.tal.intensity>5)f.tal.intensity=5;if(f.tal&&f.tal.incinerate){f.tal.sflame=f.tal.incinerate;delete f.tal.incinerate;}if(!Array.isArray(f.dgPack))f.dgPack=[];if(f.dg&&!f.dg.kz&&(!DUNGEONS[f.dg.id]||f.dg.step>=DUNGEONS[f.dg.id].steps.length))f.dg=null;if(!f.kz||typeof f.kz!=='object')f.kz={best:0,marks:0,bless:0};if(!f.mythic||typeof f.mythic!=='object'||Array.isArray(f.mythic))f.mythic={};if(!f.spemp||typeof f.spemp!=='object'||Array.isArray(f.spemp))f.spemp={};DUNGEONS.forEach(d=>{if((f.dgCleared||{})[d.id+':2']>0&&!f.mythic[d.id])f.mythic[d.id]=1;});
+  if(!Array.isArray(f.adds))f.adds=[];f.cast=null;for(const sl in (f.gear||{}))migrateItem(f.gear[sl]);(f.bag||[]).forEach(migrateItem);if(f.tal&&f.tal.intensity>5)f.tal.intensity=5;if(f.tal&&f.tal.incinerate){f.tal.sflame=f.tal.incinerate;delete f.tal.incinerate;}if(!Array.isArray(f.dgPack))f.dgPack=[];if(f.dg&&!f.dg.kz&&(!DUNGEONS[f.dg.id]||f.dg.step>=DUNGEONS[f.dg.id].steps.length))f.dg=null;if(!f.kz||typeof f.kz!=='object')f.kz={best:0,marks:0,bless:0};if(!f.mythic||typeof f.mythic!=='object'||Array.isArray(f.mythic))f.mythic={};if(!d.heat||typeof d.heat!=='object')f.heat={best:f.flags&&f.flags.rag?1:0,on:null};if(!f.spemp||typeof f.spemp!=='object'||Array.isArray(f.spemp))f.spemp={};DUNGEONS.forEach(d=>{if((f.dgCleared||{})[d.id+':2']>0&&!f.mythic[d.id])f.mythic[d.id]=1;});
   if(!f.legacy||typeof f.legacy!=='object')f.legacy={points:0,perks:{}};if(!f.legacy.perks)f.legacy.perks={};
   if(!f.account||typeof f.account!=='object')f.account={gold:0,perks:{}};if(!f.account.perks)f.account.perks={};f.account.gold=Number(f.account.gold)||0;
   DEMONS.forEach(dm=>f.demons[dm.id]=Number(f.demons[dm.id])||0);
@@ -1945,7 +1962,7 @@ function importCode(code){code=(code||'').replace(/\s/g,'');if(code.slice(0,4)!=
 // ---------- save/load ----------
 function save(){try{S.last=Date.now();localStorage.setItem('drainsoul3',JSON.stringify(S));}catch(e){}}
 function load(){
-  try{const raw=localStorage.getItem('drainsoul3');if(!raw)return;const d=JSON.parse(raw);S=Object.assign(freshState(),d);for(const sl in (S.gear||{}))migrateItem(S.gear[sl]);(S.bag||[]).forEach(migrateItem);if(!S.mythic||typeof S.mythic!=='object')S.mythic={};if(!S.spemp||typeof S.spemp!=='object')S.spemp={};DUNGEONS.forEach(d=>{if((S.dgCleared||{})[d.id+':2']>0&&!S.mythic[d.id])S.mythic[d.id]=1;});S.corpse=0;S.event=null;S.fighting=null;S.mode='drain';S.lifeT=0;S.hp=Math.max(1,Math.min(maxHp(),S.hp));
+  try{const raw=localStorage.getItem('drainsoul3');if(!raw)return;const d=JSON.parse(raw);S=Object.assign(freshState(),d);for(const sl in (S.gear||{}))migrateItem(S.gear[sl]);(S.bag||[]).forEach(migrateItem);if(!S.mythic||typeof S.mythic!=='object')S.mythic={};if(!d.heat||typeof d.heat!=='object')S.heat={best:S.flags&&S.flags.rag?1:0,on:null};if(!S.spemp||typeof S.spemp!=='object')S.spemp={};DUNGEONS.forEach(d=>{if((S.dgCleared||{})[d.id+':2']>0&&!S.mythic[d.id])S.mythic[d.id]=1;});S.corpse=0;S.event=null;S.fighting=null;S.mode='drain';S.lifeT=0;S.hp=Math.max(1,Math.min(maxHp(),S.hp));
     Object.values(S.gear).forEach(it=>{if(it&&it.stats&&it.q<3)it.name=itemName(it);});S.bag.forEach(it=>{if(!it.junk&&it.stats&&it.q<3)it.name=itemName(it);});if(S.tal&&S.tal.incinerate){S.tal.sflame=S.tal.incinerate;delete S.tal.incinerate;}S.spells.darmor=true;if(S.lvl>=10&&S.spells.drainsoul===undefined)S.spells.drainsoul=true;clampDemons();
     const gap=Math.min(12*3600,(Date.now()-(S.last||Date.now()))/1000);
     if(gap>0){if((S.cds.camp||0)>0)S.cds.camp=Math.max(0,S.cds.camp-gap);if((S.cds.craftSs||0)>0)S.cds.craftSs=Math.max(0,S.cds.craftSs-gap);if((S.restedT||0)>0)S.restedT=Math.max(0,S.restedT-gap);if(S.camping){S.camping=false;S.eatT=0;}}
