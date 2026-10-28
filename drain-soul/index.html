@@ -365,7 +365,8 @@ function kzFloorDone(){const f=S.dg.floor;const boss=f%5===0;
   S.kz.marks=(S.kz.marks||0)+f;fly('+'+f+' Tower Marks','#c9a4ff',null,null,false,'shard');
   if(f>(S.kz.best||0))S.kz.best=f;if(boss)log(`Floor ${f}: ${kzFloorDef(f).boss.n} falls. Checkpoint.`,'lvl');else log(`Floor ${f} cleared.`,'good');
   S.dg.floor=f+1;S.dg.step=0;dgStartStep();}
-const DG_LOCK=1800;const DG_RETRY=300; // 30 min after a clear; 5 min after a death or walking out
+const DG_LOCK=1800;const DG_RETRY=300; // Heroic and Mythic: 30 min after a clear; every tier: 5 min after a death or walking out
+function dgLockFor(tier,reason){return reason==='done'&&tier>0?DG_LOCK:DG_RETRY;} // Normal is always 5 min, even after a clear
 // Normal / Heroic / Mythic. Heroic costs an Epic shard and Mythic a Legendary shard at the door; both scale every enemy to level 58–60 and pay the same sets at Epic quality
 const DG_TIERS=[
  {name:'Normal',cost:null,lvl:null,hpm:1,dm:1,setQ:2,setIlvl:null,setChance:.25,bossAb:2},
@@ -804,10 +805,10 @@ function dgEnter(i,tier){tier=tier||0;const d=DUNGEONS[i];const T=DG_TIERS[tier]
   if(T.cost!=null){if(S.shards[T.cost]<1){log(`${T.name} needs one ${RAR[T.cost]} shard at the door.`,'bad');return;}S.shards[T.cost]-=1;fly(`−1 ${RAR[T.cost]}`,RCOL[T.cost],null,null,false,'shard');}
   if(S.fighting==='ev'){S.fighting=null;}if(S.eatT>0){S.eatT=0;S.camping=false;}
   S.dg={id:i,step:0,tier};S.dgReturn={zone:S.zone,mob:S.mob};
-  log(`You enter ${tier?T.name+' ':''}${d.name}. No eating, no camp, and a death ends the run. Clearing it locks it for 30 minutes; failing it only for 5.`,'lvl');dgStartStep();buildPickers();}
+  log(`You enter ${tier?T.name+' ':''}${d.name}. No eating, no camp, and a death ends the run. ${tier?'Clearing it locks it for 30 minutes; failing it only for 5.':'It locks for 5 minutes when you clear or leave it.'}`,'lvl');dgStartStep();buildPickers();}
 function dgLeave(reason){if(!S.dg)return;if(S.dg.kz){const f=S.dg.floor;const r=S.dgReturn||{zone:2,mob:0};S.dg=null;S.dgPack=[];S.adds=[];S.mobReturn=null;S.zone=r.zone;S.mob=Math.min(3,r.mob||0);log(reason==='death'?`You fall on floor ${f} of Karazhan. Best: ${S.kz.best||0}.`:`You leave Karazhan on floor ${f}.`,reason==='death'?'bad':'');buildPickers();if(reason!=='death')spawn();return;}
-  const d=dgDef();const tn=S.dg.tier?DG_TIERS[S.dg.tier].name+' ':'';S.dgLock[dgKey(d,S.dg.tier||0)]=Date.now()/1000+(reason==='done'?DG_LOCK:DG_RETRY);const r=S.dgReturn||{zone:d.zone,mob:0};S.dg=null;S.dgPack=[];S.adds=[];S.mobReturn=null;S.zone=r.zone;S.mob=Math.min(3,r.mob||0);
-  if(reason==='death')log(`Your run through ${tn}${d.name} ends. You can try again in ${DG_RETRY/60} minutes.`,'bad');else if(reason==='done')log(`${tn}${d.name} cleared. Locked for ${DG_LOCK/60} minutes.`,'lvl');else log(`You leave ${tn}${d.name}. You can go back in ${DG_RETRY/60} minutes.`);
+  const d=dgDef();const tn=S.dg.tier?DG_TIERS[S.dg.tier].name+' ':'';const lockS=dgLockFor(S.dg.tier||0,reason);S.dgLock[dgKey(d,S.dg.tier||0)]=Date.now()/1000+lockS;const r=S.dgReturn||{zone:d.zone,mob:0};S.dg=null;S.dgPack=[];S.adds=[];S.mobReturn=null;S.zone=r.zone;S.mob=Math.min(3,r.mob||0);
+  if(reason==='death')log(`Your run through ${tn}${d.name} ends. You can try again in ${DG_RETRY/60} minutes.`,'bad');else if(reason==='done')log(`${tn}${d.name} cleared. Locked for ${lockS/60} minutes.`,'lvl');else log(`You leave ${tn}${d.name}. You can go back in ${DG_RETRY/60} minutes.`);
   buildPickers();if(reason!=='death')spawn();}
 function dgKill(m){if(S.dg.kz){if(Math.random()<.5)giveShard(1,'(tower)');S.dgPack.shift();if(S.dgPack.length){S.adds.shift();spawn(true);S.mobRar=0;const nm=curMob();S.soulMax=soulNeed(nm);S.soul=S.soulMax;}else kzFloorDone();return;}
   const d=dgDef();const tier=S.dg.tier||0;const T=DG_TIERS[tier];
@@ -1735,7 +1736,7 @@ function renderTab(){
           const why=here?'Inside':low?'Lv '+d.band[0]:!open?'Clear '+DG_TIERS[ti-1].name:lk>0?Math.ceil(lk/60)+' min':!canPay?'Need '+RAR[T.cost]:'';
           return `<button data-a="dgEnter" data-id="${di}" data-tier="${ti}" ${here||low||!open||lk>0||!canPay?'disabled':''} title="${T.cost!=null?'Costs one '+RAR[T.cost]+' shard. ':''}${ti?'Enemies at level '+T.lvl+', '+T.hpm+'× soul, '+T.dm+'× damage. Set pieces drop Epic at ilvl '+T.setIlvl+(T.setChance>=1?', guaranteed.':'.'):''}${cl?' Cleared ×'+cl+'.':''}">${T.name}${why?' · '+why:''}</button>`;}).join('');
         const bm={n:d.boss.n,l:Math.max(d.boss.l,dgLvl(d)+2),elite:true,hpm:8,dm:2.2,shards:4};
-        h+=row(`⚔ ${d.name} <span class="lv-${lvlDiff({n:'',l:dgLvl(d),hpm:1,dm:1})}">Lv ${dgLvl(d)}</span> · ${d.boss.n} <span class="lv-${lvlDiff(bm)}">Lv ${Math.max(d.boss.l,dgLvl(d)+2)}</span>`,`${d.steps.length-1} pulls then the boss · enemies match your level up to ${d.band[1]} · no eating inside, a death ends the run · 30 min lockout after a clear, 5 after a fail${d.fearImm?' · boss immune to Fear':''}`,`<span class="t2">${DG_SETS[d.tier]} set${d.epicShard?' · Epic shard':''}</span>`,`<span style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${btns}</span>`,inThis?'owned':(low?'locked':''));});
+        h+=row(`⚔ ${d.name} <span class="lv-${lvlDiff({n:'',l:dgLvl(d),hpm:1,dm:1})}">Lv ${dgLvl(d)}</span> · ${d.boss.n} <span class="lv-${lvlDiff(bm)}">Lv ${Math.max(d.boss.l,dgLvl(d)+2)}</span>`,`${d.steps.length-1} pulls then the boss · enemies match your level up to ${d.band[1]} · no eating inside, a death ends the run · 5 min lockout on Normal; Heroic and Mythic 30 min after a clear, 5 after a fail${d.fearImm?' · boss immune to Fear':''}`,`<span class="t2">${DG_SETS[d.tier]} set${d.epicShard?' · Epic shard':''}</span>`,`<span style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${btns}</span>`,inThis?'owned':(low?'locked':''));});
     }}
   }else if(tab==='patch'){
     h+=`<div class="muted" style="padding:4px;font-size:12px">${patchSince?'Shardlock Idle has been updated since you last played.':'What changed in recent versions of Shardlock Idle.'}</div>`;
