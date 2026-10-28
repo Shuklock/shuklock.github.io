@@ -40,7 +40,7 @@ def shift(t,pairs):
     return t
 SPRITES={}
 def add(name,frames):
-    assert name not in PROTECTED,name+' is Gemini art'
+    assert name not in PROTECTED,name+' is finished art'
     SPRITES[name]=strip(frames)
 
 # ---------- Infernal 30x32: grey stone slabs, huge shoulders, small skull face inside a fel-lit chest cavity, fel cracks at the joints and feet ----------
@@ -169,7 +169,7 @@ if __name__=='__main__':
     a=ap.parse_args()
     names=a.names or list(SPRITES)
     for n in names:
-        if n in PROTECTED:ap.error(n+' is Gemini art; use tools/grid.py on a new Gemini render instead')
+        if n in PROTECTED:ap.error(n+' is finished art; use tools/grid.py on a new render instead')
         if n not in SPRITES:ap.error('no grid for '+n+'; have: '+', '.join(SPRITES))
     for n in names:
         p=ART_DIR/(n+'.png')
