@@ -34,7 +34,7 @@ Names the engine looks for:
 1. In Gemini or Midjourney (`--style raw --stylize 50`, the warlock as `--sref`, a WoW screenshot as `--oref`), make a full-body pixel-art still on solid magenta (#ff00ff) with no ground shadow, facing right. If it comes out facing left, use `--flip` in step 2.
 2. Run `python3 tools/grid.py render.jpg pet_felh --preview`. This writes `drain-soul/art/pet_felh.png` and a 6× look in `tools/preview/` (not committed). If the grid is detected wrong, pass `--cell N`. For a render with no clean grid, `tools/clean.py render.jpg pet_felh --height 48` makes a quantized version instead.
 3. Set the sprite's `ART` entry to `{frames:1,fps:1,scale:S}`, using the height guide above.
-4. If you replaced `warlock.png` or `bg_durotar.jpg`, run `python3 tools/inline.py` so the base64 copies in index.html match. `--check` only reports.
+4. If you replaced `warlock.png`, run `python3 tools/inline.py` so the base64 copy in index.html matches. `--check` only reports.
 
 ## Placeholders (`tools/mk.py`)
 
@@ -48,7 +48,7 @@ Once a placeholder has a Gemini version, delete its grid from mk.py.
 
 ## Backdrops
 
-One painted scene per place, `art/bg_<key>.png` (jpg also works). The engine shows it from the top of the stage down to the horizon, scaled to cover the width with the bottom edge on the horizon line, and draws its own floor plane under it. So the bottom of the picture should be plain ground with nothing important in the lowest 15%.
+Optional. With no file for a place, the engine draws its own layered landscape from `ZONE_ART` (that is what every zone uses today). To paint one instead, add `art/bg_<key>.png` (jpg also works). The engine shows it from the top of the stage down to the horizon, scaled to cover the width with the bottom edge on the horizon line, and draws its own floor plane under it. So the bottom of the picture should be plain ground with nothing important in the lowest 15%.
 
 Keys: durotar, tirisfal, westfall, barrens, duskwood, stranglethorn, tanaris, searing_gorge, blackrock, winterspring, molten_core, karazhan, dg_dm, dg_sfk, dg_gnom, dg_sm, dg_zf, dg_brd, dg_ubrs.
 

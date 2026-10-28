@@ -4,11 +4,12 @@
 #
 #   python3 tools/inline.py          # rewrite any stale copies
 #   python3 tools/inline.py --check  # exit 1 if any copy differs from its file
+# To inline a backdrop again, put it in BG_INLINE as key:'data:...' and add it to FILES below.
 import argparse, base64, re, sys
 from artpath import ROOT, ART_DIR
 HTML=ROOT/'drain-soul'/'index.html'
 # key inside ART_INLINE / BG_INLINE -> file in art/
-FILES={'warlock':'warlock.png','durotar':'bg_durotar.jpg'}
+FILES={'warlock':'warlock.png'}
 MIME={'.png':'image/png','.jpg':'image/jpeg'}
 ap=argparse.ArgumentParser();ap.add_argument('--check',action='store_true');a=ap.parse_args()
 s=HTML.read_text();stale=[]
