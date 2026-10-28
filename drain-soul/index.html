@@ -435,7 +435,7 @@ const TALENTS=[
  {id:'soulsiphon',tree:0,tier:20,max:3,name:'Soul Siphon',desc:'+4% shard chance per rank for each aura on the target (Corruption, Immolate, curse).'},
  {id:'pandemic',tree:0,tier:20,max:1,ms:true,name:'Pandemic',desc:'Milestone: Corruption and Bane of Agony crits hit for double instead of 1.5×.'},
  {id:'shmast',tree:0,tier:25,max:5,name:'Shadow Mastery',desc:'+2% speed for your own channel, Corruption, Immolate and Bane of Agony, per rank.'},
- {id:'wrack',tree:0,tier:30,max:1,ms:true,req:'siphonlife',name:'Wrack',desc:'Milestone: new ability. 15 instant Drain Soul ticks, each rolling for a shard. 45s cooldown. Needs Siphon Life.'},
+ {id:'wrack',tree:0,tier:30,max:1,ms:true,req:'siphonlife',name:'Wrack',desc:'Milestone: Wrack replaces Drain Soul as your channel. It ticks and rolls for shards just like Drain Soul, but each tick deals 25% more soul, and while it channels your Corruption, Immolate and Bane of Agony deal 15% more. Needs Siphon Life.'},
  {id:'impfunnel',tree:1,tier:0,max:2,name:'Improved Health Funnel',desc:'Your demons feed you health: +0.04% of max health per second per rank while you have a demon.'},
  {id:'impimp',tree:1,tier:0,max:3,name:'Improved Imp',desc:'+15% Imp damage per rank.'},
  {id:'embrace',tree:1,tier:0,max:5,name:'Demonic Embrace',desc:'+4% max health per rank.'},
@@ -747,7 +747,14 @@ function maxHpOf(s){return Math.floor((50+18*s.lvl)*(1+.04*(s.tal&&s.tal.embrace
 const maxHp=()=>maxHpOf(S);
 function globalHaste(){return (1+.1*leg('bloodline'))*(1+achCount()*.01);}
 // talent and demon tuning knobs (today's values); the web profiler (claude/balance-bot/web_profile.py) reads damage through these
-const TN={mal:.04,impcorr:.10,shm:.02,impcoa:.12,isb:.08,fabr:.04,sf:.03,dotDmg:0,pet:1,sp:2.8,big:1};
+const TN={mal:.04,impcorr:.10,shm:.02,impcoa:.12,isb:.08,fabr:.04,sf:.03,dotDmg:0,pet:1,sp:2.8,big:1,wrackHit:1.25,wrackDot:.15};
+// Wrack (Affliction capstone) takes over the channel: same ticks and shard rolls as Drain Soul, harder hits, and stronger DoTs while it runs
+function chanName(){return tal('wrack')?'Wrack':'Drain Soul';}
+function wrackOn(){return tal('wrack')>0&&!!S.spells.drainsoul&&S.mode!=='life'&&S.eatT<=0&&S.corpse<=0;}
+function channelHit(){return spMult('drain')*(tal('wrack')?TN.wrackHit:1);}
+function dotWrack(){return wrackOn()?1+TN.wrackDot:1;}
+// Bane of Agony's damage per ramp step (the profiler reads it through this too)
+function agonyMult(){return (1+.15*rank('coa'))*(1+.06*tal('agonizing'))*(1+TN.impcoa*tal('impcoa'))*(1+TN.shm*tal('shmast'))*(1+TN.dotDmg*tal('malediction'))*(1+setVal('corrAgony')/100)*spMult('coa')*dotWrack();}
 function youTps(){ // your channel, ticks per second
   if(!S.spells.drainsoul)return 0;
   let m=1+TN.mal*tal('malediction')+.05*tal('bane')+.04*tal('demknow')*demonTypes()+.06*rank('drain')+TN.shm*tal('shmast')+(hasCurse('coex')?.1*curseMul():0)+gearStat('haste')/100+setVal('dsDot')/100*((S.spells.corr?1:0)+(S.spells.immo?1:0)+(S.coaT>0?1:0));
@@ -762,12 +769,12 @@ function petTps(){let t=0;const u=(1+.05*tal('unholy'))*(1+.05*tal('energies'));
   DEMONS.forEach(d=>{let m=u;if(d.id==='imp')m*=1+.15*tal('impimp');if(d.id==='vw')m*=1+.15*tal('impvw');if(d.id==='succ')m*=1+.15*tal('impsayaad');if(d.id==='felh')m*=1+.15*tal('impfelh');m*=1+empBonus(empLevel(d.id));if(d.id==='vw'&&S.cds.sacrifice>0)m=0;t+=Math.min(S.demons[d.id],demonMax(d))*d.tps*m*(d.id==='inf'||d.id==='doom'?TN.big:1);});
   const share=setVal('petShare')/100;
   return TN.pet*t*globalHaste()*(1+.05*(S.lvl-1))*(1+setVal('petDmg')/100)*(1+share*gearStat('power')/100);}
-function immoTps(){if(!S.spells.immo)return 0;return spMult('immo')*(setFx('Emberwrought')?2:1)*(1+setVal('immoSpeed')/100)*.25*(1+.08*rank('immo'))*(1+.06*tal('aftermath'))*(1+TN.shm*tal('shmast'))*(1+gearStat('haste')/100)*globalHaste();}
+function immoTps(){if(!S.spells.immo)return 0;return spMult('immo')*dotWrack()*(setFx('Emberwrought')?2:1)*(1+setVal('immoSpeed')/100)*.25*(1+.08*rank('immo'))*(1+.06*tal('aftermath'))*(1+TN.shm*tal('shmast'))*(1+gearStat('haste')/100)*globalHaste();}
 // curses: Hexbinder makes them stronger, and its Mythic four-piece holds two at once (the two you cast last)
 function curseMul(){return 1+setVal('curseUp')/100;}
 function hasCurse(id){return S.curse===id||(S.curse2===id&&setFx('Hexbinder'));}
 function toggleCurse(id){if(hasCurse(id)){if(S.curse===id){S.curse=setFx('Hexbinder')?(S.curse2||null):null;}S.curse2=null;return;}if(setFx('Hexbinder')&&S.curse)S.curse2=S.curse;else S.curse2=null;S.curse=id;}
-function corrTps(){if(!S.spells.corr)return 0;return (1/3)*spMult('corr')*(1+setVal('corrAgony')/100)*(1+TN.impcorr*tal('impcorr'))*(1+.12*rank('corr'))*(1+TN.shm*tal('shmast'))*(1+TN.dotDmg*tal('malediction'))*(1+gearStat('haste')/100)*globalHaste();}
+function corrTps(){if(!S.spells.corr)return 0;return (1/3)*spMult('corr')*dotWrack()*(1+setVal('corrAgony')/100)*(1+TN.impcorr*tal('impcorr'))*(1+.12*rank('corr'))*(1+TN.shm*tal('shmast'))*(1+TN.dotDmg*tal('malediction'))*(1+gearStat('haste')/100)*globalHaste();}
 function auraCount(){return (S.spells.corr?1:0)+(S.spells.immo?1:0)+(S.curse?1:0)+(S.coaT>0?1:0);}
 function shardChance(){if(!S.spells.drainsoul)return 0;let c=.1+.05*tal('impdrains')+Math.min(.1,S.demons.felh*.01)+.05*leg('hunter')+.04*tal('soulsiphon')*auraCount()+(S.demons.succ>0?.012*tal('mdemo'):0)+(demonTypes()>0?.03*tal('brand'):0)+gearStat('spirit')/200;return Math.min(.95,c);}
 // crit soft cap: full value up to 50%, then each point counts for less; it closes in on 100% but never reaches it
@@ -1158,7 +1165,7 @@ function drawScene(dt){
     // target cursor
     {const cy=baseY-size*1.15-4*Math.sin(sceneT*4);ctx.save();ctx.fillStyle='#ffd138';ctx.beginPath();ctx.moveTo(mobX-7,cy-12);ctx.lineTo(mobX+7,cy-12);ctx.lineTo(mobX,cy);ctx.closePath();ctx.fill();ctx.restore();}}
   const wx=narrow?w*.34:w*.5-Math.min(190,w*.16),wy=baseY-ws*.45;actorPos.lock={x:wx,y:wy,size:ws};placeFrames(w,wx+ws*.3,wy+ws*.55,actorPos.mob.x,actorPos.mob.y+10,narrow&&DEMONS.some(d=>S.demons[d.id]>0)?tp.top-50:0);shadow(wx,wy,ws*.5);
-  const channel=S.corpse>0||S.eatT>0?null:(S.mode==='life'?'#6fcf3a':(S.spells.drainsoul?'#9b5cff':null));
+  const channel=S.corpse>0||S.eatT>0?null:(S.mode==='life'?'#6fcf3a':(S.spells.drainsoul?(tal('wrack')?'#e0457b':'#9b5cff'):null));
   if(narrow)drawPetsMini(ctx,w,tp.top);else drawPets(ctx,wx,wy,ws,narrow);
   let hand;{const nm=channel?'warlock_channel':'warlock';if(sprite(nm)||sprite('warlock')){const use=sprite(nm)?nm:'warlock';const sc=pxScale(ws)*(narrow?.7:1);drawSprite(ctx,use,wx,wy,sc,sceneT,false,1);hand={hx:wx+sc*.36*(-14),hy:wy-sc*.36*90,tx:wx+sc*.36*47,ty:wy-sc*.36*129};}else hand=drawWarlock(ctx,wx,wy,ws,channel);}
   // Drain Life: green wisps stream from the target into the warlock, and the warlock glows green as they land
@@ -1231,7 +1238,7 @@ function tick(source){
   const cm=crit=>!crit?1:(source==='dot'&&tal('pandemic')?2:1.5);
   if(mine&&Math.random()<critChance())crit=true;
   S.soul--;
-  if(mine){S.powAcc=(S.powAcc||0)+soulPerTick()*cm(crit)*(source==='you'?spMult('drain'):1)-1;while(S.powAcc>=1&&S.soul>0){S.powAcc-=1;S.soul--;}}
+  if(mine){S.powAcc=(S.powAcc||0)+soulPerTick()*cm(crit)*(source==='you'?channelHit():1)-1;while(S.powAcc>=1&&S.soul>0){S.powAcc-=1;S.soul--;}}
   if(source==='you')fxDrainTick();
   if(source!=='you')dmgNote(source==='dot'&&S.coaTicking?'coa':source,soulBefore-S.soul,crit);
   if(tal('decimation')&&S.soul>0&&S.soul<S.soulMax*.25&&Math.random()<.12*tal('decimation'))S.soul--;
@@ -1313,7 +1320,7 @@ function mobDescLine(m){const n=deathShards(m);return noShards(m)?'no shards, to
 function cast(id){
   if(id==='castSpell'){S.castSpell=S.castSpell==='incin'?'bolt':'incin';fly(S.castSpell==='incin'?'Incinerate':'Shadow Bolt','#ff9c3a',null,null,true);return;}
   if(S.cds[id]>0&&!(id==='drainlife'&&S.mode==='life'))return;const sp_=SPELLS.find(s=>s.id===id);
-  if(id==='drainlife'){if(S.mode==='life'){S.mode='drain';S.lifeT=0;S.prog=0;S.chanN=0;S.cds.drainlife=30;fly('Drain Soul','#c9a6ff',null,null,true,'heal');return;}if(S.corpse>0||S.eatT>0)return;S.mode='life';S.lifeT=6;S.prog=0;S.chanN=0;fly('Drain Life','#6fcf3a',null,null,false,'heal');return;}
+  if(id==='drainlife'){if(S.mode==='life'){S.mode='drain';S.lifeT=0;S.prog=0;S.chanN=0;S.cds.drainlife=30;fly(chanName(),'#c9a6ff',null,null,true,'heal');return;}if(S.corpse>0||S.eatT>0)return;S.mode='life';S.lifeT=6;S.prog=0;S.chanN=0;fly('Drain Life','#6fcf3a',null,null,false,'heal');return;}
   if(S.corpse>0)return;
   if(id==='camp'){if(S.dg){fly('Not in here','#9d92b3');return;}if(perk('campkit')<1||S.eatT>0)return;if(S.mode==='life'){S.mode='drain';S.lifeT=0;S.cds.drainlife=30;}S.eatT=CAMP_REST;S.camping=true;S.cds.camp=CAMP_CD;const wasBoss=S.mob===4&&S.fighting!=='ev';if(S.fighting==='ev'){S.fighting=null;S.event=null;}if(wasBoss){S.mob=3;buildPickers();}spawn();S.coaT=0;fly('You make camp','#e8b94a',null,null,false,'heal');log(`You make camp and rest by the fire. ${CAMP_REST} seconds to Well Rested.`);return;}
   if(id==='eat'){if(S.dg){fly('Not in here','#9d92b3');return;}if(S.eatT>0)return;if(S.mode==='life'){S.mode='drain';S.lifeT=0;S.cds.drainlife=30;}S.eatT=EAT_TIME;S.cds.eat=180;const wasBoss=S.mob===4&&S.fighting!=='ev';if(S.fighting==='ev'){S.fighting=null;S.event=null;}if(wasBoss){S.mob=3;buildPickers();}spawn();S.coaT=0;fly('You run off to eat','#e8b94a',null,null,false,'heal');log(wasBoss?'You flee the elite and sit down to eat. You will face its minions when you get up.':'You back off and sit down to eat. The target resets.');return;}
@@ -1328,7 +1335,6 @@ function cast(id){
   if(id==='spelllock'){if(S.demons.felh<1||!S.cast)return;interrupt('spelllock');S.cds.spelllock=Math.max(12,24-3*tal('impfelh'));return;}
   if(id==='coil'){S.hp=Math.min(maxHp(),S.hp+maxHp()*(.3+.05*rank('coil')));interrupt('coil');const m=curMob();if(!m.elite&&!m.ev)S.fear=Math.max(S.fear,3);S.cds.coil=120;return;}
   if(id==='hs'){if(!S.spells.hstone||S.shards[1]<3)return;S.shards[1]-=3;const before=S.hp;S.hp=Math.min(maxHp(),S.hp+maxHp()*(.4+.1*rank('hstone')));S.cds.hs=60;fly('Healthstone','#6fcf3a',null,null,true,'heal');fly('+'+fmt(Math.floor(S.hp-before)),'#6fcf3a',null,null,false,'heal');return;}
-  if(id==='wrack'){for(let i=0;i<15;i++)tick('burst');S.cds.wrack=45;fly('Wrack!','#ffd24a');return;}
   if(id==='shadowburn'){if(S.soul>S.soulMax*.25)return;S.cds.shadowburn=15;fly('Shadowburn!','#ff5a9a');while(S.soul>0){S.soul--;}complete();return;}
   if(id==='conflag'){S.conflagT=8;S.cds.conflag=30;fly('Conflagrate!','#ff7a2a');return;}
 }
@@ -1362,7 +1368,7 @@ function loopBody(dt){
     if(S.spells.darmor){S.armorT=(S.armorT||0)+dt;if(S.armorT>=2){S.armorT-=2;const h=maxHp()*armorRegen();if(S.hp<maxHp()){S.hp=Math.min(maxHp(),S.hp+h);fly('+'+Math.round(h),'#6fcf3a',null,null,true,'heal');}}}
     if(S.spells.corr){S.corrT+=corrTps()*dt;while(S.corrT>=1&&S.soul>0){S.corrT-=1;tick('dot');}}
     if(S.spells.immo){S.immoT=(S.immoT||0)+immoTps()*dt;while(S.immoT>=1&&S.soul>0){S.immoT-=1;tick('immo');}}
-    if(S.coaT>0){S.coaT=setFx('Gloomweaver')&&S.coaT<=8?S.coaT:S.coaT-dt;S.coaTick=(S.coaTick||0)+dt;if(S.coaTick>=2){S.coaTick-=2;const elapsed=24-S.coaT;const ramp=(elapsed<8?1:elapsed<16?2:3)*(1+.15*rank('coa'))*(1+.06*tal('agonizing'))*(1+TN.impcoa*tal('impcoa'))*(1+TN.shm*tal('shmast'))*(1+TN.dotDmg*tal('malediction'))*(1+setVal('corrAgony')/100)*spMult('coa');S.coaAcc=(S.coaAcc||0)+ramp;while(S.coaAcc>=1&&S.soul>0){S.coaAcc-=1;S.coaTicking=true;tick('dot');S.coaTicking=false;}}if(S.coaT<=0)log('Bane of Agony faded.');}
+    if(S.coaT>0){S.coaT=setFx('Gloomweaver')&&S.coaT<=8?S.coaT:S.coaT-dt;S.coaTick=(S.coaTick||0)+dt;if(S.coaTick>=2){S.coaTick-=2;const elapsed=24-S.coaT;const ramp=(elapsed<8?1:elapsed<16?2:3)*agonyMult();S.coaAcc=(S.coaAcc||0)+ramp;while(S.coaAcc>=1&&S.soul>0){S.coaAcc-=1;S.coaTicking=true;tick('dot');S.coaTicking=false;}}if(S.coaT<=0)log('Bane of Agony faded.');}
     dmgFlush(dt);
     if(S.soul>0){if(S.fear<=0)runAttacker(S,m,dt);
       (S.adds||[]).forEach(a=>{if(S.hp>0)runAttacker(a,addDef(a),dt);});
@@ -1518,7 +1524,7 @@ let abKey='';
 const ABIL_TIPS={camp:['Make Camp','Rest by a campfire for 20 seconds. The fight pauses and you heal. Then Well Rested: +50% XP for 30 minutes. Clicking does not break camp.','2 hour cooldown'],spelllock:['Spell Lock','Your Felhunter silences the target, cancelling whatever it is casting and locking it out for 12s. Only usable while the target is casting.','24s cooldown, shorter with Improved Felhunter'],sstoneOn:['Soulstone','Active. If you die, you come back at half health and skip the corpse run.',''],eat:['Eat','Back off, reset the target and heal 4% a second for 20 seconds, 80% in all. Any click stops it and you keep what you got. Fleeing an elite or Infernal puts you on the zone’s top regular mob.','3 min cooldown'],
  hs:['Healthstone','Heals 40% of your health, +10% per Healthstone rank.','60s cooldown'],
  craftSs:['Create Soulstone','Costs 1 Epic shard. Die with it active and you skip the corpse run. Once it saves you, you cannot make another for an hour.','1 hour cooldown after it saves you'],sacrifice:['Sacrifice','Your Voidwalkers shield you for 30% of your health (+10% per Improved Voidwalker rank). Damage hits the shield first. It lasts 20 seconds. Voidwalkers deal no damage until the cooldown ends.','20s shield, 60s cooldown'],
- shadowburn:['Shadowburn','Instantly kill a target at 25% health or less.','15s cooldown'],conflag:['Conflagrate','For 8 seconds Shadow Bolts deal triple damage.','30s cooldown'],coex:['Curse of Exhaustion','The target deals 15% less damage to you and your channel ticks 10% faster against it. One curse at a time.',''],wrack:['Wrack','15 instant Drain Soul ticks, each rolling for a shard.','45s cooldown']};
+ shadowburn:['Shadowburn','Instantly kill a target at 25% health or less.','15s cooldown'],conflag:['Conflagrate','For 8 seconds Shadow Bolts deal triple damage.','30s cooldown'],coex:['Curse of Exhaustion','The target deals 15% less damage to you and your channel ticks 10% faster against it. One curse at a time.',''],wrack:['Wrack','Your channel. Ticks and rolls for shards like Drain Soul, hits 25% harder, and your DoTs deal 15% more while it runs.','Affliction capstone']};
 function abilityTip(id){
   if(id==='castSpell')return [S.castSpell==='incin'?'Incinerate':'Shadow Bolt','Click to switch what your clicks cast. Shadow Bolt is the bigger hit; Incinerate hits for 85% and fires one extra Immolate tick per cast, so it wins once Immolate talents are stacked.',''];
   let t=ABIL_TIPS[id];if(!t){const sp=SPELLS.find(x=>x.id===id);t=sp?[sp.name,sp.desc,sp.cd?sp.cd+'s cooldown':'']:[id,'',''];}
@@ -1567,7 +1573,7 @@ document.addEventListener('pointerdown',e=>{const d=e.target.closest&&e.target.c
 document.addEventListener('pointerup',e=>{if(e.pointerType!=='touch'||!tipAura&&!auraHold)return;clearTimeout(auraHold);setTimeout(()=>{hideTip();tipAura=null;},1800);});
 
 // fixed action bar: each ability has a home slot and a hotkey, so nothing shifts around as you learn things
-const SLOT_ORDER=['cow','coe','coex','coa','drainlife','shadowburn','conflag','wrack','coil','hs','sacrifice','spelllock','craftSs','fear','lifetap'];
+const SLOT_ORDER=['cow','coe','coex','coa','drainlife','shadowburn','conflag','coil','hs','sacrifice','spelllock','craftSs','fear','lifetap'];
 const SLOT_KEYS=['1','2','3','4','5','6','7','8','9','0','-','=','[',']','\\'];
 function slotAbility(id){
   switch(id){
@@ -1585,7 +1591,7 @@ function slotAbility(id){
     case 'craftSs':return S.spells.sstone?(S.sstone?{id:'sstoneOn',lbl:'Soulstone active',on:true,dis:true}:{id:'craftSs',lbl:(S.cds.craftSs||0)>0?`Soulstone (${Math.ceil(S.cds.craftSs/60)}m)`:'Create Soulstone (1 Epic)',craft:true}):null;
     case 'shadowburn':return tal('shadowburn')?{id,lbl:'Shadowburn'}:null;
     case 'conflag':return tal('conflag')?{id,lbl:'Conflagrate'}:null;
-    case 'wrack':return tal('wrack')?{id,lbl:'Wrack'}:null;
+    case 'wrack':return null;
   }return null;}
 function renderAbilities(){
   const cells=SLOT_ORDER.map((sid,i)=>{const a=slotAbility(sid);if(!a)return `<div class="empty"><span class="key">${SLOT_KEYS[i]}</span></div>`;return cdBtn(a.id,a.lbl,(a.on?'on ':'')+(a.craft?'craft':'')).replace('<span class="cdfill"',`<span class="key">${SLOT_KEYS[i]}</span><span class="cdfill"`);});
@@ -1615,7 +1621,7 @@ function render(){
   $('soulbar').style.width=(S.soul/S.soulMax*100)+'%';setText('soullbl',`${S.soul} / ${S.soulMax}`);
   $('boltbar').style.width=Math.min(100,(S.bolt||0)*100)+'%';setText('boltlbl',`Shadow Bolt · ${clicksPerCast()} clicks · ${boltPower().toFixed(2)} dmg`);
   $('drainrow').style.display=S.spells.drainsoul?'':'none';$('castbar').className='cast'+(S.mode==='life'?' life':'');$('castbar').style.width=(S.mode==='life'?Math.min(100,(6-(S.lifeT||0))/6*100):Math.min(100,((S.chanN||0)+Math.min(1,S.prog))/5*100))+'%';
-  setText('castlbl',S.corpse>0?'Dead':S.camping?'Resting by the fire':S.eatT>0?'Eating':(S.mode==='life'?'Drain Life — no shards while this runs':'Drain Soul'));
+  setText('castlbl',S.corpse>0?'Dead':S.camping?'Resting by the fire':S.eatT>0?'Eating':(S.mode==='life'?'Drain Life — no shards while this runs':chanName()));
   setHTML('auras',(S.spells.corr?'<span class="dot sh" data-tip="corr">Corruption</span>':'')+(S.spells.immo?'<span class="dot fi" data-tip="immo">Immolate</span>':'')+(hasCurse('cow')?'<span class="dot cu" data-tip="cow">Weakness</span>':'')+(hasCurse('coe')?'<span class="dot cu" data-tip="coe">Elements</span>':'')+(hasCurse('coex')?'<span class="dot cu" data-tip="coex">Exhaustion</span>':'')+(S.coaT>0?`<span class="dot cu" data-tip="coa">Agony ${Math.ceil(S.coaT)}s</span>`:'')+(S.fear>0?`<span class="dot" data-tip="fear">Feared ${Math.ceil(S.fear)}s</span>`:'')+(S.enrageT>0?`<span class="dot fi" data-tip="enrage">Enraged ${Math.ceil(S.enrageT)}s</span>`:''));
   setHTML('pauras',(S.spells.darmor?'<span class="dot sh" data-tip="darmor">Demon Armor</span>':'')+(S.sstone?'<span class="dot gd" data-tip="sstone">Soulstone</span>':'')+(S.shield>0?`<span class="dot" data-tip="shield" style="border-color:#7fb0ff">Shield ${Math.ceil(S.shield)}</span>`:'')+(S.mode==='life'?`<span class="dot cu" data-tip="dlife">Drain Life ${Math.ceil(S.lifeT||0)}s</span>`:'')+(S.camping?`<span class="dot gd" data-tip="camping">Resting ${Math.ceil(S.eatT)}s</span>`:S.eatT>0?`<span class="dot gd" data-tip="eat">Eating ${Math.ceil(S.eatT)}s</span>`:'')+((S.restedT||0)>0?`<span class="dot" data-tip="rested" style="border-color:#6fcf3a;color:#9fe87a">Well Rested ${Math.ceil(S.restedT/60)}m</span>`:'')+(S.conflagT>0?`<span class="dot fi" data-tip="conflag">Conflagrate ${Math.ceil(S.conflagT)}s</span>`:''));
   setText('pname',`You · Lv ${S.lvl}`);setText('pstate',S.corpse>0?'dead':S.eatT>0?'resting':S.mode==='life'?'draining life':'in combat');document.getElementById('pframe').classList.toggle('dead',S.corpse>0);
@@ -1825,12 +1831,12 @@ function renderTab(){
   }else if(tab==='spellbook'){
     const rk=id=>{const r=RANKS.find(x=>x.id===id);return r?` <span class="muted">rank ${rank(id)+1}${rank(id)>=r.max?' (max)':''}</span>`:'';};
     h+=row('Shadow Bolt'+rk('bolt'),'Your click. Several clicks make one cast; each cast hits the target. Damage only.','','','owned');
-    if(S.spells.drainsoul)h+=row('Drain Soul'+rk('drain'),'Always channeling on your target. Each tick takes 1 health and may yield a shard.','','','owned');
+    if(S.spells.drainsoul)h+=row(chanName()+rk('drain'),'Always channeling on your target. Each tick takes 1 health and may yield a shard.'+(tal('wrack')?' Wrack hits 25% harder than Drain Soul, and your DoTs deal 15% more while it channels.':''),'','','owned');
     SPELLS.filter(s=>S.spells[s.id]&&s.id!=='drainsoul').forEach(s=>h+=row(s.name+rk(s.id),s.desc,'','','owned'));
     {const open=SP_EMP.filter(e=>spEmpOpen(e.id));const any=SP_EMP.some(e=>spEmpLevel(e.id)>0);
      if(open.length||any){h+='<div class="tier" style="padding:10px 4px 2px">Empower spells</div><div class="muted" style="padding:2px 4px 6px;font-size:12px">A spell at max rank can be empowered with shards, with no limit: +8% damage per level up to 20, +4% after. Resets with the Ritual.</div>';
        SP_EMP.forEach(e=>{const lv=spEmpLevel(e.id);const op=spEmpOpen(e.id);if(!op&&!lv)return;const r=RANKS.find(x=>x.id===e.id);
-         h+=row(`Empower ${e.name} <span class="muted">level ${lv}</span>`,op?`+${lv<20?8:4}% damage per level (now +${Math.round(empBonus(lv)*100)}%).`:`Train ${e.name} to max rank to keep empowering it.`,op?costStr(spEmpCost(e.id)):'',`<button data-a="spemp" data-id="${e.id}" ${canSpEmp(e.id)?'':'disabled'}>Empower</button>`,lv>0?'owned':'');});}}
+         h+=row(`Empower ${e.id==='drain'?chanName():e.name} <span class="muted">level ${lv}</span>`,op?`+${lv<20?8:4}% damage per level (now +${Math.round(empBonus(lv)*100)}%).`:`Train ${e.name} to max rank to keep empowering it.`,op?costStr(spEmpCost(e.id)):'',`<button data-a="spemp" data-id="${e.id}" ${canSpEmp(e.id)?'':'disabled'}>Empower</button>`,lv>0?'owned':'');});}}
     if(rank('council'))h+='<div class="muted" style="padding:6px 4px;font-size:12px">Breaking shards down is in the Shadow Council window (S).</div>';
   }else if(tab==='ranks_old'){
     h+='<div class="muted" style="padding:4px;font-size:12px">Higher ranks of spells you already know. Priced mostly in Uncommon shards. Ranks for a spell appear once you have learned it at the Trainer.</div>';
