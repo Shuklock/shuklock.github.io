@@ -476,7 +476,7 @@ const TREES=['Affliction','Demonology','Destruction'];
 const SLOTS=[['head','Head'],['chest','Chest'],['legs','Legs'],['hands','Hands'],['wand','Wand'],['trinket','Trinket']];
 const STATS={haste:'Haste',crit:'Crit',hit:'Hit',stam:'Stamina',power:'Spell power',spirit:'Spirit'};
 const HIT_CAP=.17;
-const STATDESC={haste:'Drain Soul, Corruption, Immolate, Agony and Drain Life tick faster. More ticks means more shard rolls and faster kills.',crit:'Chance any tick or cast crits for 1.5× soul (1.5× heal for Drain Life). Ruin and Pandemic raise bolts and dots to 2×. A Drain Soul crit also always gives a shard.',hit:'Fewer ticks resisted. 17% Hit means nothing at your level resists; enemies above your level need more.',stam:'More max health, so you survive longer between heals.',power:'Every tick and cast removes more soul: +1% per point. Drain Life heals more. Kills come faster, which also means fewer Drain Soul ticks per kill.',spirit:'Demon Armor heals more, Life Tap pays more shards, and Drain Soul ticks are more likely to give a shard (+1% chance per 2 Spirit). The farming stat.'};
+const STATDESC={haste:'Drain Soul, Corruption, Immolate, Agony and Drain Life tick faster. More ticks means more shard rolls and faster kills.',crit:'Chance any tick or cast crits for 1.5× soul (1.5× heal for Drain Life). Ruin and Pandemic raise bolts and dots to 2×. A Drain Soul crit also always gives a shard. Counts in full up to 50%; past that each point counts for less, and it never reaches 100%.',hit:'Fewer ticks resisted. 17% Hit means nothing at your level resists; enemies above your level need more.',stam:'More max health, so you survive longer between heals.',power:'Every tick and cast removes more soul: +1% per point. Drain Life heals more. Kills come faster, which also means fewer Drain Soul ticks per kill.',spirit:'Demon Armor heals more, Life Tap pays more shards, and Drain Soul ticks are more likely to give a shard (+1% chance per 2 Spirit). The farming stat.'};
 // what each line on the character sheet means
 const SHEETDESC={
  'Drain Soul speed':'Ticks per second from your channel. Each tick takes one point of soul and rolls for a shard. Haste gear, Drain Soul ranks, Bloodline and achievements raise it.',
@@ -756,7 +756,9 @@ function toggleCurse(id){if(hasCurse(id)){if(S.curse===id){S.curse=setFx('Hexbin
 function corrTps(){if(!S.spells.corr)return 0;return (1/3)*(1+setVal('corrAgony')/100)*(1+.1*tal('impcorr'))*(1+.12*rank('corr'))*(1+.02*tal('shmast'))*(1+gearStat('haste')/100)*globalHaste();}
 function auraCount(){return (S.spells.corr?1:0)+(S.spells.immo?1:0)+(S.curse?1:0)+(S.coaT>0?1:0);}
 function shardChance(){if(!S.spells.drainsoul)return 0;let c=.1+.05*tal('impdrains')+Math.min(.1,S.demons.felh*.01)+.05*leg('hunter')+.04*tal('soulsiphon')*auraCount()+(S.demons.succ>0?.012*tal('mdemo'):0)+(demonTypes()>0?.03*tal('brand'):0)+gearStat('spirit')/200;return Math.min(.95,c);}
-function critChance(){return .03*tal('fconc')+.02*tal('malevolence')+gearStat('crit')/100;}
+// crit soft cap: full value up to 50%, then each point counts for less; it closes in on 100% but never reaches it
+function critRaw(){return .03*tal('fconc')+.02*tal('malevolence')+gearStat('crit')/100;}
+function critChance(){const r=critRaw();return r<=.5?r:.5+.5*(1-Math.exp(-(r-.5)));}
 function armorRegen(){return (.01+.0025*rank('darmor'))*(1+.15*tal('aegis'))*(1+gearStat('spirit')/100);}
 function soulPerTick(){return 1+gearStat('power')/100;}
 function lifeTickHeal(){return maxHp()*(.4+.05*rank('drainlife'))/6*soulPerTick();}
