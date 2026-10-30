@@ -1805,8 +1805,12 @@ function respecCostText(){const c=respecCost();return Object.keys(c).map(k=>c[k]
 function trainables(){let n=0,afford=0;SPELLS.forEach(sp=>{if(sp.id==='darmor'||sp.id==='drainsoul'||S.spells[sp.id])return;if(S.lvl>=sp.lvl){n++;if(canAfford(spellCost(sp)))afford++;}});
   RANKS.forEach(r=>{const cur=rank(r.id);if(cur>=r.max)return;if(r.req&&!S.spells[r.req])return;const need=r.lvls?r.lvls[cur]:(r.lvl||0);if(S.lvl>=need){n++;if(canAfford(r.cost(cur)))afford++;}});return [n,afford];}
 let trainerKey='';
-function renderTrainerHead(){const [n,a]=trainables();const key=n+':'+a;if(key===trainerKey)return;trainerKey=key;const b=$('trainerbadge');b.style.display=n?'grid':'none';b.textContent=n;
-  $('trainerhead').classList.toggle('ready',a>0);setHTML('trainerlbl',n?`Trainer<br><span class="${a?'t1':'muted'}">${a?a+' you can afford':n+' to learn, not affordable yet'}</span>`:'Trainer<br><span class="muted">nothing new</span>');}
+// spells you can empower right now (level 60, max rank, shards in hand)
+function empowerables(){return S.lvl>=60&&typeof SP_EMP!=='undefined'?SP_EMP.filter(e=>canSpEmp(e.id)).length:0;}
+function renderTrainerHead(){const [n,a]=trainables();const e=empowerables();const key=n+':'+a+':'+e;if(key===trainerKey)return;trainerKey=key;const b=$('trainerbadge');b.style.display=n+e?'grid':'none';b.textContent=n+e;
+  $('trainerhead').classList.toggle('ready',a+e>0);
+  const lines=[];if(n)lines.push(`<span class="${a?'t1':'muted'}">${a?a+' you can afford':n+' to learn, not affordable yet'}</span>`);if(e)lines.push(`<span class="t1">${e} spell${e>1?'s':''} you can empower</span>`);
+  setHTML('trainerlbl','Trainer<br>'+(lines.length?lines.join('<br>'):'<span class="muted">nothing new</span>'));}
 // ---------- the world map: a stylised journey from Durotar to the Molten Core, zones as regions, dungeons as skulls, the elite as a star ----------
 // Character window: Gear & stats, or the damage meter
 let charTab='gear',meterWin='last5',meterDemOpen=false;
