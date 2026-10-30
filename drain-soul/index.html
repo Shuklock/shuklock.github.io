@@ -889,14 +889,18 @@ function curMob(){
   if(S.event&&S.fighting==='ev')return {n:'Infernal',l:S.lvl+2,hpm:5,dm:2,shards:10,ev:true,w:[20,30,28,15,7]};
   if(S.dg)return dgMob();
   const z=ZONES[S.zone];if(S.mob===4)return Object.assign({elite:true,hpm:10,dm:2.5,shards:5},z.elite);const rr=S.mobRar||0;return Object.assign({hpm:[1,1.5,2.5][rr],dm:[1,1.25,1.5][rr],shards:1,rar:rr},z.mobs[S.mob]);}
+// enemy levels per tier: a tier is never lower level than the one below it. Normal matches you up to the dungeon's band (boss at
+// least 2 over); Heroic lifts everything to 58 (boss 60) but never below Normal; Mythic is 59 (+creep) with the boss 4 over, never below Heroic
+function dgLevels(d,tier,T){const nT=dgLvl(d),nB=Math.max(d.boss.l,nT+2);if(d.kz||d.raid||!tier)return {t:d.kz?d.lvl:T&&T.lvl||nT,b:d.raid&&T?T.lvl+2:nB};
+  const hT=Math.max(DG_TIERS[1].lvl,nT),hB=Math.max(DG_TIERS[1].lvl+2,nB);if(tier===1)return {t:hT,b:hB};return {t:Math.max(T.lvl,hT),b:Math.max(T.lvl+4,hB)};}
 function dgDef(){return S.dg.kz?kzFloorDef(S.dg.floor):DUNGEONS[S.dg.id];}
 function dgLvl(d){return Math.max(d.lvl,Math.min(S.lvl,d.band[1]));}
-function dgMob(){const d=dgDef();const T=dgTierOf();const st=d.steps[S.dg.step];if(st==='boss'){const b=Object.assign({elite:true,dg:true,fearImm:!!d.fearImm||S.dg.tier>0,hpm:8*T.hpm,dm:2.2*T.dm,shards:4},d.boss);if(T.lvl)b.l=T.lvl+(S.dg.tier>=2?4:2);else if(!d.kz)b.l=Math.max(d.boss.l,dgLvl(d)+2);if(S.dg.kz)b.hpm=6*T.hpm;return b;}const cur=(S.dgPack&&S.dgPack[0])||{n:st[0],l:dgLvl(d)};const m=Object.assign({hpm:1.3*T.hpm,dm:1.2*T.dm,shards:1,rar:0,dg:true},cur);if(T.lvl)m.l=T.lvl;else if(!d.kz)m.l=dgLvl(d);return m;}
+function dgMob(){const d=dgDef();const T=dgTierOf();const st=d.steps[S.dg.step];if(st==='boss'){const b=Object.assign({elite:true,dg:true,fearImm:!!d.fearImm||S.dg.tier>0,hpm:8*T.hpm,dm:2.2*T.dm,shards:4},d.boss);if(!d.kz)b.l=dgLevels(d,S.dg.tier||0,T).b;if(S.dg.kz)b.hpm=6*T.hpm;return b;}const cur=(S.dgPack&&S.dgPack[0])||{n:st[0],l:dgLvl(d)};const m=Object.assign({hpm:1.3*T.hpm,dm:1.2*T.dm,shards:1,rar:0,dg:true},cur);if(T.lvl)m.l=T.lvl;else if(!d.kz)m.l=dgLvl(d);return m;}
 function dgLock(id){const t=(S.dgLock||{})[id]||0;return Math.max(0,t-Date.now()/1000);}
 // Heroic needs a Normal clear of that dungeon, Mythic a Heroic clear
 function dgTierOpen(d,tier){if(tier===0)return true;return (S.dgCleared[dgKey(d,tier-1)]||0)>0;}
 function dgStartStep(){const d=dgDef();const st=d.steps[S.dg.step];S.adds=[];S.dgPack=[];S.mobReturn=null;
-  const T=dgTierOf();if(st!=='boss'){S.dgPack=st.map(n=>({n,l:T.lvl||(d.kz?d.lvl:dgLvl(d))}));S.adds=S.dgPack.slice(1).map(def=>({def,swingT:Math.random()*.6,castCd:4+Math.random()*3,cast:null,enrageT:0,flurryN:0,alt:0}));}
+  const T=dgTierOf();if(st!=='boss'){S.dgPack=st.map(n=>({n,l:dgLevels(d,S.dg.tier||0,T).t}));S.adds=S.dgPack.slice(1).map(def=>({def,swingT:Math.random()*.6,castCd:4+Math.random()*3,cast:null,enrageT:0,flurryN:0,alt:0}));}
   spawn(true);S.mobRar=0;const m=curMob();S.soulMax=soulNeed(m);S.soul=S.soulMax;
   if(S.dg.kz)log(st==='boss'?`Floor ${S.dg.floor}: ${d.boss.n}.`:`Floor ${S.dg.floor}: ${st.length>1?st.length+' enemies':st[0]}.`);else log(st==='boss'?`${d.boss.n} waits at the end of ${d.name}.`:`Pull ${S.dg.step+1} of ${d.steps.length-1}: ${st.length>1?st.length+' enemies':st[0]}.`);}
 function dgEnter(i,tier,ml){tier=tier||0;const d=DUNGEONS[i];if(d.raid){tier=0;ml=Math.max(1,Math.min(ml||heatBest()+1,heatBest()+1));}else if(tier===2){ml=Math.max(1,Math.min(ml||mythicBest(d)+1,mythicBest(d)+1));}const T=d.raid?heatTier(ml):tierOf(tier,ml);const key=dgKey(d,tier);if(S.lvl<d.band[0]){log(`You need to be level ${d.band[0]} for ${d.name}.`,'bad');return;}if(dgLock(key)>0){log(`${T.name} ${d.name} is locked for another ${Math.ceil(dgLock(key)/60)} minutes.`,'bad');return;}
@@ -1880,7 +1884,7 @@ function renderTab(){
           const why=here?'Inside':low?'Lv '+d.band[0]:!open?'Clear '+DG_TIERS[ti-1].name:lk>0?Math.ceil(lk/60)+' min':!canPay?'Need '+RAR[T.cost]:'';
           const dis=here||low||!open||lk>0||!canPay;
           const pay=ti===2?(ml===top?` First clear pays ${Math.floor(ml/2)} extra Epic shard${Math.floor(ml/2)===1?'':'s'}${ml%5===0?' and a Legendary shard':''}, a guaranteed set piece, and opens Mythic ${ml+1}.`:' Already cleared: repeat clears drop a set piece 25% of the time.'):'';
-          const enter=`<button data-a="dgEnter" data-id="${di}" data-tier="${ti}" data-ml="${ml}" ${dis?'disabled':''} title="${T.cost!=null?'Costs one '+RAR[T.cost]+' shard. ':''}${ti?'Enemies at level '+T.lvl+', '+T.hpm+'× soul, '+T.dm+'× damage. Set pieces drop Epic at ilvl '+T.setIlvl+'.':''}${pay}${cl?' Cleared ×'+cl+'.':''}${ti===2&&mythicBest(d)?' Best: Mythic '+mythicBest(d)+'.':''}">${T.name}${why?' · '+why:''}</button>`;
+          const enter=`<button data-a="dgEnter" data-id="${di}" data-tier="${ti}" data-ml="${ml}" ${dis?'disabled':''} title="${T.cost!=null?'Costs one '+RAR[T.cost]+' shard. ':''}${ti?'Enemies at level '+dgLevels(d,ti,T).t+', '+d.boss.n+' level '+dgLevels(d,ti,T).b+', '+T.hpm+'× soul, '+T.dm+'× damage. Set pieces drop Epic at ilvl '+T.setIlvl+'.':''}${pay}${cl?' Cleared ×'+cl+'.':''}${ti===2&&mythicBest(d)?' Best: Mythic '+mythicBest(d)+'.':''}">${T.name}${why?' · '+why:''}</button>`;
           if(ti!==2||!open||low)return enter;
           return `<span class="mpick"><button data-a="mythPick" data-id="${d.id}" data-d="-1" ${ml<=1?'disabled':''} title="Lower Mythic level">‹</button>${enter}<button data-a="mythPick" data-id="${d.id}" data-d="1" ${ml>=top?'disabled':''} title="${ml>=top?'Clear Mythic '+ml+' to open Mythic '+(ml+1):'Higher Mythic level'}">›</button></span>`;}).join('');
         const bm={n:d.boss.n,l:Math.max(d.boss.l,dgLvl(d)+2),elite:true,hpm:8,dm:2.2,shards:4};
