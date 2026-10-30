@@ -482,12 +482,12 @@ const TALENTS=[
  {id:'ruin',tree:2,tier:10,max:1,ms:true,name:'Ruin',desc:'Milestone: Shadow Bolt and Shadowflame Bolt crits hit for double instead of 1.5×.'},
  {id:'shadowburn',tree:2,tier:10,max:1,ms:true,name:'Shadowburn',desc:'Milestone: new ability. Instantly kill a target at 25% health or less. 15s cooldown.'},
  {id:'intensity',tree:2,tier:10,max:5,name:'Intensity',desc:'Your click spell casts itself: one full cast every 19 / 14 / 11 / 8 / 6 seconds by rank, even while you are away.'},
- {id:'backlash',tree:2,tier:15,max:3,name:'Backlash',desc:'Every cast wraps you in a shield worth 4.5% of your max health per rank (for a 2-click Shadow Bolt; 1-click spells give half), holding up to 13% per rank. It loses a tenth of its strength every second, so it stays up while you keep casting.'},
  {id:'agonizing',tree:2,tier:15,max:3,name:'Agonizing Flames',desc:'Bane of Agony deals 6% more damage per rank.'},
  {id:'conflag',tree:2,tier:15,max:1,ms:true,name:'Conflagrate',desc:'Milestone: new ability. For 8s Shadow Bolts deal triple damage. 30s cooldown.'},
  {id:'pyro',tree:2,tier:15,max:2,name:'Pyroclasm',desc:'A soul you finish has a 12% chance per rank to pay one extra shard.'},
- {id:'havoc',tree:2,tier:20,max:1,name:'Bane of Havoc',desc:'15% of your Shadow Bolt damage carries over to the next target.'},
+ {id:'havoc',tree:2,tier:15,max:1,name:'Bane of Havoc',desc:'15% of your Shadow Bolt damage carries over to the next target.'},
  {id:'fabr',tree:2,tier:20,max:3,name:'Fire and Brimstone',desc:'+4% Shadow Bolt damage per rank while Immolate is on the target.'},
+ {id:'backlash',tree:2,tier:20,max:3,name:'Backlash',desc:'Every cast wraps you in a shield worth 4.5% of your max health per rank (for a 2-click Shadow Bolt; 1-click spells give half), holding up to 13% per rank. It loses a tenth of its strength every second, so it stays up while you keep casting.'},
  {id:'shadowflame',tree:2,tier:25,max:5,name:'Shadow and Flame',desc:'Immolate ticks 70% faster per rank.'},
  {id:'sflame',tree:2,tier:30,max:1,req:'havoc',name:'Shadowflame Bolt',desc:'Milestone: learn Shadowflame Bolt, on your action bar: a big shadow hit (6× a Shadow Bolt) that sets the target burning for as long as its 12 second cooldown. Immolate also ticks 40% faster. Needs Bane of Havoc.'},
 ];
@@ -1982,6 +1982,8 @@ function renderTab(){
 // ---------- transfer codes (shared with the addon; this numbering is canonical) ----------
 function exportCode(){const c=Object.assign({},S);c.cds={};c.event=null;c.fighting=null;c.corpse=0;c.lootQ=[];c.cleared=[0,1,2,3,4,5].map(i=>!!S.cleared[i]);c.seen=[0,1,2,3,4].map(i=>!!S.seen[i]);c.source='web';
   return 'DS1.'+btoa(unescape(encodeURIComponent(JSON.stringify(c))));}
+// Backlash moved from 15 to 20 Destruction points: a save that took it in a smaller splash gets those points back to spend again
+function fixTalents(){if(tal('backlash')&&treePts(2)-tal('backlash')<20){const n=tal('backlash');delete S.tal.backlash;log(`Backlash now needs 20 points in Destruction. Your ${n} point${n>1?'s were':' was'} refunded.`);}}
 function clampDemons(){DEMONS.forEach(d=>{const n=S.demons[d.id]||0,mx=d.max+1;if(n>mx){let refund=0;for(let k=mx;k<n;k++)refund+=Math.floor(d.cost*Math.pow(1.15,k));S.demons[d.id]=mx;S.shards[0]+=refund;log(`Demon limits: ${n-mx} extra ${d.name}${n-mx>1?'s':''} released. Refunded ${fmt(refund)} Common shards.`,'good');}});}
 function importCode(code){code=(code||'').replace(/\s/g,'');if(code.slice(0,4)!=='DS1.')return 'Not a Shardlock Idle code.';let d;
   try{d=JSON.parse(decodeURIComponent(escape(atob(code.slice(4)))));}catch(e){return 'Could not read that code.';}
@@ -1997,12 +1999,12 @@ function importCode(code){code=(code||'').replace(/\s/g,'');if(code.slice(0,4)!=
   DEMONS.forEach(dm=>f.demons[dm.id]=Number(f.demons[dm.id])||0);
   f.zone=Math.max(0,Math.min(5,Number(d.zone)||0));f.mob=Math.max(0,Math.min(4,Number(d.mob)||0));
   f.cds={};f.event=null;f.fighting=null;f.corpse=0;f.mode='drain';f.spells.darmor=true;if(f.lvl>=10)f.spells.drainsoul=true;f.last=Date.now();
-  S=f;clampDemons();buildPickers();spawn();tabDirty=true;save();log('Progress imported.','good');return null;}
+  S=f;clampDemons();fixTalents();buildPickers();spawn();tabDirty=true;save();log('Progress imported.','good');return null;}
 // ---------- save/load ----------
 function save(){try{S.last=Date.now();localStorage.setItem('drainsoul3',JSON.stringify(S));}catch(e){}}
 function load(){
   try{const raw=localStorage.getItem('drainsoul3');if(!raw)return;const d=JSON.parse(raw);S=Object.assign(freshState(),d);for(const sl in (S.gear||{}))migrateItem(S.gear[sl]);(S.bag||[]).forEach(migrateItem);if(!S.mythic||typeof S.mythic!=='object')S.mythic={};if(!d.heat||typeof d.heat!=='object')S.heat={best:S.flags&&S.flags.rag?1:0,on:null};if(!S.spemp||typeof S.spemp!=='object')S.spemp={};DUNGEONS.forEach(d=>{if((S.dgCleared||{})[d.id+':2']>0&&!S.mythic[d.id])S.mythic[d.id]=1;});S.corpse=0;S.event=null;S.fighting=null;S.mode='drain';S.lifeT=0;S.hp=Math.max(1,Math.min(maxHp(),S.hp));
-    Object.values(S.gear).forEach(it=>{if(it&&it.stats&&it.q<3)it.name=itemName(it);});S.bag.forEach(it=>{if(!it.junk&&it.stats&&it.q<3)it.name=itemName(it);});if(S.tal&&S.tal.incinerate){S.tal.sflame=S.tal.incinerate;delete S.tal.incinerate;}S.spells.darmor=true;if(S.lvl>=10&&S.spells.drainsoul===undefined)S.spells.drainsoul=true;clampDemons();
+    Object.values(S.gear).forEach(it=>{if(it&&it.stats&&it.q<3)it.name=itemName(it);});S.bag.forEach(it=>{if(!it.junk&&it.stats&&it.q<3)it.name=itemName(it);});if(S.tal&&S.tal.incinerate){S.tal.sflame=S.tal.incinerate;delete S.tal.incinerate;}S.spells.darmor=true;if(S.lvl>=10&&S.spells.drainsoul===undefined)S.spells.drainsoul=true;clampDemons();fixTalents();
     const gap=Math.min(12*3600,(Date.now()-(S.last||Date.now()))/1000);
     if(gap>0){if((S.cds.camp||0)>0)S.cds.camp=Math.max(0,S.cds.camp-gap);if((S.cds.craftSs||0)>0)S.cds.craftSs=Math.max(0,S.cds.craftSs-gap);if((S.restedT||0)>0)S.restedT=Math.max(0,S.restedT-gap);if(S.camping){S.camping=false;S.eatT=0;}}
     if(gap>60&&!noShards(curMob())){const m=curMob();const tps=youTps()+corrTps()+immoTps()+petTps();const ticks=tps*gap*(1-resistChance());const need=soulNeed(m);const souls=Math.floor(ticks/need);
