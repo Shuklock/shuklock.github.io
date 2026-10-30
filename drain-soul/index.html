@@ -383,11 +383,14 @@ const DG_TIERS=[
 function mythicIlvl(n){return 60+2*Math.min(n-1,19)+Math.max(0,n-20);}
 function mythicTier(n){n=Math.max(1,n|0);const b=DG_TIERS[2],k=n-1;return Object.assign({},b,{name:'Mythic '+n,ml:n,setIlvl:mythicIlvl(n),lvl:b.lvl+Math.min(3,Math.floor(k/10)),hpm:Math.round(b.hpm*Math.pow(1.12,k)*100)/100,dm:Math.round(b.dm*(1+.06*k)*100)/100});}
 function mythicBest(d){return ((S.mythic||{})[d.id])||0;}
-// Molten Core is a raid with an endless Heat ladder, like Mythic. Heat 1 is the base raid; killing Ragnaros at Heat N opens N+1.
-// Each Heat adds Mythic's growth (+12% soul, +6% damage) and enemies creep up 3 levels over the first 30 Heats. 30 minute lockout per clear
+// Molten Core is a raid with an endless Heat ladder, like Mythic. Killing Ragnaros at Heat N opens N+1. 30 minute lockout per clear
 function heatBest(){return (S.heat&&S.heat.best)||0;}
 function heatSel(){const top=heatBest()+1;const on=S.heat&&S.heat.on;return Math.max(1,Math.min(top,on||top));}
-function heatTier(h){h=Math.max(1,h|0);const k=h-1;return {name:'Heat '+h,heat:h,cost:null,lvl:61+Math.min(3,Math.floor(k/10)),hpm:Math.round(1.25*Math.pow(1.12,k)*100)/100,dm:Math.round(1.15*(1+.06*k)*100)/100,setQ:3,setIlvl:null,setChance:0,bossAb:3};}
+// Heat climbs four Mythic levels at a time: Heat N fights like Mythic 4N-3 (Heat 2 = Mythic 5, Heat 6 = Mythic 21), so the raid stays
+// ahead of the dungeons. Ragnaros drops one Epic item per kill at that Mythic level's item level plus RAID_ILVL
+const HEAT_STEP=4,RAID_ILVL=2;
+function heatEq(h){return 1+HEAT_STEP*(Math.max(1,h|0)-1);}
+function heatTier(h){h=Math.max(1,h|0);const e=heatEq(h),M=mythicTier(e);return {name:'Heat '+h,heat:h,eq:e,cost:null,lvl:M.lvl+2,hpm:M.hpm,dm:M.dm,setQ:3,setIlvl:mythicIlvl(e)+RAID_ILVL,setChance:0,bossAb:3};}
 function tierOf(tier,ml){return tier===2?mythicTier(ml||1):DG_TIERS[tier||0];}
 function dgTierOf(){if(!S.dg)return DG_TIERS[0];return S.dg.kz?kzTier(S.dg.floor):DUNGEONS[S.dg.id].raid?heatTier(S.dg.heat):tierOf(S.dg.tier||0,S.dg.ml);}
 function dgKey(d,tier){return tier?d.id+':'+tier:d.id;}
@@ -913,6 +916,7 @@ function dgKill(m){if(S.dg.kz){if(Math.random()<.5)giveShard(1,'(tower)');S.dgPa
   if(m.elite){S.dgCleared[dgKey(d,tier)]=(S.dgCleared[dgKey(d,tier)]||0)+1;
     // the boss always drops a Rare, and a set piece one time in four; BRD and UBRS also pay an Epic shard
     if(!d.raid){const needy=SLOTS.map(x=>x[0]).filter(sl=>!S.gear[sl]||S.gear[sl].q<2);const slot=(needy.length&&Math.random()<.6?needy:SLOTS.map(x=>x[0]))[Math.floor(Math.random()*(needy.length&&Math.random()<.6?needy.length:SLOTS.length))]||'chest';const it=makeItem(tier===2?T.setIlvl:m.l,2,slot);if(addToBag(it)){S.lastDrop=it.uid;log(`${m.n} dropped <span class="t2">${it.name}</span>.`,'loot');}}
+    else{const sl=SLOTS[Math.floor(Math.random()*SLOTS.length)][0];const it=makeItem(T.setIlvl,3,sl);if(addToBag(it)){S.lastDrop=it.uid;log(`${m.n} dropped <span class="t3">${it.name}</span> (ilvl ${it.ilvl}).`,'loot');}}
     if(Math.random()<setCh){const have=['head','chest','legs','hands'].filter(sl=>!(S.gear[sl]&&S.gear[sl].set===DG_SETS[d.tier]&&(S.gear[sl].tier||0)>=tier));const pool=have.length&&Math.random()<.7?have:['head','chest','legs','hands'];const sl=pool[Math.floor(Math.random()*pool.length)];const it=setPiece(DG_SETS[d.tier],sl,T.setIlvl||m.l,tier,T.setQ);if(addToBag(it)){S.lastDrop=it.uid;log(`${m.n} dropped <span class="t${it.q}">${it.name}</span> (${DG_SETS[d.tier]} set).`,'loot');}}
     if(d.epicShard)giveShard(3,'(dungeon)');
     if(d.raid){S.flags.rag=true;ragFirstKill(S.dg.heat||1);}
@@ -1868,9 +1872,9 @@ function renderTab(){
         if(d.raid){const hs=heatSel(),top=heatBest()+1,T=heatTier(hs),lk=dgLock(dgKey(d,0));const first=hs===top;
           const why=inThis?'Inside':low?'Lv '+d.band[0]:lk>0?Math.ceil(lk/60)+' min':'';const dis=inThis||low||lk>0;
           const pay=first?`First kill pays ${hs===1||hs%5===0?'a Legendary shard and ':''}${1+Math.floor(hs/2)} Epic shard${Math.floor(hs/2)?'s':''}, and opens Heat ${hs+1}.`:'Already beaten at this Heat: Ragnaros pays his usual pile.';
-          const enter=`<button data-a="dgEnter" data-id="${di}" data-tier="0" data-ml="${hs}" ${dis?'disabled':''} title="Enemies at level ${T.lvl}, ${T.hpm}× soul, ${T.dm}× damage. ${pay}">Heat ${hs}${why?' · '+why:''}</button>`;
+          const enter=`<button data-a="dgEnter" data-id="${di}" data-tier="0" data-ml="${hs}" ${dis?'disabled':''} title="As hard as Mythic ${T.eq}: enemies at level ${T.lvl}, ${T.hpm}× soul, ${T.dm}× damage. Ragnaros drops an Epic at ilvl ${T.setIlvl}. ${pay}">Heat ${hs}${why?' · '+why:''}</button>`;
           const pick=low?enter:`<span class="mpick"><button data-a="heatPick" data-d="-1" ${hs<=1?'disabled':''} title="Lower Heat">‹</button>${enter}<button data-a="heatPick" data-d="1" ${hs>=top?'disabled':''} title="${hs>=top?'Kill Ragnaros at Heat '+hs+' to open Heat '+(hs+1):'Higher Heat'}">›</button></span>`;
-          h+=row(`🔥 ${d.name} <span class="lv-${lvlDiff({n:'',l:T.lvl,hpm:1,dm:1})}">Lv ${T.lvl}</span> · ${d.boss.n} <span class="lv-${lvlDiff({n:'',l:T.lvl+2,elite:true,hpm:1,dm:1})}">Lv ${T.lvl+2}</span> · raid`,`${d.steps.length-1} pulls then Ragnaros · endless Heat: each one +12% soul, +6% damage · no eating inside, a death ends the run · 30 min lockout after a clear · best ${heatBest()?'Heat '+heatBest():'none'}`,`<span class="t3">Epic loot · Heat shards</span>`,`<span style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${pick}</span>`,inThis?'owned':(low?'locked':''));return;}
+          h+=row(`🔥 ${d.name} <span class="lv-${lvlDiff({n:'',l:T.lvl,hpm:1,dm:1})}">Lv ${T.lvl}</span> · ${d.boss.n} <span class="lv-${lvlDiff({n:'',l:T.lvl+2,elite:true,hpm:1,dm:1})}">Lv ${T.lvl+2}</span> · raid`,`${d.steps.length-1} pulls then Ragnaros · endless Heat: each one fights like four more Mythic levels and drops an Epic at that item level · no eating inside, a death ends the run · 30 min lockout after a clear · best ${heatBest()?'Heat '+heatBest():'none'}`,`<span class="t3">Epic ilvl ${T.setIlvl} · Heat shards</span>`,`<span style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${pick}</span>`,inThis?'owned':(low?'locked':''));return;}
         const btns=DG_TIERS.map((T0,ti)=>{const key=dgKey(d,ti);const lk=dgLock(key);const here=inThis&&(S.dg.tier||0)===ti;const open=dgTierOpen(d,ti);const canPay=T0.cost==null||S.shards[T0.cost]>=1;const cl=S.dgCleared[key]||0;
           const top=mythicBest(d)+1;const ml=ti===2?Math.max(1,Math.min(top,mythSel[d.id]||top)):0;const T=ti===2?mythicTier(ml):T0;
           const why=here?'Inside':low?'Lv '+d.band[0]:!open?'Clear '+DG_TIERS[ti-1].name:lk>0?Math.ceil(lk/60)+' min':!canPay?'Need '+RAR[T.cost]:'';
