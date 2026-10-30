@@ -1546,7 +1546,7 @@ $('tab').addEventListener('pointerdown',e=>{const b=e.target.closest('button,[da
   else if(a==='autotoggle'){S.autosellOff=S.autosellOff||{};S.autosellOff[id]=!S.autosellOff[id];autosellSweep();}
   else if(a==='autosell'){const q=id==='junk'?'junk':+id;const o=AUTOSELL.find(x=>String(x.q)===String(q));if(autosellAvail(q)&&!S.autosell[q]&&S.account.gold>=o.cost){S.account.gold=Math.round((S.account.gold-o.cost)*100)/100;S.autosell[q]=true;log(`Auto-sell for ${o.name} items is on.`,'good');autosellSweep();}}
   else if(a==='mapz'){const z=b.dataset.z==='dg'?'dg':+b.dataset.z;if(mapOpen.has(z))mapOpen.delete(z);else mapOpen.add(z);}
-  else if(a==='mapsel'){mapSel=b.dataset.z==='kz'?'kz':+b.dataset.z;}
+  else if(a==='mapsel'){mapSel=b.dataset.z==='kz'||String(b.dataset.z).startsWith('dg:')?b.dataset.z:+b.dataset.z;}
   else if(a==='kzEnter'){kzEnter(+id);closeWin();}
   else if(a==='kzBless'){const c=kzBlessCost();if((S.kz.marks||0)>=c){S.kz.marks-=c;const k=blessNext();S.kz.bless=(S.kz.bless||0)+1;log(`Blessing of Medivh rank ${S.kz.bless}: +${S.kz.bless<=12?1:.5} ${STATS[k]}.`,'good');}}
   else if(a==='dgEnter'){dgEnter(+id,+(b.dataset.tier||0),+(b.dataset.ml||0));closeWin();}
@@ -1781,8 +1781,8 @@ function worldMapSvg(){
       <text x="${x}" y="${y+4}" text-anchor="middle" font-size="12" fill="${open?'#dfd0ff':'#5a5470'}">${open?'♜':'✕'}</text>
       <text x="${x}" y="${y+26}" text-anchor="middle" font-size="8" fill="${open?'#c9a4ff':'#5a5470'}" style="paint-order:stroke;stroke:#0b0912;stroke-width:2.5px">Karazhan</text></g>`;}
   DUNGEONS.forEach((d,di)=>{const [x,y]=MAP_DG[d.id];const low=S.lvl<d.band[0];const zl=d.zone>0&&!S.cleared[d.zone-1];const cl=(S.dgCleared[d.id]||0)+(S.dgCleared[d.id+':1']||0)+(S.dgCleared[d.id+':2']||0);const inThis=S.dg&&S.dg.id===di;
-    g+=`<g data-a="mapsel" data-z="${d.zone}" style="cursor:pointer"><title>${d.name} · levels ${d.band[0]}–${d.band[1]}${cl?' · cleared ×'+cl:''}</title>
-      <circle cx="${x}" cy="${y}" r="11" fill="#0b0912" stroke="${inThis?'#2fff6a':zl||low?'#3a3448':'#4aa3ff'}" stroke-width="1.5"/>
+    const dsel=mapSel==='dg:'+d.id;g+=`<g data-a="mapsel" data-z="dg:${d.id}" style="cursor:pointer"><title>${d.name} · levels ${d.band[0]}–${d.band[1]}${cl?' · cleared ×'+cl:''}</title>
+      <circle cx="${x}" cy="${y}" r="11" fill="#0b0912" stroke="${dsel?'#ffd138':inThis?'#2fff6a':zl||low?'#3a3448':'#4aa3ff'}" stroke-width="${dsel?3:1.5}"/>
       <text x="${x}" y="${y+4.5}" text-anchor="middle" font-size="13" fill="${zl||low?'#5a5470':'#dfe8ff'}">${zl||low?'✕':'☠'}</text>
       <text x="${x}" y="${y+22}" text-anchor="middle" font-size="8" fill="${zl||low?'#5a5470':'#9fb8e8'}" style="paint-order:stroke;stroke:#0b0912;stroke-width:2.5px">${d.name.replace('The ','').replace('Upper Blackrock Spire','UBRS').replace('Blackrock Depths','BRD').replace('Scarlet Monastery','Scarlet Mon.').replace('Shadowfang Keep','Shadowfang')}</text></g>`;});
   return `<div class="worldmap"><svg viewBox="0 0 640 400" width="100%" style="display:block;border-radius:10px;background:radial-gradient(ellipse at 40% 60%,#1c1430 0%,#0f0c1c 70%)">
@@ -1791,7 +1791,7 @@ function worldMapSvg(){
     <path d="M10 250 C 60 180, 150 170, 230 190 S 340 150, 400 50 S 560 10, 630 30 L 630 395 L 10 395 Z" fill="#171226" stroke="#2d2459" stroke-width="1.5"/>
     <path d="${road}" fill="none" stroke="#5a4a7a" stroke-width="3" stroke-dasharray="6 5" stroke-linecap="round" opacity=".8"/>
     ${g}
-    <text x="12" y="20" font-size="10" fill="#9d92b3">Tap a zone to see its enemies. ☆ elite alive · ★ drained · ☠ dungeon · ♜ Karazhan</text>
+    <text x="12" y="20" font-size="10" fill="#9d92b3">Tap a zone for its enemies, a skull to run that dungeon. ☆ elite alive · ★ drained · ☠ dungeon · ♜ Karazhan</text>
   </svg></div>`;}
 // ---------- set library: a set shows once you have cleared a dungeon that drops it, or found a piece of it ----------
 function setKnown(nm){const st=SETS[nm];if(st.dungeon){return DUNGEONS.some(d=>DG_SETS[d.tier]===nm&&[0,1,2].some(t=>(S.dgCleared[dgKey(d,t)]||0)>0));}
@@ -1874,29 +1874,40 @@ function renderTab(){
     if(S.dg){const d=dgDef();h+=`<div class="event" style="background:#1a1a3a;border-color:#4aa3ff"><span>⚔ ${S.dg.kz?`Karazhan · floor ${S.dg.floor} (${d.steps[0]==='boss'?d.boss.n:d.steps[0].join(', ')}) · best ${S.kz.best||0}`:`In ${S.dg.tier?dgTierOf().name+' ':''}${d.name} · pull ${S.dg.step+1} of ${d.steps.length} (${d.steps[S.dg.step]==='boss'?d.boss.n:d.steps[S.dg.step].join(', ')})`}</span><button data-a="dgLeave">Leave</button></div>`;}
     h+=worldMapSvg();
     if(mapSel==null)mapSel=S.zone;
-    if(mapSel==='kz'){h+=kzPanel(row);}else{
+    // a dungeon's own panel: what the run is, then one row per tier with its Enter button
+    const dgRows=(d,di)=>{const low=S.lvl<d.band[0];const inThis=S.dg&&S.dg.id===di;const lv=(l,el)=>`<span class="lv-${lvlDiff({n:'',l,elite:!!el,hpm:1,dm:1})}">Lv ${l}</span>`;
+        const intro=t=>{h+=`<div class="muted" style="padding:2px 4px 8px;font-size:12px;line-height:1.45">${t}</div>`;};
+        if(d.raid){const hs=heatSel(),top=heatBest()+1,T=heatTier(hs),lk=dgLock(dgKey(d,0));const first=hs===top;
+          intro(`${d.steps.length-1} pulls of Molten Core trash, then Ragnaros. No eating inside, and a death ends the run. A clear locks the raid for 30 minutes. Heat is endless: each one fights like four more Mythic levels, and Ragnaros drops an Epic at that item level every kill. Best: ${heatBest()?'Heat '+heatBest():'none yet'}.`);
+          const why=inThis?'Inside':low?'Lv '+d.band[0]:lk>0?Math.ceil(lk/60)+' min':'';const dis=inThis||low||lk>0;
+          const pay=first?`First kill pays ${hs===1||hs%5===0?'a Legendary shard and ':''}${1+Math.floor(hs/2)} Epic shard${Math.floor(hs/2)?'s':''} and opens Heat ${hs+1}.`:'Already beaten at this Heat: Ragnaros pays his usual shards.';
+          const enter=`<button data-a="dgEnter" data-id="${di}" data-tier="0" data-ml="${hs}" ${dis?'disabled':''}>${why||'Enter'}</button>`;
+          const pick=`<span class="mpick"><button data-a="heatPick" data-d="-1" ${hs<=1?'disabled':''} title="Lower Heat">‹</button><b style="padding:0 6px">Heat ${hs}</b><button data-a="heatPick" data-d="1" ${hs>=top?'disabled':''} title="${hs>=top?'Kill Ragnaros at Heat '+hs+' to open Heat '+(hs+1):'Higher Heat'}">›</button></span>`;
+          h+=row(`${pick}`,`As hard as Mythic ${T.eq}: trash ${lv(T.lvl)}, Ragnaros ${lv(T.lvl+2,1)}, ${T.hpm}× soul, ${T.dm}× damage. Drops an Epic at ilvl ${T.setIlvl}. ${pay}`,'',enter,inThis?'owned':(low?'locked':''));return;}
+        intro(`${d.steps.length-1} pulls, then ${d.boss.n}. No eating inside, and a death ends the run. A clear locks that tier for 10 minutes; every Mythic level shares one lock.${d.fearImm?' The boss is immune to Fear.':''} Drops the <span class="t2">${DG_SETS[d.tier]}</span> set${d.epicShard?' and an Epic shard':''}.`);
+        DG_TIERS.forEach((T0,ti)=>{const key=dgKey(d,ti);const lk=dgLock(key);const here=inThis&&(S.dg.tier||0)===ti;const open=dgTierOpen(d,ti);const canPay=T0.cost==null||S.shards[T0.cost]>=1;const cl=S.dgCleared[key]||0;
+          const top=mythicBest(d)+1;const ml=ti===2?Math.max(1,Math.min(top,mythSel[d.id]||top)):0;const T=ti===2?mythicTier(ml):T0;const L=dgLevels(d,ti,T);
+          const why=here?'Inside':low?'Lv '+d.band[0]:!open?'Clear '+DG_TIERS[ti-1].name:lk>0?Math.ceil(lk/60)+' min':!canPay?'Need '+RAR[T.cost]:'';
+          const dis=here||low||!open||lk>0||!canPay;
+          const what=ti===0?`Enemies match your level up to ${d.band[1]}: trash ${lv(L.t)}, boss ${lv(L.b,1)}. Set pieces drop Rare 25% of the time.`
+            :`Trash ${lv(L.t)}, boss ${lv(L.b,1)}, ${T.hpm}× soul, ${T.dm}× damage. Set pieces drop Epic at ilvl ${T.setIlvl}${ti===1?', 40% of the time':''}.`;
+          const pay=ti===2?(ml===top?` First clear pays ${[Math.floor(ml/2)?Math.floor(ml/2)+' extra Epic shard'+(Math.floor(ml/2)===1?'':'s'):'',ml%5===0?'a Legendary shard':'','a guaranteed set piece'].filter(Boolean).join(', ')}, and opens Mythic ${ml+1}.`:' Already cleared: a set piece drops 25% of the time.'):'';
+          const extra=`${cl?' Cleared ×'+cl+'.':''}${ti===2&&mythicBest(d)?' Best: Mythic '+mythicBest(d)+'.':''}`;
+          const name=ti===2&&open&&!low?`<span class="mpick"><button data-a="mythPick" data-id="${d.id}" data-d="-1" ${ml<=1?'disabled':''} title="Lower Mythic level">‹</button><b style="padding:0 6px">Mythic ${ml}</b><button data-a="mythPick" data-id="${d.id}" data-d="1" ${ml>=top?'disabled':''} title="${ml>=top?'Clear Mythic '+ml+' to open Mythic '+(ml+1):'Higher Mythic level'}">›</button></span>`:T.name;
+          h+=row(name,what+pay+extra,T.cost!=null?`<span class="t${T.cost}">1 ${RAR[T.cost]}</span>`:'',`<button data-a="dgEnter" data-id="${di}" data-tier="${ti}" data-ml="${ml}" ${dis?'disabled':''}>${why||'Enter'}</button>`,here?'owned':(dis&&!lk?'locked':''));});};
+    if(mapSel==='kz'){h+=kzPanel(row);}else if(typeof mapSel==='string'&&mapSel.startsWith('dg:')){
+    // a dungeon or the raid on its own: click its skull on the map
+    const di=DUNGEONS.findIndex(x=>'dg:'+x.id===mapSel),d=DUNGEONS[di],z=ZONES[d.zone];const zl=d.zone>0&&!S.cleared[d.zone-1];
+    h+=`<div class="tier" style="padding:10px 4px 2px">${d.name} · ${d.raid?'raid':'dungeon'} in <span data-a="mapsel" data-z="${d.zone}" style="cursor:pointer;text-decoration:underline">${z.name}</span> · levels ${d.band[0]}–${d.band[1]}${S.dg&&S.dg.id===di?' · <span class="t1">you are inside</span>':''}${zl?' · <span class="muted">locked: drain '+ZONES[d.zone-1].elite.n+' first</span>':''}</div>`;
+    if(!zl)dgRows(d,di);
+    }else{
     const zi=mapSel,z=ZONES[zi];const locked=zi>0&&!S.cleared[zi-1];
     h+=`<div class="tier" style="padding:10px 4px 2px">${z.name} · levels ${z.band[0]}–${z.band[1]}${S.zone===zi?' · <span class="t1">you are here</span>':''}${locked?' · <span class="muted">locked: drain '+ZONES[zi-1].elite.n+' first</span>':''}</div>`;
     if(!locked){
       z.mobs.forEach((mm,mi)=>{const m={n:mm.n,l:mm.l,hpm:1,dm:1,shards:1};const cls=lvlDiff(m);const cur=S.zone===zi&&S.mob===mi&&S.fighting!=='ev'&&!S.dg;h+=row(`${mm.n} <span class="lv-${cls}">Lv ${mm.l}</span>`,`${cls}${noShards(m)?' · no XP, no shards':''}`,'',`<button data-a="go" data-z="${zi}" data-m="${mi}" ${cur?'disabled':''}>${cur?'Fighting':'Face'}</button>`,cur?'owned':'');});
       const el={n:z.elite.n,l:z.elite.l,elite:true,hpm:10,dm:3,shards:5};const lk=bossLock(zi);const cur=S.zone===zi&&S.mob===4&&!S.dg;h+=row(`★ ${z.elite.n} <span class="lv-${lvlDiff(el)}">Lv ${el.l}</span> elite`,lk>0?`dead, back in ${Math.ceil(lk/60)} min`:'20 minute lockout after a kill'+(fearImmune(el)?' · immune to Fear':''),`<span class="t2">Rare${zi>=3?' + Epic':''} shards</span>`,`<button data-a="go" data-z="${zi}" data-m="4" ${cur||lk>0?'disabled':''}>${cur?'Fighting':lk>0?'Dead':'Face'}</button>`,cur?'owned':(lk>0?'locked':''));
-      DUNGEONS.forEach((d,di)=>{if(d.zone!==zi)return;const low=S.lvl<d.band[0];const inThis=S.dg&&S.dg.id===di;
-        if(d.raid){const hs=heatSel(),top=heatBest()+1,T=heatTier(hs),lk=dgLock(dgKey(d,0));const first=hs===top;
-          const why=inThis?'Inside':low?'Lv '+d.band[0]:lk>0?Math.ceil(lk/60)+' min':'';const dis=inThis||low||lk>0;
-          const pay=first?`First kill pays ${hs===1||hs%5===0?'a Legendary shard and ':''}${1+Math.floor(hs/2)} Epic shard${Math.floor(hs/2)?'s':''}, and opens Heat ${hs+1}.`:'Already beaten at this Heat: Ragnaros pays his usual pile.';
-          const enter=`<button data-a="dgEnter" data-id="${di}" data-tier="0" data-ml="${hs}" ${dis?'disabled':''} title="As hard as Mythic ${T.eq}: enemies at level ${T.lvl}, ${T.hpm}× soul, ${T.dm}× damage. Ragnaros drops an Epic at ilvl ${T.setIlvl}. ${pay}">Heat ${hs}${why?' · '+why:''}</button>`;
-          const pick=low?enter:`<span class="mpick"><button data-a="heatPick" data-d="-1" ${hs<=1?'disabled':''} title="Lower Heat">‹</button>${enter}<button data-a="heatPick" data-d="1" ${hs>=top?'disabled':''} title="${hs>=top?'Kill Ragnaros at Heat '+hs+' to open Heat '+(hs+1):'Higher Heat'}">›</button></span>`;
-          h+=row(`🔥 ${d.name} <span class="lv-${lvlDiff({n:'',l:T.lvl,hpm:1,dm:1})}">Lv ${T.lvl}</span> · ${d.boss.n} <span class="lv-${lvlDiff({n:'',l:T.lvl+2,elite:true,hpm:1,dm:1})}">Lv ${T.lvl+2}</span> · raid`,`${d.steps.length-1} pulls then Ragnaros · endless Heat: each one fights like four more Mythic levels and drops an Epic at that item level · no eating inside, a death ends the run · 30 min lockout after a clear · best ${heatBest()?'Heat '+heatBest():'none'}`,`<span class="t3">Epic ilvl ${T.setIlvl} · Heat shards</span>`,`<span style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${pick}</span>`,inThis?'owned':(low?'locked':''));return;}
-        const btns=DG_TIERS.map((T0,ti)=>{const key=dgKey(d,ti);const lk=dgLock(key);const here=inThis&&(S.dg.tier||0)===ti;const open=dgTierOpen(d,ti);const canPay=T0.cost==null||S.shards[T0.cost]>=1;const cl=S.dgCleared[key]||0;
-          const top=mythicBest(d)+1;const ml=ti===2?Math.max(1,Math.min(top,mythSel[d.id]||top)):0;const T=ti===2?mythicTier(ml):T0;
-          const why=here?'Inside':low?'Lv '+d.band[0]:!open?'Clear '+DG_TIERS[ti-1].name:lk>0?Math.ceil(lk/60)+' min':!canPay?'Need '+RAR[T.cost]:'';
-          const dis=here||low||!open||lk>0||!canPay;
-          const pay=ti===2?(ml===top?` First clear pays ${Math.floor(ml/2)} extra Epic shard${Math.floor(ml/2)===1?'':'s'}${ml%5===0?' and a Legendary shard':''}, a guaranteed set piece, and opens Mythic ${ml+1}.`:' Already cleared: repeat clears drop a set piece 25% of the time.'):'';
-          const enter=`<button data-a="dgEnter" data-id="${di}" data-tier="${ti}" data-ml="${ml}" ${dis?'disabled':''} title="${T.cost!=null?'Costs one '+RAR[T.cost]+' shard. ':''}${ti?'Enemies at level '+dgLevels(d,ti,T).t+', '+d.boss.n+' level '+dgLevels(d,ti,T).b+', '+T.hpm+'× soul, '+T.dm+'× damage. Set pieces drop Epic at ilvl '+T.setIlvl+'.':''}${pay}${cl?' Cleared ×'+cl+'.':''}${ti===2&&mythicBest(d)?' Best: Mythic '+mythicBest(d)+'.':''}">${T.name}${why?' · '+why:''}</button>`;
-          if(ti!==2||!open||low)return enter;
-          return `<span class="mpick"><button data-a="mythPick" data-id="${d.id}" data-d="-1" ${ml<=1?'disabled':''} title="Lower Mythic level">‹</button>${enter}<button data-a="mythPick" data-id="${d.id}" data-d="1" ${ml>=top?'disabled':''} title="${ml>=top?'Clear Mythic '+ml+' to open Mythic '+(ml+1):'Higher Mythic level'}">›</button></span>`;}).join('');
-        const bm={n:d.boss.n,l:Math.max(d.boss.l,dgLvl(d)+2),elite:true,hpm:8,dm:2.2,shards:4};
-        h+=row(`⚔ ${d.name} <span class="lv-${lvlDiff({n:'',l:dgLvl(d),hpm:1,dm:1})}">Lv ${dgLvl(d)}</span> · ${d.boss.n} <span class="lv-${lvlDiff(bm)}">Lv ${Math.max(d.boss.l,dgLvl(d)+2)}</span>`,`${d.steps.length-1} pulls then the boss · enemies match your level up to ${d.band[1]} · no eating inside, a death ends the run · 10 min lockout after a clear${d.fearImm?' · boss immune to Fear':''}`,`<span class="t2">${DG_SETS[d.tier]} set${d.epicShard?' · Epic shard':''}</span>`,`<span style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${btns}</span>`,inThis?'owned':(low?'locked':''));});
+      {const here=DUNGEONS.map((d,di)=>d.zone===zi?`<button data-a="mapsel" data-z="dg:${d.id}">${d.raid?'🔥':'☠'} ${d.name}</button>`:'').join('');
+        if(here)h+=row('Dungeons here','Open one to run it, or click its skull on the map.','',`<span style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${here}</span>`);}
     }}
   }else if(tab==='patch'){
     h+=`<div class="muted" style="padding:4px;font-size:12px">${patchSince?'Shardlock Idle has been updated since you last played.':'What changed in recent versions of Shardlock Idle.'}</div>`;
