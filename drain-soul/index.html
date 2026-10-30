@@ -969,7 +969,7 @@ function dangerPay(m){if(m.elite||m.ev)return 1;return CASTERS[m.n]||BRUTES[m.n]
 function interrupt(source){let hit=false;const stop=att=>{if(!att.cast)return;const nm=att.cast.name;att.cast=null;att.castCd=Math.max(att.castCd||0,source==='spelllock'?12:8);fly('Interrupted: '+nm,'#ff9c3a',null,null,false,'dmg');hit=true;};stop(S);if(source==='spelllock'||source==='coil')(S.adds||[]).forEach(stop);return hit;}
 function mobRarity(m){return m.ev?1:(m.elite?(m.n==='Ragnaros'?4:3):(S.mobRar||0));}
 function rollRarity(m,kind){
-  if(m.ev){const z=S.zone;const r=Math.random();if(z>=5&&r<.005)return 4;if(r<.02*(z+1))return 3;return 1;}
+  if(m.ev){const z=S.zone;const r=Math.random();if(r<.02*(z+1))return 3;return 1;} // Infernals top out at Epic; Legendary shards come only from milestones
   if(m.elite)return 1; // boss ticks pay Uncommon; the kill pays the pile (see complete)
   let r=mobRarity(m);
   if(kind==='death'&&S.coaT>0&&!m.elite&&!m.ev&&r<4&&Math.random()<.1)r++;
