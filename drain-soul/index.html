@@ -446,7 +446,7 @@ const TALENTS=[
  {id:'fconc',tree:0,tier:10,max:3,name:'Fel Concentration',desc:'+3% critical drain chance per rank. A critical drain always yields a shard.'},
  {id:'ampc',tree:0,tier:10,max:1,ms:true,name:'Amplify Curse',desc:'Milestone: your curses are 50% stronger.'},
  {id:'malevolence',tree:0,tier:15,max:5,name:'Malevolence',desc:'+2% critical drain chance per rank.'},
- {id:'darkbargain',tree:0,tier:15,max:3,name:'Dark Bargain',desc:'20% of each hit you take per rank is deferred and taken over 5 seconds instead, and each of your damage-over-time effects on the target (Corruption, Immolate, Bane of Agony) eats 25% of what is deferred.'},
+ {id:'darkbargain',tree:0,tier:15,max:3,name:'Dark Bargain',desc:'20% of each hit you take per rank is spread evenly over the next 5 seconds instead of landing at once. You still take all of it; big hits just stop arriving in one piece.'},
  {id:'nightfall',tree:0,tier:15,max:2,name:'Nightfall',desc:'Corruption ticks have 10% chance per rank to deal an extra point of damage.'},
  {id:'exhaust',tree:0,tier:15,max:1,ms:true,req:'ampc',name:'Curse of Exhaustion',desc:'Milestone: a third curse. The target deals 15% less damage and your channel ticks 10% faster against it. One curse at a time. Needs Amplify Curse.'},
  {id:'siphonlife',tree:0,tier:20,max:1,ms:true,name:'Siphon Life',desc:'Milestone: each Drain Soul tick heals you 0.4% of max health, and each Corruption or Bane of Agony tick 0.2%. Demon hits and Shadow Bolts do not.'},
@@ -885,11 +885,14 @@ function dmgTakenMult(){
 const SSTONE_CD=3600; // a Soulstone that saves you cannot be made again for an hour
 const SHIELD_DUR=20; // seconds the Sacrifice shield lasts (the cooldown is longer)
 function shieldMax(){return maxHp()*(.3+.1*tal('impvw'));}
-function takeDamage(d,raw){if(!raw&&tal('darkbargain')){const def=d*Math.min(.9,TN.dbFrac*tal('darkbargain'));const dots=(S.spells.corr?1:0)+(S.spells.immo?1:0)+(S.coaT>0?1:0)+(S.rot&&S.rot.length?1:0)+(S.sfT>0?1:0);S.bargain=(S.bargain||0)+def*Math.max(0,1-TN.dbEat*dots);d-=def;}if(S.backlash>0){const a=Math.min(S.backlash,d);S.backlash-=a;d-=a;}if(S.shield>0){const a=Math.min(S.shield,d);S.shield-=a;d-=a;}S.hp-=d;}
+function takeDamage(d,raw){if(!raw&&tal('darkbargain')){const def=d*Math.min(.9,TN.dbFrac*tal('darkbargain'));if(!(S.bargain>0)||!S.bargainQ)S.bargainQ=[];S.bargain=(S.bargain||0)+def;S.bargainQ.push([def,def/TN.dbDur]);d-=def;}if(S.backlash>0){const a=Math.min(S.backlash,d);S.backlash-=a;d-=a;}if(S.shield>0){const a=Math.min(S.shield,d);S.shield-=a;d-=a;}S.hp-=d;}
 // Backlash fades by blDecay of its size each second
 function backlashTick(dt){if(S.backlash>0)S.backlash=Math.max(0,S.backlash*(1-Math.min(1,TN.blDecay*dt))-.01);}
-// Dark Bargain: the deferred damage drains away evenly over dbDur seconds
-function bargainTick(dt){if(!(S.bargain>0))return;const t=Math.min(S.bargain,S.bargain*dt/TN.dbDur+.001);S.bargain-=t;takeDamage(t,true);}
+// Dark Bargain: each hit's deferred share lands evenly over the next dbDur seconds. Nothing removes it; it only smooths spikes out
+function bargainTick(dt){if(!(S.bargain>0)){S.bargain=0;S.bargainQ=[];return;}
+  if(!S.bargainQ||!S.bargainQ.length)S.bargainQ=[[S.bargain,S.bargain/TN.dbDur]];
+  let t=0;for(const c of S.bargainQ){const x=Math.min(c[0],c[1]*dt);c[0]-=x;t+=x;}S.bargainQ=S.bargainQ.filter(c=>c[0]>1e-6);
+  S.bargain=S.bargainQ.reduce((a,c)=>a+c[0],0);if(t>0)takeDamage(t,true);}
 function demonCost(d){const c={0:Math.floor(d.cost*Math.pow(1.15,S.demons[d.id])*(tal('feldom')?.85:1)*(1-.06*tal('msumm')))};if(d.extra)Object.assign(c,d.extra);return c;}
 function xpStretch(l){return 1+3*Math.min(1,Math.max(0,(l-20)/20));}
 function xpNeed(l){return Math.floor(150*Math.pow(1.27,l-1)*xpStretch(l));}
@@ -1376,7 +1379,7 @@ function gainXp(x){if(S.lvl>=60)return;S.xp+=x;while(S.lvl<60&&S.xp>=xpNeed(S.lv
 function die(){
   const m=curMob();if(S.mode==='life'){S.mode='drain';S.lifeT=0;S.cds.drainlife=30;}
   if(S.sstone){S.sstone=false;S.cds.craftSs=SSTONE_CD;S.hp=maxHp()*.5;fly('Soulstone','#c77dff',null,null,false,'heal');fly('+'+fmt(Math.floor(S.hp)),'#6fcf3a',null,null,false,'heal');log('You died. The Soulstone pulled you back.','good');return;}
-  S.deaths++;S.hp=0;S.bargain=0;S.backlash=0;S.brand=[];S.rot=[];S.sfT=0;if(m.n==='Kobold Miner')S.flags.koboldDeath=true;
+  S.deaths++;S.hp=0;S.bargain=0;S.bargainQ=[];S.backlash=0;S.brand=[];S.rot=[];S.sfT=0;if(m.n==='Kobold Miner')S.flags.koboldDeath=true;
   S.corpseTotal=Math.round(Math.min(90,30+10*(S.deaths-1))*(perk('epicmount')?.25:perk('riding')?.5:1));S.corpse=S.corpseTotal;S.event=null;S.fighting=null;S.havoc=0;if(S.dg)dgLeave('death');spawn();
   log(`You died to ${m.n}. Your channel is down for ${S.corpseTotal}s; your demons keep draining.`,'bad');
 }
@@ -1649,7 +1652,7 @@ function auraTip(k){
     case 'sflame':return ['Shadowflame',`Burning for ${Math.ceil(S.sfT||0)} more seconds. Carries to the next target.`,'From Shadowflame Bolt (Destruction).'];
     case 'rot':return ['Rotbloom',`${(S.rot||[]).length} rot${(S.rot||[]).length===1?'':'s'} ticking on the target. Each lasts 3 seconds; Rotbloom adds one, up to ${TN.rbCap}.`,'From Rotbloom (Affliction).'];
     case 'backlash':return ['Backlash',`Absorbs ${Math.ceil(S.backlash||0)} damage. Every cast adds to it; it fades fast when you stop casting.`,'From Backlash (Destruction).'];
-    case 'bargain':return ['Dark Bargain',`${Math.ceil(S.bargain||0)} damage deferred, draining into your health over the next few seconds.`,'From Dark Bargain (Affliction).'];
+    case 'bargain':return ['Dark Bargain',`${Math.ceil(S.bargain||0)} damage deferred, landing evenly over the next 5 seconds.`,'From Dark Bargain (Affliction).'];
     case 'shield':return ['Sacrifice shield',`Absorbs damage before your health does. ${Math.ceil(S.shield)} left, fades in ${Math.ceil(Math.max(0,S.shieldT||0))}s.`,'From sacrificing a Voidwalker.'];
     case 'dlife':return ['Drain Life',`Heals you while it channels, about ${Math.round(lifePct()*lifePow()*100)}% of your health over the full 6 seconds. No shards from anything until it ends.`,`${Math.ceil(S.lifeT||0)}s left. Press its action bar button to stop early.`];
     case 'camping':return ['Resting at camp','The fight is paused and you heal. Clicking does not break camp.',`Well Rested in ${Math.ceil(S.eatT)}s`];
