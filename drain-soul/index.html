@@ -1288,7 +1288,7 @@ function drawScene(dt){
   if(lastSoul>=0&&S.soul<lastSoul)mobFlash=.18;lastSoul=S.soul;mobFlash=Math.max(0,mobFlash-dt);
   const rr=mobRarity(m);let outline=rr===1?'#1eff00':rr===2?'#4aa3ff':rr===3?'#a335ee':rr===4?'#ff8000':null;if(S.cast&&Math.floor(sceneT*6)%2===0)outline='#ff9c3a';if(S.enrageT>0)outline='#ff5a1a';
   const size=Math.min(170,Math.max(60,freeH*.3))*(m.elite?1.5:m.ev?1.6:1)*(1+(m.rar||0)*.15)*(narrow?.72:1);const ws=Math.min(80,Math.max(42,freeH*.14));
-  const mobX=narrow?w*.7:w*.5+Math.min(240,w*.2);actorPos.mob={x:mobX,y:baseY,size};
+  const mobX=narrow?w*.76:w*.5+Math.min(240,w*.2);actorPos.mob={x:mobX,y:baseY,size};
   // shadows under everyone
   const shadow=(x,y,r)=>{ctx.save();ctx.fillStyle='rgba(0,0,0,.28)';ctx.beginPath();ctx.ellipse(x,y+2,r,r*.28,0,0,Math.PI*2);ctx.fill();ctx.restore();};
   if(S.camping){const ti=campImg();if(ti){const ts=Math.min(200,size*1.5);ctx.save();ctx.shadowColor='#ff9c3a';ctx.shadowBlur=30+8*Math.sin(sceneT*3);ctx.drawImage(ti,mobX-ts/2,baseY-ts,ts,ts);ctx.restore();}}
@@ -1303,7 +1303,7 @@ function drawScene(dt){
     const mx=mobX+(1-mobEnter)*120;drawEnemy(m,mx,baseY,size,outline,mobFlash>0?mobFlash/.18:0,.95*mobEnter,1);
     // target cursor
     {const cy=baseY-size*1.15-4*Math.sin(sceneT*4);ctx.save();ctx.fillStyle='#ffd138';ctx.beginPath();ctx.moveTo(mobX-7,cy-12);ctx.lineTo(mobX+7,cy-12);ctx.lineTo(mobX,cy);ctx.closePath();ctx.fill();ctx.restore();}}
-  const wx=narrow?w*.34:w*.5-Math.min(190,w*.16),wy=baseY-ws*.45;actorPos.lock={x:wx,y:wy,size:ws};placeFrames(w,wx+ws*.3,wy+ws*.55,actorPos.mob.x,actorPos.mob.y+10,narrow&&DEMONS.some(d=>S.demons[d.id]>0)?tp.top-50:0);shadow(wx,wy,ws*.5);
+  const wx=narrow?w*.27:w*.5-Math.min(190,w*.16),wy=baseY-ws*.45;actorPos.lock={x:wx,y:wy,size:ws};placeFrames(w,wx+ws*.3,wy+ws*.55,actorPos.mob.x,actorPos.mob.y+10,narrow&&DEMONS.some(d=>S.demons[d.id]>0)?tp.top-50:0);shadow(wx,wy,ws*.5);
   const channel=S.corpse>0||S.eatT>0?null:(S.mode==='life'?'#6fcf3a':(S.spells.drainsoul?(tal('wrack')?'#e0457b':'#9b5cff'):null));
   if(narrow)drawPetsMini(ctx,w,tp.top);else drawPets(ctx,wx,wy,ws,narrow);
   let hand;{const nm=channel?'warlock_channel':'warlock';if(sprite(nm)||sprite('warlock')){const use=sprite(nm)?nm:'warlock';const sc=pxScale(ws)*(narrow?.7:1);drawSprite(ctx,use,wx,wy,sc,sceneT,false,1);hand={hx:wx+sc*.36*(-14),hy:wy-sc*.36*90,tx:wx+sc*.36*47,ty:wy-sc*.36*129};}else hand=drawWarlock(ctx,wx,wy,ws,channel);}
