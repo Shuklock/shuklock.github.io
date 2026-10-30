@@ -183,6 +183,12 @@ h1,h2,h3,.gem-slot .n,.lvlline,#pname,#mname,.bar .lbl,#wintitle,.zonename{font-
 .row .d{font-size:12px;color:var(--muted);line-height:1.35}
 .row .d span{font-size:12px}
 .row .cost{font-size:12px;white-space:nowrap;text-align:right}
+.meter .mrow{display:grid;grid-template-columns:minmax(110px,34%) minmax(0,1fr) 64px 40px;column-gap:10px;align-items:center;font-size:13px;padding:3px 0}
+.meter .mrow.sub{font-size:12px;color:var(--muted)}.meter .mrow.sub .mn{padding-left:16px}
+.meter .mn{display:flex;align-items:center;gap:7px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.meter .mn i{width:8px;height:8px;border-radius:2px;flex:0 0 auto}
+.meter .mb{height:10px;background:#1d1828;border-radius:4px;overflow:hidden}.meter .mrow.sub .mb{height:6px}.meter .mb i{display:block;height:100%}.meter .mrow.sub .mb i{opacity:.55}
+.meter .mv,.meter .mp{text-align:right}.meter .mp{color:var(--muted)}
+button.seg.on{border-color:#9b5cff;background:#2a1f45;color:#fff}
 .row .cost .cpart{display:block;line-height:1.35}
 .row .cost .cplus{display:none}
 .row button{white-space:nowrap}
@@ -815,8 +821,8 @@ function brandMult(n){return 1+TN.brandPer*tal('brand')*(n==null?(S.brand||[]).l
 function rotTickRate(n){n=n==null?(S.rot||[]).length:n;return n*TN.rbPer*spMult('bolt')*dotWrack()*(1+TN.shm*tal('shmast'));}
 // Shadowflame's burn: ticks per second (the profiler reads it through this too)
 function sfDotRate(){return TN.sfDot*spMult('bolt');}
-function stackTick(dt){if(S.sfT>0){S.sfT-=dt;S.sfAcc=(S.sfAcc||0)+sfDotRate()*dt;while(S.sfAcc>=1&&S.soul>0){S.sfAcc-=1;tick('dot');}}for(const k of ['brand','rot']){const a=S[k];if(a&&a.length){for(let i=0;i<a.length;i++)a[i]-=dt;S[k]=a.filter(x=>x>0);}}
-  if(S.rot&&S.rot.length){S.rotAcc=(S.rotAcc||0)+rotTickRate()*dt;while(S.rotAcc>=1&&S.soul>0){S.rotAcc-=1;tick('dot');}}}
+function stackTick(dt){if(S.sfT>0){S.sfT-=dt;S.sfAcc=(S.sfAcc||0)+sfDotRate()*dt;while(S.sfAcc>=1&&S.soul>0){S.sfAcc-=1;tickLbl='sflame';tick('dot');tickLbl=null;}}for(const k of ['brand','rot']){const a=S[k];if(a&&a.length){for(let i=0;i<a.length;i++)a[i]-=dt;S[k]=a.filter(x=>x>0);}}
+  if(S.rot&&S.rot.length){S.rotAcc=(S.rotAcc||0)+rotTickRate()*dt;while(S.rotAcc>=1&&S.soul>0){S.rotAcc-=1;tickLbl='rot';tick('dot');tickLbl=null;}}}
 function boltPower(){let p=spMult('bolt')*(1+TN.isb*tal('isb'))*(1+.12*rank('bolt'))*(1+spCoef()*gearStat('power')/100);if(S.spells.immo)p*=1+TN.fabr*tal('fabr');p*=1+TN.sf*tal('shadowflame')*((S.spells.corr?1:0)+(S.spells.immo?1:0)+(S.coaT>0?1:0));if(S.conflagT>0)p*=3;return p;} // health removed per bolt
 const clickPull=boltPower;
 // every build can bind the base number; Demonic Pact (Demonology's capstone) lifts it to the full number and opens Infernal and Doomguard.
@@ -824,8 +830,9 @@ const clickPull=boltPower;
 // Demonic Pact opens the full legion at level 60 (pactFrom/pactTo can spread it over levels instead)
 function pactFrac(){return Math.max(0,Math.min(1,(S.lvl-TN.pactFrom)/(TN.pactTo-TN.pactFrom)));}
 function demonMax(d){const n=tal('dempact')?d.base+Math.round((d.max-d.base)*pactFrac()):d.base;return n+(setFx('Pactbound')&&d.id!=='inf'&&d.id!=='doom'?1:0);}
-function petTps(){let t=0;const u=(1+.05*tal('unholy'))*(1+.05*tal('energies'));
-  DEMONS.forEach(d=>{let m=u;if(d.id==='imp')m*=1+.15*tal('impimp');if(d.id==='vw')m*=1+.15*tal('impvw');if(d.id==='succ')m*=1+.15*tal('impsayaad');if(d.id==='felh')m*=1+.15*tal('impfelh');m*=1+empBonus(empLevel(d.id));m*=1+TN.mdemoDmg*tal('mdemo');if(d.id==='succ'&&S.demons.succ>0)m*=1+TN.mdSucc*tal('mdemo');if(d.id==='vw'&&S.cds.sacrifice>0)m=0;t+=Math.min(S.demons[d.id],demonMax(d))*d.tps*m*(d.id==='inf'||d.id==='doom'?TN.big:1)*(d.id==='doom'?TN.doom:1);});
+function petTerms(){const o={};const u=(1+.05*tal('unholy'))*(1+.05*tal('energies'));
+  DEMONS.forEach(d=>{let m=u;if(d.id==='imp')m*=1+.15*tal('impimp');if(d.id==='vw')m*=1+.15*tal('impvw');if(d.id==='succ')m*=1+.15*tal('impsayaad');if(d.id==='felh')m*=1+.15*tal('impfelh');m*=1+empBonus(empLevel(d.id));m*=1+TN.mdemoDmg*tal('mdemo');if(d.id==='succ'&&S.demons.succ>0)m*=1+TN.mdSucc*tal('mdemo');if(d.id==='vw'&&S.cds.sacrifice>0)m=0;o[d.id]=Math.min(S.demons[d.id],demonMax(d))*d.tps*m*(d.id==='inf'||d.id==='doom'?TN.big:1)*(d.id==='doom'?TN.doom:1);});return o;}
+function petTps(){const tm=petTerms();let t=0;for(const id in tm)t+=tm[id];
   const md=tal('mdemo');
   // Master Demonologist: Imps rally the rest, Felhunters lend your Spell power, an Infernal or Doomguard leads the legion
   const army=(1+TN.mdImp*md*Math.min(S.demons.imp||0,demonMax(DEMONS[0])))*(1+(S.demons.inf>0||S.demons.doom>0?TN.mdBig*md:0))*(1+TN.dkPet*tal('demknow')*demonTypes());
@@ -1338,14 +1345,23 @@ function bossLock(z){const t=(S.bossDead||{})[z]||0;return Math.max(0,t-Date.now
 function ragFirstKill(n){if(n<=heatBest())return;S.heat=S.heat||{best:0,on:null};S.heat.best=n;
   if(n===1||n%5===0)giveShard(4,'(Heat '+n+')');for(let i=0;i<1+Math.floor(n/2);i++)giveShard(3,'(Heat '+n+')');
   log(`Molten Core Heat ${n+1} is open.`,'lvl');}
-function spawn(keep){S.cast=null;S.castCd=2+Math.random()*3;S.enrageT=0;S.swingT=Math.max(0,swingTime(curMob())-FIRST_SWING);S.flurryN=0;S.alt=0;S.fearPull=false;if(!keep){S.adds=[];if(S.mobReturn!=null){S.mob=S.mobReturn;S.mobReturn=null;}}const base=curMob();if(!base.elite&&!base.ev&&!base.dg){S.mobRar=rollMobRarity(base);if(S.mobRar===2){log(`A rare ${base.n} appears! Blue shards and better loot, if you can take it.`,'loot');fly('Rare!','#4aa3ff');}else if(S.mobRar===1)fly('Uncommon','#1eff00',null,null,true);}else S.mobRar=0;
+function spawn(keep){spawnN++;S.cast=null;S.castCd=2+Math.random()*3;S.enrageT=0;S.swingT=Math.max(0,swingTime(curMob())-FIRST_SWING);S.flurryN=0;S.alt=0;S.fearPull=false;if(!keep){S.adds=[];if(S.mobReturn!=null){S.mob=S.mobReturn;S.mobReturn=null;}}const base=curMob();if(!base.elite&&!base.ev&&!base.dg){S.mobRar=rollMobRarity(base);if(S.mobRar===2){log(`A rare ${base.n} appears! Blue shards and better loot, if you can take it.`,'loot');fly('Rare!','#4aa3ff');}else if(S.mobRar===1)fly('Uncommon','#1eff00',null,null,true);}else S.mobRar=0;
   const m=curMob();S.soulMax=soulNeed(m);S.soul=S.soulMax;
-  if(S.havoc>0){S.soul=Math.max(1,S.soul-S.havoc);S.havoc=0;}}
+  if(S.havoc>0){meterAdd('havoc',Math.min(S.soul-1,S.havoc));S.soul=Math.max(1,S.soul-S.havoc);S.havoc=0;}}
 function giveShard(r,tag){S.shards[r]++;S.life++;S.seen[r]=true;if(r>=2||tag==='★')fly('+1 '+RAR[r]+(tag?' '+tag:''),RCOL[r],null,null,false,'shard');else pendingShards[r]++;
   if(r>=2)log(`<span class="t${r}">${RAR[r]}</span> shard from ${curMob().n}${tag?' '+tag:''}.`,'loot');}
 // source: you | pet | dot | burst
 function noShards(m){return lvlDiff(m)==='grey';}
-function tick(source){
+// ---------- damage meter: soul drained per source, in 5-second buckets for the last 5 minutes plus a running session total ----------
+// not saved: it starts fresh each time the game is opened
+const METER_BUCKET=5,METER_N=60;let meterT=0,meterSess=0,tickLbl=null,spawnN=0;const meterBuckets=[],meterTot={};
+function meterAdd(lbl,amt){if(!(amt>0))return;let b=meterBuckets[meterBuckets.length-1];const k=Math.floor(meterT/METER_BUCKET);if(!b||b.k!==k){b={k,v:{}};meterBuckets.push(b);while(meterBuckets.length&&meterBuckets[0].k<=k-METER_N)meterBuckets.shift();}
+  const put=(l,a)=>{b.v[l]=(b.v[l]||0)+a;meterTot[l]=(meterTot[l]||0)+a;};
+  if(lbl==='pet'){const tm=petTerms();let sum=0;for(const id in tm)sum+=tm[id];if(sum>0){for(const id in tm)if(tm[id]>0)put('pet:'+id,amt*tm[id]/sum);return;}}
+  put(lbl,amt);}
+function meterTickLabel(source){if(tickLbl)return tickLbl;if(source==='you')return 'drain';if(source==='dot')return S.coaTicking?'coa':'corr';if(source==='bolt'){const sp=curSpell();return sp==='searing'?'searing':'bolt';}return source;}
+function tick(source){const mb=S.soul,sn=spawnN,ml=meterTickLabel(source);tick0(source);meterAdd(ml,spawnN!==sn?mb:mb-S.soul);}
+function tick0(source){
   if(S.corpse>0||S.soul<=0)return;
   if(Math.random()<resistChance()){if(source!=='pet'&&source!=='immo')fly('Resisted','#9d92b3',null,null,true);return;}
   // one roll for crit on everything you cast; pets and Shadow Bolt handle their own
@@ -1456,11 +1472,11 @@ function cast(id){
   if(id==='spelllock'){if(S.demons.felh<1||!S.cast)return;interrupt('spelllock');S.cds.spelllock=Math.max(12,24-3*tal('impfelh'));return;}
   if(id==='coil'){S.hp=Math.min(maxHp(),S.hp+maxHp()*(.3+.05*rank('coil')));interrupt('coil');const m=curMob();if(!m.elite&&!m.ev)S.fear=Math.max(S.fear,3);S.cds.coil=120;return;}
   if(id==='hs'){if(!S.spells.hstone||S.shards[1]<3)return;S.shards[1]-=3;const before=S.hp;S.hp=Math.min(maxHp(),S.hp+maxHp()*(.4+.1*rank('hstone')));S.cds.hs=60;fly('Healthstone','#6fcf3a',null,null,true,'heal');fly('+'+fmt(Math.floor(S.hp-before)),'#6fcf3a',null,null,false,'heal');return;}
-  if(id==='shadowburn'){if(S.soul>S.soulMax*.25)return;S.cds.shadowburn=15;fly('Shadowburn!','#ff5a9a');while(S.soul>0){S.soul--;}complete();return;}
+  if(id==='shadowburn'){if(S.soul>S.soulMax*.25)return;S.cds.shadowburn=15;fly('Shadowburn!','#ff5a9a');meterAdd('shadowburn',S.soul);while(S.soul>0){S.soul--;}complete();return;}
   if(id==='conflag'){S.conflagT=8;S.cds.conflag=30;fly('Conflagrate!','#ff7a2a');return;}
   if(id==='sflame'){if(!tal('sflame')||S.corpse>0||S.eatT>0)return;S.cds.sflame=TN.sfCd;S.sfT=TN.sfCd;
     if(tal('backlash'))S.backlash=Math.min(maxHp()*TN.blCap*tal('backlash'),(S.backlash||0)+maxHp()*TN.blAdd*tal('backlash'));
-    let p=boltPower()*TN.sfHit;if(Math.random()<critChance())p*=tal('ruin')?2:1.5;bolts.push({t:0});S.boltAcc=(S.boltAcc||0)+p;let n=0;while(S.boltAcc>=1&&S.soul>0){S.boltAcc-=1;tick('bolt');n++;}
+    let p=boltPower()*TN.sfHit;if(Math.random()<critChance())p*=tal('ruin')?2:1.5;bolts.push({t:0});S.boltAcc=(S.boltAcc||0)+p;let n=0;tickLbl='sflame';while(S.boltAcc>=1&&S.soul>0){S.boltAcc-=1;tick('bolt');n++;}tickLbl=null;
     fly('Shadowflame Bolt'+(n>1?' ×'+n:''),'#b07fff');return;}
 }
 
@@ -1471,7 +1487,7 @@ function loop(){
   try{loopBody(dt);drawScene(dt);}catch(e){console.error(e);log('Error: '+e.message,'bad');}
   requestAnimationFrame(loop);
 }
-function loopBody(dt){
+function loopBody(dt){meterT+=dt;meterSess+=dt;
   Object.keys(S.cds).forEach(k=>{if(S.cds[k]>0)S.cds[k]-=dt;});
   if((S.restedT||0)>0){S.restedT-=dt;if(S.restedT<=0){S.restedT=0;log('Well Rested has worn off.');}}
   shardFlushT+=dt;if(shardFlushT>=.35){shardFlushT=0;flushShardFly();}
@@ -1587,6 +1603,10 @@ $('tab').addEventListener('pointerdown',e=>{const b=e.target.closest('button,[da
   else if(a==='autotoggle'){S.autosellOff=S.autosellOff||{};S.autosellOff[id]=!S.autosellOff[id];autosellSweep();}
   else if(a==='autosell'){const q=id==='junk'?'junk':+id;const o=AUTOSELL.find(x=>String(x.q)===String(q));if(autosellAvail(q)&&!S.autosell[q]&&S.account.gold>=o.cost){S.account.gold=Math.round((S.account.gold-o.cost)*100)/100;S.autosell[q]=true;log(`Auto-sell for ${o.name} items is on.`,'good');autosellSweep();}}
   else if(a==='mapz'){const z=b.dataset.z==='dg'?'dg':+b.dataset.z;if(mapOpen.has(z))mapOpen.delete(z);else mapOpen.add(z);}
+  else if(a==='charTab'){charTab=id==='dmg'?'dmg':'gear';}
+  else if(a==='meterWin'){meterWin=id==='session'?'session':'last5';}
+  else if(a==='meterReset'){meterBuckets.length=0;for(const k in meterTot)delete meterTot[k];meterSess=0;}
+  else if(a==='meterDem'){meterDemOpen=!meterDemOpen;}
   else if(a==='mapsel'){mapSel=b.dataset.z==='kz'||String(b.dataset.z).startsWith('dg:')?b.dataset.z:+b.dataset.z;}
   else if(a==='kzEnter'){kzEnter(+id);closeWin();}
   else if(a==='kzBless'){const c=kzBlessCost();if((S.kz.marks||0)>=c){S.kz.marks-=c;const k=blessNext();S.kz.bless=(S.kz.bless||0)+1;log(`Blessing of Medivh rank ${S.kz.bless}: +${S.kz.bless<=12?1:.5} ${STATS[k]}.`,'good');}}
@@ -1787,6 +1807,24 @@ let trainerKey='';
 function renderTrainerHead(){const [n,a]=trainables();const key=n+':'+a;if(key===trainerKey)return;trainerKey=key;const b=$('trainerbadge');b.style.display=n?'grid':'none';b.textContent=n;
   $('trainerhead').classList.toggle('ready',a>0);setHTML('trainerlbl',n?`Trainer<br><span class="${a?'t1':'muted'}">${a?a+' you can afford':n+' to learn, not affordable yet'}</span>`:'Trainer<br><span class="muted">nothing new</span>');}
 // ---------- the world map: a stylised journey from Durotar to the Molten Core, zones as regions, dungeons as skulls, the elite as a star ----------
+// Character window: Gear & stats, or the damage meter
+let charTab='gear',meterWin='last5',meterDemOpen=false;
+function charTabs(){const b=(id,lbl)=>`<button data-a="charTab" data-id="${id}" class="seg${charTab===id?' on':''}" style="flex:1 1 0">${lbl}</button>`;return `<div style="display:flex;gap:6px;padding:4px 4px 8px">${b('gear','Gear &amp; stats')}${b('dmg','Damage')}</div>`;}
+const METER_SRC={drain:['Drain Soul','#9b5cff'],bolt:['Shadow Bolt','#c9a4ff'],searing:['Searing Pain','#ff9c3a'],sflame:['Shadowflame Bolt','#b07fff'],corr:['Corruption','#b36cff'],coa:['Bane of Agony','#8a4dff'],immo:['Immolate','#ff8c3a'],rot:['Rotbloom','#8fd14f'],havoc:['Bane of Havoc','#ff5a9a'],shadowburn:['Shadowburn','#ff5a9a'],ev:['Other','#9d92b3']};
+function meterData(){let v={},dur;if(meterWin==='last5'){const k=Math.floor(meterT/METER_BUCKET);meterBuckets.forEach(b=>{if(b.k>k-METER_N)for(const l in b.v)v[l]=(v[l]||0)+b.v[l];});dur=Math.min(METER_BUCKET*METER_N,meterSess);}else{v=Object.assign({},meterTot);dur=meterSess;}return {v,dur:Math.max(1,dur)};}
+function meterHtml(row){const {v,dur}=meterData();let total=0;for(const l in v)total+=v[l];const rate=x=>x<10?x.toFixed(1):fmt(Math.round(x));
+  const fmtT=t=>{t=Math.round(t);return t<60?t+'s':Math.floor(t/60)+':'+String(t%60).padStart(2,'0');};
+  const seg=(id,lbl)=>`<button data-a="meterWin" data-id="${id}" class="seg${meterWin===id?' on':''}">${lbl}</button>`;
+  let h=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0 4px 8px;flex-wrap:wrap"><span style="display:flex;gap:4px">${seg('last5','Last 5 min')}${seg('session','This session')}</span><button data-a="meterReset">Reset</button></div>`;
+  h+=`<div style="display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 8px"><span class="muted" style="font-size:12px">${meterWin==='last5'?'Last '+fmtT(dur):'This session · '+fmtT(dur)} · ${fmt(total)} soul</span><span><b style="font-size:18px">${rate(total/dur)}</b> <span class="muted">soul/s</span></span></div>`;
+  if(total<=0)return h+`<div class="row"><div class="d">Nothing drained yet${meterWin==='last5'?' in the last 5 minutes':' this session'}. Damage is counted from when the game was opened.</div></div>`;
+  // one row per source; demons add up into one row that opens into each kind
+  const rows=[];let dem=0;const demRows=[];
+  for(const l in v){if(l.startsWith('pet:')){const d=DEMONS.find(x=>x.id===l.slice(4));dem+=v[l];demRows.push([d?d.name:l,v[l],'#2fff6a']);}else{const m=l==='drain'?[chanName(),tal('wrack')?'#e0457b':'#9b5cff']:(METER_SRC[l]||[l,'#9d92b3']);rows.push([m[0],v[l],m[1],l]);}}
+  if(dem>0)rows.push(['Demons',dem,'#2fff6a','pet']);rows.sort((a,b)=>b[1]-a[1]);demRows.sort((a,b)=>b[1]-a[1]);const top=rows[0][1];
+  const line=(n,val,c,sub,id)=>`<div class="mrow${sub?' sub':''}"${id==='pet'?' data-a="meterDem" style="cursor:pointer"':''}><span class="mn"><i style="background:${c}"></i>${n}${id==='pet'?` <span class="muted">${meterDemOpen?'▾':'▸'}</span>`:''}</span><span class="mb"><i style="width:${Math.max(1,Math.round(val/top*100))}%;background:${c}"></i></span><span class="mv">${rate(val/dur)}</span><span class="mp">${Math.round(val/total*100)}%</span></div>`;
+  h+='<div class="row meter" style="display:block">';rows.forEach(r=>{h+=line(r[0],r[1],r[2],false,r[3]);if(r[3]==='pet'&&meterDemOpen)demRows.forEach(x=>{h+=line(x[0],x[1],x[2],true);});});
+  h+='</div><div class="muted" style="font-size:11px;padding:6px 4px;line-height:1.4">Soul each source drains, crits included, in soul per second. Not saved: it starts again each time you open the game.</div>';return h;}
 let mapSel=null;const mythSel={}; // Map: chosen Mythic level per dungeon (defaults to the highest open)
 const MAP_ZONES=[
  {x:85,y:300,rx:62,ry:34,c:'#8a3a1e',c2:'#c25a2a'},    // Durotar & Tirisfal
@@ -1855,7 +1893,8 @@ function renderTab(){
   if(tab==='demons'){
     h+=`<div class="muted" style="padding:4px;font-size:12px">Each demon attacks your target, all the time, even while you are dead or away: one point of damage per tick. Demons grow with you: +5% per level. Their hits do not pull shards until Demonic Pact. Total: ${petTps().toFixed(2)} ticks/s.</div>`;
     DEMONS.forEach(d=>{const c=demonCost(d);const pact=demonMax(d)<=0;const lk=S.lvl<d.lvl||pact;h+=row(`${d.name} <span class="muted">×${S.demons[d.id]} / ${demonMax(d)}</span>`,`${d.desc} ${(d.tps*(1+.05*(S.lvl-1))).toFixed(2)} ticks/s each at your level. ${pact?(tal('dempact')?'Joins your legion at level 60 ('+d.max+').':'Needs Demonic Pact, the Demonology capstone (30 points).'):'You can bind at most '+demonMax(d)+(tal('dempact')?(demonMax(d)<d.max?' (Demonic Pact raises it to '+d.max+' at level 60).':'.'):' (Demonic Pact raises it to '+d.max+' at level 60).')}${S.lvl<d.lvl?' Requires level '+d.lvl+'.':''}`,S.demons[d.id]>=demonMax(d)?'':costStr(c),`<button data-a="demon" data-id="${d.id}" ${!lk&&S.demons[d.id]<demonMax(d)&&canAfford(c)?'':'disabled'}>${S.demons[d.id]>=demonMax(d)?'Full':'Summon'}</button>`,lk?'locked':(S.demons[d.id]>0?'owned':''));if(S.demons[d.id]>=demonMax(d)&&!lk){const el=empLevel(d.id);h+=row(`&nbsp;&nbsp;Empower ${d.name} <span class="muted">level ${el}</span>`,`Every ${d.name} does +${el<20?8:4}% more damage per level (now +${Math.round(empBonus(el)*100)}%). +8% a level up to 20, +4% after, no limit; from level 10 it also costs Epic shards. Resets with the Ritual.`,el<EMP_MAX?costStr(empCost(d)):'',`<button data-a="emp" data-id="${d.id}" ${canEmp(d)?'':'disabled'}>${el<EMP_MAX?'Empower':'Max'}</button>`);}});
-  }else if(tab==='gear'){
+  }else if(tab==='gear'&&charTab==='dmg'){h+=charTabs()+meterHtml(row);
+  }else if(tab==='gear'){h+=charTabs();
     const DP={head:[115,8],chest:[18,80],legs:[18,160],hands:[212,110],wand:[212,200],trinket:[212,22]};const AB={head:'Head',chest:'Chest',legs:'Legs',hands:'Hands',wand:'Wand',trinket:'Trinket'};
     let doll=`<div class="doll"><svg class="fig" viewBox="0 0 140 290" xmlns="http://www.w3.org/2000/svg"><path d="M70 18c-14 0-22 12-22 26v10h44V44c0-14-8-26-22-26z" fill="#3a2a5a"/><ellipse cx="70" cy="42" rx="11" ry="13" fill="#d9b89a"/><path d="M52 54h36l10 40-4 120-20 10H60l-20-10-4-120z" fill="#4a2a7a" stroke="#2b1750" stroke-width="2"/><path d="M40 100l-14 60 10 6 16-56zM100 100l14 60-10 6-16-56z" fill="#4a2a7a" stroke="#2b1750" stroke-width="2"/><circle cx="26" cy="166" r="6" fill="#d9b89a"/><circle cx="114" cy="166" r="6" fill="#d9b89a"/><path d="M62 224h16l4 50H58z" fill="#2b1750"/><path d="M118 60v150" stroke="#6a4a2a" stroke-width="4"/><circle cx="118" cy="56" r="7" fill="#9b5cff"/></svg>`;
     SLOTS.forEach(([sl,nm])=>{const it=S.gear[sl];const s=selItem&&selItem.where==='gear'&&selItem.slot===sl;doll+=`<div class="slot ${it?'q'+it.q:''} ${s?'sel':''}" style="left:${DP[sl][0]}px;top:${DP[sl][1]}px" data-a="selSlot" data-id="${sl}" title="${it?it.name:''}">${it?`<span class="t${it.q}" style="font-size:10px;padding:2px">${it.name.split(' ').slice(0,2).join(' ')}</span>`:`<span class="lb">${AB[sl]}</span>`}</div>`;});
