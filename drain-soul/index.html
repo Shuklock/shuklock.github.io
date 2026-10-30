@@ -2021,6 +2021,11 @@ function renderTab(){
     </div>`;
   }else if(tab==='trainer'){
     h+=`<div class="muted" style="padding:4px;font-size:12px">Training costs gold (sell junk and gear). Ranks also take Uncommon shards. You have ${goldStr(S.account.gold)}. Greyed rows are above your level.</div>`;
+    // at 60 the trainer also empowers spells at max rank
+    if(S.lvl>=60){const open=SP_EMP.filter(e=>spEmpOpen(e.id));const any=SP_EMP.some(e=>spEmpLevel(e.id)>0);
+     if(open.length||any){h+='<div class="tier" style="padding:10px 4px 2px">Empower spells</div><div class="muted" style="padding:2px 4px 6px;font-size:12px">A spell at max rank can be empowered with shards, with no limit: +6% damage per level up to 20, +3% after. Resets with the Ritual.</div>';
+       SP_EMP.forEach(e=>{const lv=spEmpLevel(e.id);const op=spEmpOpen(e.id);if(!op&&!lv)return;const r=RANKS.find(x=>x.id===e.id);
+         h+=row(`Empower ${e.id==='drain'?chanName():e.name} <span class="muted">level ${lv}</span>`,op?`+${lv<20?6:3}% damage per level (now +${Math.round(TN.spEmp*empBonus(lv)*100)}%).`:`Train ${e.name} to max rank to keep empowering it.`,op?costStr(spEmpCost(e.id)):'',`<button data-a="spemp" data-id="${e.id}" ${canSpEmp(e.id)?'':'disabled'}>Empower</button>`,lv>0?'owned':'');});}}
     // build one list of entries: new spells and next ranks, each with the level it needs
     const entries=[];
     SPELLS.forEach(s=>{if(s.id==='darmor'||s.id==='drainsoul')return;if(!S.spells[s.id]){const c=spellCost(s);entries.push({lvl:s.lvl,html:row(`${s.name} <span class="muted">Lv ${s.lvl}</span>`,s.desc,costStr(c),`<button data-a="spell" data-id="${s.id}" ${S.lvl>=s.lvl&&canAfford(c)?'':'disabled'}>Train</button>`,S.lvl<s.lvl?'locked':'')});}});
@@ -2033,10 +2038,7 @@ function renderTab(){
     h+=row('Shadow Bolt'+rk('bolt'),'Your click. Several clicks make one cast; each cast hits the target. Damage only.','','','owned');
     if(S.spells.drainsoul)h+=row(chanName()+rk('drain'),'Always channeling on your target. Each tick takes 1 health and may yield a shard.'+(tal('wrack')?' Wrack hits 20% harder than Drain Soul, and your DoTs deal 25% more while it channels.':''),'','','owned');
     SPELLS.filter(s=>S.spells[s.id]&&s.id!=='drainsoul').forEach(s=>h+=row(s.name+rk(s.id),s.desc,'','','owned'));
-    {const open=SP_EMP.filter(e=>spEmpOpen(e.id));const any=SP_EMP.some(e=>spEmpLevel(e.id)>0);
-     if(open.length||any){h+='<div class="tier" style="padding:10px 4px 2px">Empower spells</div><div class="muted" style="padding:2px 4px 6px;font-size:12px">A spell at max rank can be empowered with shards, with no limit: +6% damage per level up to 20, +3% after. Resets with the Ritual.</div>';
-       SP_EMP.forEach(e=>{const lv=spEmpLevel(e.id);const op=spEmpOpen(e.id);if(!op&&!lv)return;const r=RANKS.find(x=>x.id===e.id);
-         h+=row(`Empower ${e.id==='drain'?chanName():e.name} <span class="muted">level ${lv}</span>`,op?`+${lv<20?6:3}% damage per level (now +${Math.round(TN.spEmp*empBonus(lv)*100)}%).`:`Train ${e.name} to max rank to keep empowering it.`,op?costStr(spEmpCost(e.id)):'',`<button data-a="spemp" data-id="${e.id}" ${canSpEmp(e.id)?'':'disabled'}>Empower</button>`,lv>0?'owned':'');});}}
+    if(S.lvl>=60)h+='<div class="muted" style="padding:6px 4px;font-size:12px">Empowering spells with shards is at the Trainer.</div>';
     if(rank('council'))h+='<div class="muted" style="padding:6px 4px;font-size:12px">Breaking shards down is in the Shadow Council window (S).</div>';
   }else if(tab==='ranks_old'){
     h+='<div class="muted" style="padding:4px;font-size:12px">Higher ranks of spells you already know. Priced mostly in Uncommon shards. Ranks for a spell appear once you have learned it at the Trainer.</div>';
