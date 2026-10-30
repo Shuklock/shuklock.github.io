@@ -426,13 +426,14 @@ const ZONES=[
  {name:'Eastern Plaguelands',band:[60,60],w:[30,30,25,12,3],mobs:[{n:'Plaguehound',l:60},{n:'Crypt Slayer',l:60},{n:'Death Cultist',l:61},{n:'Scourge Champion',l:62}],elite:{n:'Lord Maldazzar',l:63}},
 ];
 // demons: ticks per second contributed to the drain
+// per-demon damage (tps): a Doomguard out-hits both Infernals together, and both Infernals out-hit five Felhunters unless the Felhunters are boosted hard
 const DEMONS=[
  {id:'imp',max:8,base:4,name:'Imp',lvl:1,cost:10,tps:0.032,desc:'Firebolts. Many imps, many firebolts.'},
  {id:'vw',max:5,base:2,name:'Voidwalker',lvl:10,cost:60,tps:0.065,desc:'Slow hitter and protector: Sacrifice from the action bar for a shield worth 30% of your health. Voidwalkers stop attacking during the 60s cooldown.'},
  {id:'succ',max:4,base:2,name:'Succubus',lvl:20,cost:300,extra:{1:2},tps:0.2,desc:'Lash of Pain. Costs 2 Uncommon to bind.'},
- {id:'felh',max:5,base:2,name:'Felhunter',lvl:30,cost:1500,extra:{1:5},tps:0.57,desc:'Devours. Each one adds +1% shard chance per drain tick (max +10%). Owning one puts Spell Lock on your bar. Costs 5 Uncommon to bind.'},
- {id:'inf',max:2,base:0,name:'Infernal',lvl:50,cost:8000,extra:{2:1},tps:1,desc:'Immolation aura. Hits everything. Costs a Rare to bind.'},
- {id:'doom',max:1,base:0,name:'Doomguard',lvl:60,cost:50000,extra:{3:1},tps:3.1,desc:'Ritual of Doom. Costs an Epic to bind.'},
+ {id:'felh',max:5,base:2,name:'Felhunter',lvl:30,cost:1500,extra:{1:5},tps:0.40,desc:'Devours. Each one adds +1% shard chance per drain tick (max +10%). Owning one puts Spell Lock on your bar. Costs 5 Uncommon to bind.'},
+ {id:'inf',max:2,base:0,name:'Infernal',lvl:50,cost:8000,extra:{2:1},tps:2.0,desc:'Immolation aura. Hits everything. Costs a Rare to bind.'},
+ {id:'doom',max:1,base:0,name:'Doomguard',lvl:60,cost:50000,extra:{3:1},tps:4.4,desc:'Ritual of Doom. Costs an Epic to bind.'},
 ];
 const SPELLS=[
  {id:'drainsoul',name:'Drain Soul',lvl:10,cost:0,kind:'passive',desc:'Learned at level 10. Your channel ticks on its own (one tick every 1.5s), and each of your ticks has a chance to drain a shard. Before this, shards only come from kills.'},
