@@ -824,7 +824,11 @@ function armorRegen(){return (.01+.0025*rank('darmor'))*(1+.15*tal('aegis'))*(1+
 // Fel Attunement (trainer, level 60) multiplies what Spell power does for your own spells
 function spCoef(){return S.spells.felattune?TN.sp:1;}
 function soulPerTick(){return 1+spCoef()*gearStat('power')/100;}
-function lifeTickHeal(){return maxHp()*(.4+.05*rank('drainlife'))/6*soulPerTick();}
+// Drain Life heals a share of your health over the 6 second channel: 40% plus 5% per trainer rank. Haste makes it tick faster but
+// not heal more. Spell power adds up to +20% on a soft curve (gear power only, not Fel Attunement's multiplier). It does not crit
+function lifePct(){return .4+.05*rank('drainlife');}
+function lifePow(){return 1+.2*(1-Math.exp(-(gearStat('power')/100)/2));}
+function lifeTickHeal(){return maxHp()*lifePct()*lifePow()/6/lifeTps();}
 function lifeTps(){return (1+gearStat('haste')/100)*globalHaste();}
 function hitPct(){return .02*tal('suppression')+gearStat('hit')/100;}
 const FAR_MISS={5:.40,6:.85,7:.92,8:.95};
@@ -1414,7 +1418,7 @@ function loopBody(dt){
   if(S.fear>0){S.fear-=dt;if(S.fear<=0&&S.fearPull){S.fearPull=false;addMob();}}if(S.conflagT>0)S.conflagT-=dt;
   if(S.shield>0){S.shieldT=(S.shieldT==null?SHIELD_DUR:S.shieldT)-dt;if(S.shieldT<=0){S.shield=0;S.shieldT=null;log('Your Voidwalker shield fades.');}}else if(S.shieldT!=null)S.shieldT=null;
   if(S.mode==='life'){S.lifeT=(S.lifeT||0)-dt;
-    if(S.corpse<=0&&S.eatT<=0){S.lifeTick=(S.lifeTick||0)+lifeTps()*dt;while(S.lifeTick>=1){S.lifeTick-=1;const crit=Math.random()<critChance();const h=Math.min(maxHp()-S.hp,lifeTickHeal()*(crit?1.5:1));if(h>0){S.hp+=h;fly((crit?'★ +':'+')+fmt(Math.floor(h)),'#6fcf3a',null,null,false,'heal');}}}
+    if(S.corpse<=0&&S.eatT<=0){S.lifeTick=(S.lifeTick||0)+lifeTps()*dt;while(S.lifeTick>=1){S.lifeTick-=1;const crit=false;const h=Math.min(maxHp()-S.hp,lifeTickHeal());if(h>0){S.hp+=h;fly((crit?'★ +':'+')+fmt(Math.floor(h)),'#6fcf3a',null,null,false,'heal');}}}
     if(S.lifeT<=0){S.mode='drain';S.lifeT=0;S.prog=0;S.chanN=0;S.cds.drainlife=30;}}
   else S.lifeTick=0;
   if(!S.event){S.eventT-=dt;if(S.eventT<=0&&S.corpse<=0&&S.lvl>=5&&!S.dg){S.event={t:45};S.eventT=(180+Math.random()*120)/(1+.25*perk('rain'));log('An Infernal crashes down nearby! 45 seconds.','lvl');}}
@@ -1628,7 +1632,7 @@ function auraTip(k){
     case 'backlash':return ['Backlash',`Absorbs ${Math.ceil(S.backlash||0)} damage. Every cast adds to it; it fades fast when you stop casting.`,'From Backlash (Destruction).'];
     case 'bargain':return ['Dark Bargain',`${Math.ceil(S.bargain||0)} damage deferred, draining into your health over the next few seconds.`,'From Dark Bargain (Affliction).'];
     case 'shield':return ['Sacrifice shield',`Absorbs damage before your health does. ${Math.ceil(S.shield)} left, fades in ${Math.ceil(Math.max(0,S.shieldT||0))}s.`,'From sacrificing a Voidwalker.'];
-    case 'dlife':return ['Drain Life',`Heals you while it channels, about ${Math.round((.4+.05*rank('drainlife'))*100)}% of your health over the full 6 seconds. No shards from anything until it ends.`,`${Math.ceil(S.lifeT||0)}s left. Press its action bar button to stop early.`];
+    case 'dlife':return ['Drain Life',`Heals you while it channels, about ${Math.round(lifePct()*lifePow()*100)}% of your health over the full 6 seconds. No shards from anything until it ends.`,`${Math.ceil(S.lifeT||0)}s left. Press its action bar button to stop early.`];
     case 'camping':return ['Resting at camp','The fight is paused and you heal. Clicking does not break camp.',`Well Rested in ${Math.ceil(S.eatT)}s`];
     case 'rested':return ['Well Rested','+50% XP from kills.',`${Math.ceil((S.restedT||0)/60)} minutes left`];
     case 'eat':return ['Eating','You are resting back to full health. The target is reset and nothing hits it while you sit. Any click stops it.',`${Math.ceil(S.eatT)}s left`];
