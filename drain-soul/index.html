@@ -174,6 +174,8 @@ h1,h2,h3,.gem-slot .n,.lvlline,#pname,#mname,.bar .lbl,#wintitle,.zonename{font-
 .row .d{font-size:12px;color:var(--muted);line-height:1.35}
 .row .d span{font-size:12px}
 .row .cost{font-size:12px;white-space:nowrap;text-align:right}
+.row .cost .cpart{display:block;line-height:1.35}
+.row .cost .cplus{display:none}
 .row button{white-space:nowrap}
 .row button.on{border-color:var(--fel);background:#1f3317}
 .tier{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:6px 0 0}
@@ -957,7 +959,8 @@ function fmt(n){if(!isFinite(n))return '∞';if(n<1000)return (Math.round(n*10)/
 function canAfford(c){return Object.keys(c).every(k=>k==='g'?S.account.gold>=c[k]:S.shards[k]>=c[k]);}
 function pay(c){Object.keys(c).forEach(k=>{if(k==='g')S.account.gold=Math.round((S.account.gold-c[k])*100)/100;else S.shards[k]-=c[k];});}
 function goldStr(g){return g>=1?(Math.round(g*100)/100)+'g':Math.round(g*100)+'s';}
-function costStr(c){return Object.keys(c).filter(k=>c[k]>0).map(k=>k==='g'?`<span style="color:var(--gold)">${goldStr(c[k])}</span>`:`<span class="t${k}">${fmt(c[k])} ${RAR[k]}</span>`).join(' + ')||'free';}
+// each part is its own span so a row's cost column can stack them one per line; inline text keeps the ' + '
+function costStr(c){return Object.keys(c).filter(k=>c[k]>0).map(k=>k==='g'?`<span class="cpart" style="color:var(--gold)">${goldStr(c[k])}</span>`:`<span class="cpart t${k}">${fmt(c[k])} ${RAR[k]}</span>`).join('<span class="cplus"> + </span>')||'free';}
 function spellCost(s){const c={};if(s.cost>0)c.g=s.cost;return Object.assign(c,s.extra||{});}
 function drainTps(){return youTps()+(tal('dempact')?petTps():0);}
 function shardsPerSec(){if(S.mode==='life')return 0;const tps=drainTps();const need=soulNeed(curMob());return tps*(1-resistChance())*shardChance()+(youTps()+corrTps()+immoTps()+petTps())/need*deathShards(curMob());}
