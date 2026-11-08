@@ -23,3 +23,7 @@ To add a kit, create a new entry under **Kits**. Its page address comes from its
 - `_layouts/`, `_includes/blocks/` — page templates, one template per section type.
 - `assets/css/site.css` — styles.
 - `.pages.yml` — the Pages CMS forms. A new section type needs a template in `_includes/blocks/` and an entry here.
+
+## License
+
+All rights reserved, see `LICENSE`.
